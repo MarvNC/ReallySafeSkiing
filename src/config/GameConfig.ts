@@ -58,7 +58,7 @@ export const TERRAIN_DIMENSIONS = {
 export const TERRAIN_CONFIG = {
   SLOPE_ANGLE: 0.5,
   // Tuning parameters for the new algorithm
-  WINDINESS: 60, // controls noise amplitude
+  WINDINESS: 30, // controls noise amplitude
   NOISE_SCALE: 0.005, // controls noise frequency
   MEANDER_AMP: 40, // controls sine wave amplitude
   MEANDER_FREQ: 0.002, // controls sine wave frequency
@@ -79,7 +79,7 @@ export const TERRAIN_CONFIG = {
   BIOME_TRANSITION_DISTANCE: 2000,
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
-  CANYON_HEIGHT: 40, // The max height of the cliff
+  CANYON_HEIGHT: 25, // The max height of the cliff
   WALL_WIDTH: 15, // How wide the slope is horizontally
   CLIFF_NOISE_SCALE: 0.5, // Higher frequency noise for rocks
   OBSTACLE_COUNT: 200, // Number of obstacles per chunk
