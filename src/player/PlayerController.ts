@@ -19,6 +19,10 @@ export class PlayerController {
 
   private input: InputManager;
 
+  // Hand animation state for smooth lateral movement
+  private currentLeftHandX: number = PLAYER_CONFIG.hands.leftOffset.x;
+  private currentRightHandX: number = PLAYER_CONFIG.hands.rightOffset.x;
+
   constructor(scene: THREE.Scene, input: InputManager, options?: PlayerOptions) {
     const startPosition = options?.startPosition ?? PLAYER_CONFIG.startPosition.clone();
 
@@ -89,8 +93,7 @@ export class PlayerController {
     this.updateVisuals(deltaTime);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private updateVisuals(_deltaTime: number): void {
+  private updateVisuals(deltaTime: number): void {
     const steerLeft = this.input.isActive(Action.SteerLeft);
     const steerRight = this.input.isActive(Action.SteerRight);
     const isBraking = this.input.isBraking();
@@ -99,6 +102,37 @@ export class PlayerController {
     // No physics, so no velocity - use a default speed for animation purposes
     const speed = 0;
     const time = performance.now() / 1000;
+
+    // Calculate target X positions for hands based on steering input
+    let targetLeftHandX = PLAYER_CONFIG.hands.leftOffset.x;
+    let targetRightHandX = PLAYER_CONFIG.hands.rightOffset.x;
+
+    if (steerLeft) {
+      // Move both hands left when steering left
+      targetLeftHandX =
+        PLAYER_CONFIG.hands.leftOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
+      targetRightHandX =
+        PLAYER_CONFIG.hands.rightOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
+    } else if (steerRight) {
+      // Move both hands right when steering right
+      targetLeftHandX =
+        PLAYER_CONFIG.hands.leftOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+      targetRightHandX =
+        PLAYER_CONFIG.hands.rightOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+    }
+
+    // Smoothly interpolate current X positions toward target
+    const lerpFactor = 1 - Math.exp(-PLAYER_CONFIG.hands.lateralAnimationSpeed * deltaTime);
+    this.currentLeftHandX = THREE.MathUtils.lerp(
+      this.currentLeftHandX,
+      targetLeftHandX,
+      lerpFactor
+    );
+    this.currentRightHandX = THREE.MathUtils.lerp(
+      this.currentRightHandX,
+      targetRightHandX,
+      lerpFactor
+    );
 
     // 1. Ski Rotation
     const leftSki = this.skis.children[0];
@@ -141,9 +175,9 @@ export class PlayerController {
       this.rightHand.position.y =
         PLAYER_CONFIG.hands.rightOffset.y + Math.max(0, rightPhase) * poleVertical;
 
-      // Keep X position at default
-      this.leftHand.position.x = PLAYER_CONFIG.hands.leftOffset.x;
-      this.rightHand.position.x = PLAYER_CONFIG.hands.rightOffset.x;
+      // Apply smooth lateral movement
+      this.leftHand.position.x = this.currentLeftHandX;
+      this.rightHand.position.x = this.currentRightHandX;
     } else {
       // Normal bobbing animation when not poling (tucked position)
       const bobAmount = Math.min(speed * 0.02, PLAYER_CONFIG.animation.maxBobAmount);
@@ -161,9 +195,9 @@ export class PlayerController {
       this.leftHand.position.z = PLAYER_CONFIG.hands.leftOffset.z + leftBob * 0.5;
       this.rightHand.position.z = PLAYER_CONFIG.hands.rightOffset.z + rightBob * 0.5;
 
-      // Keep X position at default
-      this.leftHand.position.x = PLAYER_CONFIG.hands.leftOffset.x;
-      this.rightHand.position.x = PLAYER_CONFIG.hands.rightOffset.x;
+      // Apply smooth lateral movement
+      this.leftHand.position.x = this.currentLeftHandX;
+      this.rightHand.position.x = this.currentRightHandX;
     }
   }
 }

@@ -36,6 +36,8 @@ export const PLAYER_CONFIG = {
     rightOffset: new THREE.Vector3(0.3, -0.3, -0.5),
     rightMirrorScaleX: -1,
     poleAngleRadians: Math.PI / 12,
+    lateralMovementAmount: 0.15, // How far hands move left/right when steering
+    lateralAnimationSpeed: 8.0, // Speed of lateral animation interpolation
   },
   skis: {
     offset: new THREE.Vector3(0, -1.5, 0.3),
