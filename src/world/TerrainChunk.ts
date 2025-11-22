@@ -7,7 +7,6 @@ import type { ChunkState, PathPoint } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
-import { COLOR_PALETTE } from '../constants/colors';
 
 export const CHUNK_WIDTH = 150;
 export const CHUNK_LENGTH = 100;
@@ -117,7 +116,7 @@ export class TerrainChunk {
 
     // Materials
     this.treeMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff, // White base - instance colors provide actual color
+      color: 0x2d7a2d, // Better forest green color
       roughness: 0.8,
       flatShading: true,
       vertexColors: true, // Enable instance colors
@@ -158,12 +157,12 @@ export class TerrainChunk {
     // Enable shadows and initialize instance colors for all tree buckets
     Object.values(this.treeBuckets).forEach((mesh) => {
       mesh.castShadow = true;
-      mesh.receiveShadow = false; // Disable shadow receiving to prevent black appearance
+      mesh.receiveShadow = true;
       this.group.add(mesh);
 
       // Initialize instance colors
       const colors = new Float32Array(mesh.count * 3);
-      const baseColor = new THREE.Color(COLOR_PALETTE.trees.pineGreen);
+      const baseColor = new THREE.Color(0x4b8b3b);
       for (let i = 0; i < mesh.count; i++) {
         colors[i * 3] = baseColor.r;
         colors[i * 3 + 1] = baseColor.g;
@@ -431,15 +430,29 @@ export class TerrainChunk {
     const heights = new Float32Array(this.nrows * this.ncols);
     let heightIndex = 0;
 
-    for (let col = 0; col < this.ncols; col++) {
-      for (let row = this.nrows - 1; row >= 0; row--) {
-        const zFraction = (this.nrows - 1 - row) / (this.nrows - 1);
-        const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
-        const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-        const worldZ = startState.endZ + pathPoint.z;
+    // Iterate rows from Z = -CHUNK_LENGTH to 0 (Min Z to Max Z in physics local space)
+    for (let row = 0; row < this.nrows; row++) {
+      // Row 0 corresponds to Z = -CHUNK_LENGTH (end of chunk)
+      // Row N corresponds to Z = 0 (start of chunk)
+      const zProgress = row / (this.nrows - 1); // 0 to 1
 
+      // Map to path points (which go from 0 to -CHUNK_LENGTH)
+      // If row=0 (Z=-100), we want path index near end.
+      // If row=N (Z=0), we want path index 0.
+      const pathZ = -CHUNK_LENGTH + zProgress * CHUNK_LENGTH; // -100 to 0
+
+      // Find corresponding path point
+      const pathFraction = Math.abs(pathZ) / CHUNK_LENGTH; // 1 to 0
+      const pathIndex = Math.floor(pathFraction * CHUNK_SEGMENTS);
+      const pathPoint = points[Math.min(Math.max(0, pathIndex), points.length - 1)];
+
+      const worldZ = startState.endZ + pathZ;
+
+      for (let col = 0; col < this.ncols; col++) {
         const xFraction = col / (this.ncols - 1);
         const localGridX = (xFraction - 0.5) * CHUNK_WIDTH;
+
+        // Calculate distance from the curved path spine
         const effectiveLocalX = localGridX - pathPoint.x;
 
         // Use full terrain width including canyon walls
@@ -601,8 +614,8 @@ export class TerrainChunk {
 
           this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
 
-          // Color variation using palette colors
-          dummyColor.set(COLOR_PALETTE.trees.pineGreen);
+          // Color variation with better base green
+          dummyColor.setHex(0x2d7a2d);
           const hueShift = (Math.random() - 0.5) * 0.1; // Small hue variation
           const saturationShift = (Math.random() - 0.5) * 0.1;
           const lightnessShift = (Math.random() - 0.5) * 0.1;
@@ -747,7 +760,6 @@ export class TerrainChunk {
       })
         .setFriction(0.05)
         .setRestitution(0)
-        .setRotation({ x: 0, y: 1, z: 0, w: 0 })
         .setTranslation(0, 0, -CHUNK_LENGTH * 0.5);
 
       this.collider = this.world.createCollider(colliderDesc, this.body);
