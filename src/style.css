@@ -23,3 +23,57 @@ canvas {
   width: 100%;
   height: 100%;
 }
+
+#debug-ui {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  z-index: 1000;
+  min-width: 280px;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+#debug-ui h3 {
+  margin: 0 0 10px 0;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff6b35;
+}
+
+#debug-ui .debug-section {
+  margin-bottom: 15px;
+}
+
+#debug-ui .debug-section:last-child {
+  margin-bottom: 0;
+}
+
+#debug-ui .debug-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 10px;
+}
+
+#debug-ui .debug-label {
+  color: #a0a0a0;
+  font-weight: normal;
+}
+
+#debug-ui .debug-value {
+  color: #ffffff;
+  font-weight: bold;
+  text-align: right;
+  flex-shrink: 0;
+}

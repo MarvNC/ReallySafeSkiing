@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { PhysicsSystem } from './core/PhysicsSystem';
 import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
+import { DebugUI } from './debug/DebugUI';
+import { DebugHelpers } from './debug/DebugHelpers';
 
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
@@ -18,6 +20,8 @@ export class GameApp {
   private activeCamera?: THREE.PerspectiveCamera;
   private useDebugCamera = true;
   private grid?: THREE.GridHelper;
+  private debugUI?: DebugUI;
+  private debugHelpers?: DebugHelpers;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -57,6 +61,11 @@ export class GameApp {
     if (!this.useDebugCamera) {
       this.activeCamera = this.player.camera;
     }
+
+    // Initialize debug systems
+    this.debugUI = new DebugUI(this.container);
+    this.debugHelpers = new DebugHelpers(this.scene);
+    this.debugHelpers.addWorldAxes(50);
 
     this.isRunning = true;
     this.clock.start();
@@ -99,6 +108,26 @@ export class GameApp {
     this.physics.update(delta);
     this.terrainManager.update(this.player.mesh.position);
 
+    // Update debug info
+    if (this.debugUI && this.debugHelpers && this.player) {
+      const velocity = new THREE.Vector3(
+        this.player.body.linvel().x,
+        this.player.body.linvel().y,
+        this.player.body.linvel().z
+      );
+      const rotation = this.player.mesh.quaternion.clone();
+
+      this.debugUI.update(
+        this.player.mesh.position,
+        velocity,
+        rotation,
+        this.activeCamera ?? this.player.camera,
+        delta
+      );
+
+      this.debugHelpers.update(this.player.mesh.position, rotation, velocity);
+    }
+
     this.debugControls?.update();
     const camera = this.activeCamera ?? this.player.camera;
     this.renderer.render(this.scene, camera);
@@ -136,6 +165,11 @@ export class GameApp {
     if (key === 'g' && this.grid) {
       this.grid.visible = !this.grid.visible;
       console.info(`Grid ${this.grid.visible ? 'visible' : 'hidden'}`);
+    }
+    if (key === 'd') {
+      const isVisible = this.debugUI?.toggle() ?? false;
+      this.debugHelpers?.setVisible(isVisible);
+      console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
     }
   };
 
