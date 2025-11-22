@@ -58,4 +58,9 @@ export class TerrainManager {
     this.setWireframe(!this.wireframe);
     return this.wireframe;
   }
+
+  getStartPoint(): THREE.Vector3 {
+    const y = this.generator.getSnowHeight(0, 0, 0);
+    return new THREE.Vector3(0, y, 0);
+  }
 }

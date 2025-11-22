@@ -30,7 +30,7 @@ export class GameApp {
     this.container = container;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#8bd1ff');
-    this.scene.fog = new THREE.Fog(this.scene.background, 120, 2200);
+    this.scene.fog = new THREE.Fog(this.scene.background, 120, 8000);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.shadowMap.enabled = true;
@@ -60,18 +60,34 @@ export class GameApp {
     this.setupLights();
     this.addHelpers();
 
+    // 1. Create Terrain Manager (generates the world)
     this.terrainManager = new TerrainManager(this.scene, this.physics);
+
+    // 2. Get Start Position from generated path
+    const startPoint = this.terrainManager.getStartPoint();
+    const startPos = new THREE.Vector3(startPoint.x, startPoint.y + 2, startPoint.z);
 
     // DEBUG: Add a simple ground plane to test if collision works at all
     const rapier = this.physics.getRapier();
+    // Move ground plane to be under the start position approximately
     const groundBody = this.physics
       .getWorld()
-      .createRigidBody(rapier.RigidBodyDesc.fixed().setTranslation(0, -5, -50));
+      .createRigidBody(
+        rapier.RigidBodyDesc.fixed().setTranslation(
+          startPoint.x,
+          startPoint.y - 5,
+          startPoint.z - 50
+        )
+      );
     const groundCollider = rapier.ColliderDesc.cuboid(100, 0.1, 100);
     this.physics.getWorld().createCollider(groundCollider, groundBody);
-    console.log('DEBUG: Ground plane collider created at Y=-5, Z=-50');
+    console.log('DEBUG: Ground plane collider created');
 
-    this.player = new PlayerController(this.scene, this.physics);
+    // 3. Create Player at Start Position
+    this.player = new PlayerController(this.scene, this.physics, this.input!, {
+      startPosition: startPos,
+    });
+
     if (!this.useDebugCamera) {
       this.activeCamera = this.player.camera;
     }

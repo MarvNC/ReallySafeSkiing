@@ -634,33 +634,57 @@ export class TerrainChunk {
     }
 
     try {
-      // RAPIER expects the heightfield scale as a Vector with {x, y, z}
-      const scale = { x: CHUNK_WIDTH, y: 1.0, z: CHUNK_LENGTH };
+      // Create Trimesh collider instead of Heightfield to avoid WASM crashes
+      // We reconstruct the vertex grid explicitly
+      const numVertices = this.nrows * this.ncols;
+      const vertices = new Float32Array(numVertices * 3);
+      const indices = new Uint32Array((this.nrows - 1) * (this.ncols - 1) * 6);
 
-      console.log(
-        `Creating heightfield: nrows=${this.nrows}, ncols=${this.ncols}, scale=${JSON.stringify(scale)}`
-      );
+      let vertIdx = 0;
+      for (let row = 0; row < this.nrows; row++) {
+        const zProgress = row / (this.nrows - 1);
+        // Z range from -CHUNK_LENGTH to 0 (relative to chunk startZ)
+        const localZ = -CHUNK_LENGTH + zProgress * CHUNK_LENGTH;
 
-      // Use FIX_INTERNAL_EDGES flag to improve collision detection on flat surfaces
-      const HeightFieldFlags = this.rapier.HeightFieldFlags;
-      const colliderDesc = this.rapier.ColliderDesc.heightfield(
-        this.nrows,
-        this.ncols,
-        heights,
-        scale,
-        HeightFieldFlags.FIX_INTERNAL_EDGES
-      )
+        for (let col = 0; col < this.ncols; col++) {
+          const xFraction = col / (this.ncols - 1);
+          // X range centered around 0
+          const localX = (xFraction - 0.5) * CHUNK_WIDTH;
+
+          const height = heights[row * this.ncols + col];
+
+          vertices[vertIdx++] = localX;
+          vertices[vertIdx++] = Number.isFinite(height) ? height : 0;
+          vertices[vertIdx++] = localZ;
+        }
+      }
+
+      let indIdx = 0;
+      for (let row = 0; row < this.nrows - 1; row++) {
+        for (let col = 0; col < this.ncols - 1; col++) {
+          const i = row * this.ncols + col;
+          const iBelow = (row + 1) * this.ncols + col;
+
+          // Triangle 1
+          indices[indIdx++] = i;
+          indices[indIdx++] = iBelow;
+          indices[indIdx++] = i + 1;
+
+          // Triangle 2
+          indices[indIdx++] = i + 1;
+          indices[indIdx++] = iBelow;
+          indices[indIdx++] = iBelow + 1;
+        }
+      }
+
+      const colliderDesc = this.rapier.ColliderDesc.trimesh(vertices, indices)
         .setFriction(0.05)
-        .setRestitution(0)
-        .setTranslation(0, 0, -CHUNK_LENGTH * 0.5);
+        .setRestitution(0);
 
       this.collider = this.world.createCollider(colliderDesc, this.body);
-      console.log(`✓ Heightfield collider created successfully at Z=${this.currentZ}`);
+      console.log(`✓ Trimesh collider created successfully at Z=${this.currentZ}`);
     } catch (error) {
       console.error('✗ Failed to rebuild terrain collider', error);
-      console.error('Heights array length:', heights.length);
-      console.error('nrows:', this.nrows, 'ncols:', this.ncols);
-      console.error('Expected length:', this.nrows * this.ncols);
     }
   }
 }

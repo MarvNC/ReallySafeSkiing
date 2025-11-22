@@ -63,6 +63,10 @@ export class InputManager {
     return this.actionStates.get(action) ?? false;
   }
 
+  isBraking(): boolean {
+    return this.isActive(Action.SteerLeft) && this.isActive(Action.SteerRight);
+  }
+
   on(action: Action, listener: ActionListener): void {
     let set = this.listeners.get(action);
     if (!set) {

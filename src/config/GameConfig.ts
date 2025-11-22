@@ -8,13 +8,22 @@ export const PHYSICS_CONFIG = {
   maxDeltaTime: 1 / 20,
 } as const;
 
+export const SKI_PHYSICS = {
+  turnTorque: 4.0, // How fast player rotates
+  maxSpeed: 35.0, // Terminal velocity
+  lateralFriction: 6.0, // "Edge Grip" - how hard it is to slide sideways
+  forwardFriction: 0.05, // "Wax" - how easily they glide forward
+  snowplowDrag: 3.0, // Extra drag when A+D are pressed
+  gravityScale: 2.0, // Gravity multiplier for punchy feel
+} as const;
+
 export const PLAYER_CONFIG = {
   radius: 1.6,
   startPosition: new THREE.Vector3(0, 15, -5),
   camera: {
     fov: 75,
     near: 0.1,
-    far: 5000,
+    far: 8000,
     eyeHeight: 1.7,
     tiltRadians: -0.5,
   },
@@ -34,6 +43,12 @@ export const PLAYER_CONFIG = {
   },
 } as const;
 
+export const MOUNTAIN_CONFIG = {
+  TOTAL_LENGTH: 6000, // Total Z distance of the run
+  START_ALTITUDE: 600, // Y height at start
+  END_ALTITUDE: 0, // Y height at finish
+} as const;
+
 export const TERRAIN_DIMENSIONS = {
   CHUNK_WIDTH: 150,
   CHUNK_LENGTH: 100,
@@ -42,6 +57,15 @@ export const TERRAIN_DIMENSIONS = {
 
 export const TERRAIN_CONFIG = {
   SLOPE_ANGLE: 0.5,
+  // Tuning parameters for the new algorithm
+  WINDINESS: 60, // controls noise amplitude
+  NOISE_SCALE: 0.005, // controls noise frequency
+  MEANDER_AMP: 40, // controls sine wave amplitude
+  MEANDER_FREQ: 0.002, // controls sine wave frequency
+  WIDTH_VARIATION: 0.5, // how much the width changes
+  SMOOTHING_WINDOW: 5, // window size for moving average
+  SEGMENT_LENGTH: 2.5, // Resolution of points
+
   BIOME_DEFAULTS: {
     [BiomeType.Glade]: { turnSpeed: 0.02, widthMin: 25, widthMax: 40 },
     [BiomeType.Chute]: { turnSpeed: 0.05, widthMin: 10, widthMax: 15 },
