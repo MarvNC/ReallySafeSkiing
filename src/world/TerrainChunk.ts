@@ -5,11 +5,15 @@ import { PhysicsSystem } from '../core/PhysicsSystem';
 
 export const CHUNK_WIDTH = 100;
 export const CHUNK_LENGTH = 100;
-export const CHUNK_SEGMENTS = 20;
+export const CHUNK_SEGMENTS = 60;
 
 const SLOPE_ANGLE = 0.2;
-const BANK_STEEPNESS = 0.02;
-const NOISE_SCALE = 2.0;
+const PATH_AMPLITUDE = 40.0;
+const PATH_FREQUENCY = 0.005;
+const MOGUL_SCALE = 0.2;
+const MOGUL_HEIGHT = 2.0;
+const TRACK_WIDTH = 17.0;
+const WALL_HEIGHT_SCALAR = 2.0;
 
 export class TerrainChunk {
   readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
@@ -44,6 +48,8 @@ export class TerrainChunk {
     position.setUsage(THREE.DynamicDrawUsage);
     const vertexCount = position.count;
 
+    this.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
+
     this.baseX = new Float32Array(vertexCount);
     this.baseZ = new Float32Array(vertexCount);
 
@@ -54,7 +60,7 @@ export class TerrainChunk {
     }
 
     this.material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
+      vertexColors: true,
       flatShading: true,
       roughness: 0.6,
       metalness: 0,
@@ -75,12 +81,17 @@ export class TerrainChunk {
     return this.currentZ;
   }
 
+  private getPathX(z: number): number {
+    return this.noise2D(0, z * PATH_FREQUENCY) * PATH_AMPLITUDE;
+  }
+
   regenerate(centerZ: number): void {
     this.currentZ = centerZ;
     this.mesh.position.set(0, 0, centerZ);
     this.body.setTranslation({ x: 0, y: 0, z: centerZ }, true);
 
     const position = this.geometry.attributes.position as THREE.BufferAttribute;
+    const colors = this.geometry.attributes.color as THREE.BufferAttribute;
     const heights = new Float32Array(this.nrows * this.ncols);
 
     let heightIndex = 0;
@@ -90,19 +101,44 @@ export class TerrainChunk {
         const worldX = this.baseX[i];
         const worldZ = this.baseZ[i] + centerZ;
 
-        let y = worldZ * Math.tan(SLOPE_ANGLE);
-        y += (worldX * worldX) * BANK_STEEPNESS;
-        y += this.noise2D(worldX * 0.1, worldZ * 0.1) * NOISE_SCALE;
+        // Layer A: Base Descent
+        const baseHeight = worldZ * Math.tan(SLOPE_ANGLE);
+
+        // Layer B: The Cross-Section (The "Bowl")
+        const pathX = this.getPathX(worldZ);
+        const dist = worldX - pathX;
+        const normalizedDist = Math.abs(dist) / TRACK_WIDTH;
+        const wallHeight = Math.pow(normalizedDist, 2.5) * WALL_HEIGHT_SCALAR;
+
+        // Layer C: Surface Detail (Moguls & Roughness)
+        const surfaceNoise = this.noise2D(worldX * MOGUL_SCALE, worldZ * MOGUL_SCALE);
+        // Masking: Higher in center, lower on steep walls
+        const mask = Math.max(0, 1 - Math.pow(normalizedDist / 2, 4));
+        const moguls = surfaceNoise * MOGUL_HEIGHT * mask;
+
+        const y = baseHeight + wallHeight + moguls;
 
         position.setX(i, this.baseX[i]);
         position.setY(i, y);
         position.setZ(i, this.baseZ[i]);
+
+        // Vertex Colors
+        const color = new THREE.Color();
+        if (normalizedDist < 0.8) {
+          color.setHex(0xffffff); // Snow
+        } else {
+          // Blend to rock
+          const t = Math.min(1, (normalizedDist - 0.8) / 2.0);
+          color.setHex(0xffffff).lerp(new THREE.Color(0x444444), t);
+        }
+        colors.setXYZ(i, color.r, color.g, color.b);
 
         heights[heightIndex++] = y;
       }
     }
 
     position.needsUpdate = true;
+    colors.needsUpdate = true;
     this.geometry.computeVertexNormals();
     this.geometry.computeBoundingSphere();
 
