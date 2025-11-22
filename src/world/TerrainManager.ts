@@ -21,7 +21,7 @@ export class TerrainManager {
       endAngle: 0,
       endZ: 0,
       biome: BiomeType.Glade,
-      distanceInBiome: 0
+      distanceInBiome: 0,
     };
 
     for (let i = 0; i < 3; i++) {
@@ -51,7 +51,7 @@ export class TerrainManager {
 
   setWireframe(enabled: boolean): void {
     this.wireframe = enabled;
-    this.chunks.forEach(chunk => chunk.setWireframe(enabled));
+    this.chunks.forEach((chunk) => chunk.setWireframe(enabled));
   }
 
   toggleWireframe(): boolean {

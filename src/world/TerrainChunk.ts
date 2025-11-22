@@ -12,9 +12,9 @@ export const CHUNK_SEGMENTS = 60;
 const TERRAIN_CONFIG = {
   SLOPE_ANGLE: 0.5,
   BIOME_DEFAULTS: {
-    [BiomeType.Glade]:   { turnSpeed: 0.02, widthMin: 25, widthMax: 40 },
-    [BiomeType.Chute]:   { turnSpeed: 0.05, widthMin: 10, widthMax: 15 },
-    [BiomeType.Slalom]:  { turnSpeed: 0.08, widthMin: 15, widthMax: 25 },
+    [BiomeType.Glade]: { turnSpeed: 0.02, widthMin: 25, widthMax: 40 },
+    [BiomeType.Chute]: { turnSpeed: 0.05, widthMin: 10, widthMax: 15 },
+    [BiomeType.Slalom]: { turnSpeed: 0.08, widthMin: 15, widthMax: 25 },
     [BiomeType.Cruiser]: { turnSpeed: 0.01, widthMin: 30, widthMax: 50 },
   },
   BANKING_STRENGTH: 0.8,
@@ -98,7 +98,12 @@ export class TerrainChunk {
     this.nrows = CHUNK_SEGMENTS + 1;
     this.ncols = CHUNK_SEGMENTS + 1;
 
-    const physicsGeo = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, CHUNK_SEGMENTS, CHUNK_SEGMENTS);
+    const physicsGeo = new THREE.PlaneGeometry(
+      CHUNK_WIDTH,
+      CHUNK_LENGTH,
+      CHUNK_SEGMENTS,
+      CHUNK_SEGMENTS
+    );
     const position = physicsGeo.attributes.position as THREE.BufferAttribute;
     const vertexCount = position.count;
 
@@ -112,7 +117,7 @@ export class TerrainChunk {
     physicsGeo.dispose();
 
     this.body = this.world.createRigidBody(
-      this.rapier.RigidBodyDesc.fixed().setTranslation(0, 0, baseZ),
+      this.rapier.RigidBodyDesc.fixed().setTranslation(0, 0, baseZ)
     );
 
     const initialState: ChunkState = {
@@ -120,7 +125,7 @@ export class TerrainChunk {
       endAngle: 0,
       endZ: baseZ,
       biome: BiomeType.Glade,
-      distanceInBiome: 0
+      distanceInBiome: 0,
     };
     this.regenerate(baseZ, initialState);
   }
@@ -132,7 +137,7 @@ export class TerrainChunk {
   // Helper Methods
 
   private getTrackWidth(z: number, biome: BiomeType): number {
-    const widthNoise = this.noise2D(z * 0.01, 100); 
+    const widthNoise = this.noise2D(z * 0.01, 100);
     const config = TERRAIN_CONFIG.BIOME_DEFAULTS[biome];
     return config.widthMin + (widthNoise * 0.5 + 0.5) * (config.widthMax - config.widthMin);
   }
@@ -150,7 +155,7 @@ export class TerrainChunk {
     return baseHeightAtEdge + rise + Math.abs(jag);
   }
 
-  private generatePathSpine(startState: ChunkState): { points: PathPoint[], endState: ChunkState } {
+  private generatePathSpine(startState: ChunkState): { points: PathPoint[]; endState: ChunkState } {
     const points: PathPoint[] = [];
     let currentX = startState.endX;
     let currentAngle = startState.endAngle;
@@ -194,7 +199,7 @@ export class TerrainChunk {
         z: localZ,
         angle: currentAngle,
         width: width,
-        banking: banking
+        banking: banking,
       });
 
       distanceInBiome += segmentLength;
@@ -205,7 +210,7 @@ export class TerrainChunk {
       endAngle: currentAngle,
       endZ: startState.endZ - CHUNK_LENGTH,
       biome: currentBiome,
-      distanceInBiome: distanceInBiome
+      distanceInBiome: distanceInBiome,
     };
 
     return { points, endState };
@@ -232,17 +237,17 @@ export class TerrainChunk {
 
       for (let col = 0; col < snowCols; col++) {
         const i = row * snowCols + col;
-        
+
         // U coordinate (0 to 1)
         const u = col / (snowCols - 1);
-        
+
         // Calculate width at this point
         const trackWidth = pathPoint.width;
-        
+
         // Map U to [-trackWidth/2, +trackWidth/2]
         const localX = (u - 0.5) * trackWidth;
         const worldX = localX + pathPoint.x; // Add spine offset
-        
+
         const y = this.getSnowHeight(localX, worldZ, pathPoint.banking);
         const vertexZ = pathPoint.z;
 
@@ -251,7 +256,6 @@ export class TerrainChunk {
     }
     snowPos.needsUpdate = true;
     this.snowGeometry.computeVertexNormals();
-
 
     // --- 2. Update Canyon Geometry ---
     const canyonPos = this.canyonGeometry.attributes.position as THREE.BufferAttribute;
@@ -263,34 +267,34 @@ export class TerrainChunk {
       const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
       const pathPoint = points[Math.min(pathIndex, points.length - 1)];
       const worldZ = startState.endZ + pathPoint.z;
-      
+
       const halfWidth = pathPoint.width / 2;
 
       for (let col = 0; col < canyonCols; col++) {
         const i = row * canyonCols + col;
         const colFraction = col / (canyonCols - 1);
         const isLeft = colFraction < 0.5;
-        
+
         let finalX: number;
         let seamHeight: number;
 
         if (isLeft) {
-           const subU = colFraction * 2;
-           finalX = -CHUNK_WIDTH/2 + subU * (-halfWidth - (-CHUNK_WIDTH/2));
-           seamHeight = this.getSnowHeight(-halfWidth, worldZ, pathPoint.banking);
+          const subU = colFraction * 2;
+          finalX = -CHUNK_WIDTH / 2 + subU * (-halfWidth - -CHUNK_WIDTH / 2);
+          seamHeight = this.getSnowHeight(-halfWidth, worldZ, pathPoint.banking);
         } else {
-           const subU = (colFraction - 0.5) * 2;
-           finalX = halfWidth + subU * (CHUNK_WIDTH/2 - halfWidth);
-           seamHeight = this.getSnowHeight(halfWidth, worldZ, pathPoint.banking);
+          const subU = (colFraction - 0.5) * 2;
+          finalX = halfWidth + subU * (CHUNK_WIDTH / 2 - halfWidth);
+          seamHeight = this.getSnowHeight(halfWidth, worldZ, pathPoint.banking);
         }
-        
+
         const distFromSeam = Math.abs(finalX) - halfWidth;
-        
+
         let y: number;
         if (distFromSeam <= 0.001) {
-            y = seamHeight;
+          y = seamHeight;
         } else {
-            y = this.getCanyonHeight(distFromSeam, worldZ, seamHeight);
+          y = this.getCanyonHeight(distFromSeam, worldZ, seamHeight);
         }
 
         const worldX = finalX + pathPoint.x;
@@ -302,37 +306,36 @@ export class TerrainChunk {
     canyonPos.needsUpdate = true;
     this.canyonGeometry.computeVertexNormals();
 
-
     // --- 3. Update Physics Collider (Heightfield) ---
     const heights = new Float32Array(this.nrows * this.ncols);
     let heightIndex = 0;
-    
+
     for (let col = 0; col < this.ncols; col++) {
-        for (let row = this.nrows - 1; row >= 0; row--) {
-             const zFraction = (this.nrows - 1 - row) / (this.nrows - 1);
-             const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
-             const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-             const worldZ = startState.endZ + pathPoint.z;
-             
-             const xFraction = col / (this.ncols - 1);
-             const localGridX = (xFraction - 0.5) * CHUNK_WIDTH;
-             const effectiveLocalX = localGridX - pathPoint.x;
-             const halfWidth = pathPoint.width / 2;
-             
-             let y: number;
-             
-             if (Math.abs(effectiveLocalX) <= halfWidth) {
-                 y = this.getSnowHeight(effectiveLocalX, worldZ, pathPoint.banking);
-             } else {
-                 const distFromEdge = Math.abs(effectiveLocalX) - halfWidth;
-                 const seamX = (effectiveLocalX > 0) ? halfWidth : -halfWidth;
-                 const seamHeight = this.getSnowHeight(seamX, worldZ, pathPoint.banking);
-                 
-                 y = this.getCanyonHeight(distFromEdge, worldZ, seamHeight);
-             }
-             
-             heights[heightIndex++] = y;
+      for (let row = this.nrows - 1; row >= 0; row--) {
+        const zFraction = (this.nrows - 1 - row) / (this.nrows - 1);
+        const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
+        const pathPoint = points[Math.min(pathIndex, points.length - 1)];
+        const worldZ = startState.endZ + pathPoint.z;
+
+        const xFraction = col / (this.ncols - 1);
+        const localGridX = (xFraction - 0.5) * CHUNK_WIDTH;
+        const effectiveLocalX = localGridX - pathPoint.x;
+        const halfWidth = pathPoint.width / 2;
+
+        let y: number;
+
+        if (Math.abs(effectiveLocalX) <= halfWidth) {
+          y = this.getSnowHeight(effectiveLocalX, worldZ, pathPoint.banking);
+        } else {
+          const distFromEdge = Math.abs(effectiveLocalX) - halfWidth;
+          const seamX = effectiveLocalX > 0 ? halfWidth : -halfWidth;
+          const seamHeight = this.getSnowHeight(seamX, worldZ, pathPoint.banking);
+
+          y = this.getCanyonHeight(distFromEdge, worldZ, seamHeight);
         }
+
+        heights[heightIndex++] = y;
+      }
     }
 
     this.rebuildCollider(heights);
@@ -366,12 +369,11 @@ export class TerrainChunk {
     }
 
     try {
-      const colliderDesc = this.rapier.ColliderDesc.heightfield(
-        this.nrows,
-        this.ncols,
-        heights,
-        { x: CHUNK_WIDTH, y: 1, z: CHUNK_LENGTH },
-      )
+      const colliderDesc = this.rapier.ColliderDesc.heightfield(this.nrows, this.ncols, heights, {
+        x: CHUNK_WIDTH,
+        y: 1,
+        z: CHUNK_LENGTH,
+      })
         .setFriction(0.05)
         .setRestitution(0)
         .setRotation({ x: 0, y: 1, z: 0, w: 0 })

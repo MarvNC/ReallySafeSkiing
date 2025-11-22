@@ -36,7 +36,7 @@ export class PlayerController {
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      5000,
+      5000
     );
     this.camera.position.set(0, radius * 0.35, 0.35);
     this.camera.rotation.x = -0.15;
@@ -44,14 +44,11 @@ export class PlayerController {
 
     this.body = physics.addBody(
       this.mesh,
-      rapier
-        .RigidBodyDesc.dynamic()
+      rapier.RigidBodyDesc.dynamic()
         .setTranslation(startPosition.x, startPosition.y, startPosition.z)
         .setLinearDamping(0.05)
         .setAngularDamping(0.6),
-      rapier.ColliderDesc.ball(radius)
-        .setFriction(0.02)
-        .setRestitution(0.1),
+      rapier.ColliderDesc.ball(radius).setFriction(0.02).setRestitution(0.1)
     );
 
     scene.add(this.mesh);

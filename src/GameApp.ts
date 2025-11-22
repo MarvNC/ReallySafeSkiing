@@ -40,12 +40,7 @@ export class GameApp {
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKeyDown);
 
-    this.debugCamera = new THREE.PerspectiveCamera(
-      70,
-      this.getAspect(),
-      0.1,
-      8000,
-    );
+    this.debugCamera = new THREE.PerspectiveCamera(70, this.getAspect(), 0.1, 8000);
     this.debugCamera.position.set(160, 180, 260);
     this.debugCamera.lookAt(0, 0, 0);
     this.debugControls = new OrbitControls(this.debugCamera, this.renderer.domElement);

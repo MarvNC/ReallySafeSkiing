@@ -30,7 +30,7 @@ export class PhysicsSystem {
   addBody(
     mesh: THREE.Object3D,
     rigidBodyDesc: RAPIER.RigidBodyDesc,
-    colliderDesc: RAPIER.ColliderDesc,
+    colliderDesc: RAPIER.ColliderDesc
   ): RAPIER.RigidBody {
     const body = this.world.createRigidBody(rigidBodyDesc);
     this.world.createCollider(colliderDesc, body);
