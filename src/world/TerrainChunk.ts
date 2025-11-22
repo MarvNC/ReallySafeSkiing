@@ -4,7 +4,9 @@ import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 import { PhysicsSystem } from '../core/PhysicsSystem';
 import { BiomeType } from './WorldState';
 import type { ChunkState, PathPoint } from './WorldState';
-import { getTreeGeometry, getRockGeometry } from './AssetFactory';
+import { getRockGeometry } from './AssetFactory';
+import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
+import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
 
 export const CHUNK_WIDTH = 150;
 export const CHUNK_LENGTH = 100;
@@ -41,11 +43,14 @@ export class TerrainChunk {
   private snowGeometry: THREE.PlaneGeometry;
 
   // Obstacles
-  private treeMesh: THREE.InstancedMesh;
+  private treeBuckets: Record<TreeArchetype, THREE.InstancedMesh>;
+  private deadTreeMesh: THREE.InstancedMesh;
   private rockMesh: THREE.InstancedMesh;
-  private treeGeometry: THREE.BufferGeometry;
+  private treeGeometries: Record<TreeArchetype, THREE.BufferGeometry>;
+  private deadTreeGeometry: THREE.BufferGeometry;
   private rockGeometry: THREE.BufferGeometry;
   private treeMaterial: THREE.MeshStandardMaterial;
+  private deadTreeMaterial: THREE.MeshStandardMaterial;
   private rockMaterial: THREE.MeshStandardMaterial;
 
   readonly width = CHUNK_WIDTH;
@@ -99,12 +104,27 @@ export class TerrainChunk {
     this.group.add(this.snowMesh);
 
     // Initialize obstacle geometries and materials
-    this.treeGeometry = getTreeGeometry();
     this.rockGeometry = getRockGeometry();
+    this.deadTreeGeometry = getDeadTreeGeometry();
 
+    // Create tree geometries for each archetype
+    this.treeGeometries = {
+      small: createTreeGeometry(TREE_ARCHETYPES.small.layerCount),
+      medium: createTreeGeometry(TREE_ARCHETYPES.medium.layerCount),
+      large: createTreeGeometry(TREE_ARCHETYPES.large.layerCount),
+    };
+
+    // Materials
     this.treeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2d5016,
+      color: 0x4b8b3b,
       roughness: 0.8,
+      flatShading: true,
+      vertexColors: true, // Enable instance colors
+    });
+
+    this.deadTreeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x5a4a3a,
+      roughness: 0.9,
       flatShading: true,
     });
 
@@ -114,15 +134,54 @@ export class TerrainChunk {
       flatShading: true,
     });
 
-    // Initialize InstancedMeshes
-    this.treeMesh = new THREE.InstancedMesh(
-      this.treeGeometry,
-      this.treeMaterial,
-      TERRAIN_CONFIG.OBSTACLE_COUNT
-    );
-    this.treeMesh.castShadow = true;
-    this.treeMesh.receiveShadow = true;
+    // Initialize InstancedMeshes for tree buckets
+    const maxTreesPerBucket = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT / 3);
+    this.treeBuckets = {
+      small: new THREE.InstancedMesh(
+        this.treeGeometries.small,
+        this.treeMaterial,
+        maxTreesPerBucket
+      ),
+      medium: new THREE.InstancedMesh(
+        this.treeGeometries.medium,
+        this.treeMaterial,
+        maxTreesPerBucket
+      ),
+      large: new THREE.InstancedMesh(
+        this.treeGeometries.large,
+        this.treeMaterial,
+        maxTreesPerBucket
+      ),
+    };
 
+    // Enable shadows and initialize instance colors for all tree buckets
+    Object.values(this.treeBuckets).forEach((mesh) => {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.group.add(mesh);
+
+      // Initialize instance colors
+      const colors = new Float32Array(mesh.count * 3);
+      const baseColor = new THREE.Color(0x4b8b3b);
+      for (let i = 0; i < mesh.count; i++) {
+        colors[i * 3] = baseColor.r;
+        colors[i * 3 + 1] = baseColor.g;
+        colors[i * 3 + 2] = baseColor.b;
+      }
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+    });
+
+    // Dead tree mesh
+    this.deadTreeMesh = new THREE.InstancedMesh(
+      this.deadTreeGeometry,
+      this.deadTreeMaterial,
+      Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * 0.1) // ~10% of obstacles can be dead trees
+    );
+    this.deadTreeMesh.castShadow = true;
+    this.deadTreeMesh.receiveShadow = true;
+    this.group.add(this.deadTreeMesh);
+
+    // Rock mesh
     this.rockMesh = new THREE.InstancedMesh(
       this.rockGeometry,
       this.rockMaterial,
@@ -131,7 +190,6 @@ export class TerrainChunk {
     this.rockMesh.castShadow = true;
     this.rockMesh.receiveShadow = true;
 
-    this.group.add(this.treeMesh);
     this.group.add(this.rockMesh);
 
     // Physics setup (Heightfield resolution matches CHUNK_SEGMENTS)
@@ -406,138 +464,235 @@ export class TerrainChunk {
     this.obstacleBodies = [];
 
     const matrix = new THREE.Matrix4();
-    let treeInstanceIndex = 0;
+    const dummy = new THREE.Object3D(); // Helper for matrix calculations
+    const dummyColor = new THREE.Color();
+
+    // Track instance counts for each bucket
+    const indices: Record<TreeArchetype, number> = {
+      small: 0,
+      medium: 0,
+      large: 0,
+    };
+    let deadTreeIndex = 0;
     let rockInstanceIndex = 0;
 
-    // Reset instance counts
-    this.treeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    // Store max capacities
+    const maxCapacities: Record<TreeArchetype, number> = {
+      small: this.treeBuckets.small.count,
+      medium: this.treeBuckets.medium.count,
+      large: this.treeBuckets.large.count,
+    };
+    const maxDeadTrees = this.deadTreeMesh.count;
+
+    // Reset instance matrix usage
+    Object.values(this.treeBuckets).forEach((mesh) => {
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    });
+    this.deadTreeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-    for (let i = 0; i < TERRAIN_CONFIG.OBSTACLE_COUNT; i++) {
-      // Random position within chunk bounds
-      const randomZ = -Math.random() * CHUNK_LENGTH;
-      const randomX = (Math.random() - 0.5) * CHUNK_WIDTH;
 
-      // Find closest path point
-      const zFraction = -randomZ / CHUNK_LENGTH;
-      const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
-      const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-      const worldZ = startState.endZ + pathPoint.z;
+    // Grid-based placement with noise sampling
+    const gridSize = 5; // Spacing between potential tree positions
+    const noiseScale = 0.1; // Frequency of noise sampling
 
-      // Calculate local X relative to path spine
-      const localX = randomX - pathPoint.x;
-      const absLocalX = Math.abs(localX);
-      const trackWidth = pathPoint.width;
-      const halfTrack = trackWidth / 2;
-      const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-      const distFromTrackEdge = absLocalX - canyonFloorWidth;
+    for (let x = -CHUNK_WIDTH / 2; x < CHUNK_WIDTH / 2; x += gridSize) {
+      for (let z = -CHUNK_LENGTH; z < 0; z += gridSize) {
+        // Find closest path point
+        const zFraction = -z / CHUNK_LENGTH;
+        const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
+        const pathPoint = points[Math.min(pathIndex, points.length - 1)];
+        const worldZ = startState.endZ + pathPoint.z;
 
-      // Determine terrain type based on distance from track edge
-      const isOnTrack = absLocalX <= halfTrack;
-      const isOnBank = absLocalX > halfTrack && distFromTrackEdge <= 0;
-      const isOnCliff = distFromTrackEdge > 0 && distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH;
-      const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
+        // Calculate local X relative to path spine
+        const localX = x - pathPoint.x;
+        const absLocalX = Math.abs(localX);
+        const trackWidth = pathPoint.width;
+        const halfTrack = trackWidth / 2;
+        const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+        const distFromTrackEdge = absLocalX - canyonFloorWidth;
 
-      // Get height at this position
-      const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+        // Determine terrain type
+        const isOnTrack = absLocalX <= halfTrack;
+        const isOnBank = absLocalX > halfTrack && distFromTrackEdge <= 0;
+        const isOnCliff = distFromTrackEdge > 0 && distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH;
+        const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
 
-      // Placement logic
-      let placeTree = false;
-      let placeRock = false;
+        // Sample noise for tree placement and type determination
+        const noiseValue = this.noise2D(x * noiseScale, worldZ * noiseScale);
+        const normalizedNoise = (noiseValue + 1) / 2; // Convert from [-1, 1] to [0, 1]
 
-      if (isOnTrack) {
-        // Track: Low chance of rock, no trees
-        if (Math.random() < 0.05) {
-          placeRock = true;
+        // Get height at this position
+        const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+
+        // Determine what to place based on terrain and noise
+        let placeTree: TreeArchetype | null = null;
+        let placeDeadTree = false;
+        let placeRock = false;
+
+        if (isOnTrack) {
+          // Track: Low chance of rock, no trees
+          if (Math.random() < 0.05) {
+            placeRock = true;
+          }
+        } else if (isOnBank) {
+          // Bank: Medium chance of tree, some rocks
+          if (normalizedNoise > 0.3 && normalizedNoise < 0.5 && Math.random() < 0.25) {
+            placeTree = 'small';
+          } else if (normalizedNoise >= 0.5 && normalizedNoise < 0.7 && Math.random() < 0.3) {
+            placeTree = 'medium';
+          } else if (normalizedNoise >= 0.7 && Math.random() < 0.2) {
+            placeTree = 'large';
+          } else if (Math.random() < 0.15) {
+            placeRock = true;
+          }
+        } else if (isOnCliff) {
+          // Cliff: Sparse trees and rocks
+          if (normalizedNoise > 0.4 && normalizedNoise < 0.6 && Math.random() < 0.1) {
+            placeTree = 'small';
+          } else if (normalizedNoise >= 0.6 && Math.random() < 0.08) {
+            placeTree = 'medium';
+          } else if (Math.random() < 0.08) {
+            placeRock = true;
+          }
+        } else if (isOnPlateau) {
+          // Plateau: High density forest with noise-based variety
+          if (normalizedNoise < 0.4) {
+            // Low noise = clearing, maybe dead tree
+            if (Math.random() < 0.1) {
+              placeDeadTree = true;
+            }
+          } else if (normalizedNoise >= 0.4 && normalizedNoise < 0.6) {
+            // Medium noise = small trees
+            if (Math.random() < 0.6) {
+              placeTree = 'small';
+            }
+          } else if (normalizedNoise >= 0.6 && normalizedNoise < 0.8) {
+            // Higher noise = medium trees
+            if (Math.random() < 0.7) {
+              placeTree = 'medium';
+            }
+          } else {
+            // Highest noise = large trees
+            if (Math.random() < 0.8) {
+              placeTree = 'large';
+            }
+          }
         }
-      } else if (isOnBank) {
-        // Bank: Medium chance of tree, some rocks
-        if (Math.random() < 0.25) {
-          placeTree = true;
-        } else if (Math.random() < 0.15) {
-          placeRock = true;
-        }
-      } else if (isOnCliff) {
-        // Cliff: Sparse trees and rocks
-        if (Math.random() < 0.1) {
-          placeTree = true;
-        } else if (Math.random() < 0.08) {
-          placeRock = true;
-        }
-      } else if (isOnPlateau) {
-        // Plateau: High density forest
-        if (Math.random() < 0.7) {
-          placeTree = true;
-        }
-      }
 
-      // Place tree
-      if (placeTree && treeInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
-        const treeY = y;
-        const treeScale = 1 + Math.random() * 0.5;
-        const rotationY = Math.random() * Math.PI * 2;
-        matrix.makeRotationY(rotationY);
-        matrix.scale(new THREE.Vector3(treeScale, treeScale, treeScale));
-        matrix.setPosition(randomX, treeY, pathPoint.z);
-        this.treeMesh.setMatrixAt(treeInstanceIndex, matrix);
+        // Place tree in appropriate bucket
+        if (placeTree && indices[placeTree] < maxCapacities[placeTree]) {
+          const treeY = y;
+          const treeScale = 0.8 + Math.random() * 0.4; // Scale variation
+          const rotationY = Math.random() * Math.PI * 2;
 
-        // Create physics body for trees on track/bank
-        if (isOnTrack || isOnBank) {
-          const treeBody = this.world.createRigidBody(
-            this.rapier.RigidBodyDesc.fixed().setTranslation(
-              randomX,
-              treeY + 3,
-              startState.endZ + pathPoint.z
+          dummy.position.set(x, treeY, pathPoint.z);
+          dummy.rotation.y = rotationY;
+          dummy.scale.set(treeScale, treeScale, treeScale);
+          dummy.updateMatrix();
+
+          this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
+
+          // Color variation
+          dummyColor.setHex(0x4b8b3b);
+          const hueShift = (Math.random() - 0.5) * 0.1; // Small hue variation
+          const saturationShift = (Math.random() - 0.5) * 0.1;
+          const lightnessShift = (Math.random() - 0.5) * 0.1;
+          dummyColor.offsetHSL(hueShift, saturationShift, lightnessShift);
+          this.treeBuckets[placeTree].setColorAt(indices[placeTree], dummyColor);
+
+          // Create physics body for trees on track/bank
+          if (isOnTrack || isOnBank) {
+            const treeHeight = placeTree === 'small' ? 2.5 : placeTree === 'medium' ? 3.5 : 4.5;
+            const treeBody = this.world.createRigidBody(
+              this.rapier.RigidBodyDesc.fixed().setTranslation(
+                x,
+                treeY + treeHeight * treeScale,
+                startState.endZ + pathPoint.z
+              )
+            );
+            const treeCollider = this.rapier.ColliderDesc.cylinder(
+              treeHeight * treeScale,
+              0.4 * treeScale
             )
-          );
-          const treeCollider = this.rapier.ColliderDesc.cylinder(3, 0.4)
-            .setFriction(0.8)
-            .setRestitution(0);
-          this.world.createCollider(treeCollider, treeBody);
-          this.obstacleBodies.push(treeBody);
+              .setFriction(0.8)
+              .setRestitution(0);
+            this.world.createCollider(treeCollider, treeBody);
+            this.obstacleBodies.push(treeBody);
+          }
+
+          indices[placeTree]++;
         }
 
-        treeInstanceIndex++;
-      }
+        // Place dead tree
+        if (placeDeadTree && deadTreeIndex < maxDeadTrees) {
+          const logY = y;
+          const logScale = 0.9 + Math.random() * 0.3;
+          // Rotate 90 degrees on X or Z axis to lay flat
+          const rotationAxis = Math.random() > 0.5 ? 'x' : 'z';
+          const rotationAngle = Math.random() * Math.PI * 2;
 
-      // Place rock
-      if (placeRock && rockInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
-        const rockY = y;
-        const rockScale = 0.8 + Math.random() * 0.6;
-        const euler = new THREE.Euler(
-          Math.random() * Math.PI * 0.3,
-          Math.random() * Math.PI * 2,
-          Math.random() * Math.PI * 0.3
-        );
-        matrix.makeRotationFromEuler(euler);
-        matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
-        matrix.setPosition(randomX, rockY, pathPoint.z);
-        this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
+          dummy.position.set(x, logY, pathPoint.z);
+          if (rotationAxis === 'x') {
+            dummy.rotation.x = Math.PI / 2;
+            dummy.rotation.z = rotationAngle;
+          } else {
+            dummy.rotation.z = Math.PI / 2;
+            dummy.rotation.x = rotationAngle;
+          }
+          dummy.scale.set(logScale, logScale, logScale);
+          dummy.updateMatrix();
 
-        // Create physics body for rocks on track/bank
-        if (isOnTrack || isOnBank) {
-          const rockBody = this.world.createRigidBody(
-            this.rapier.RigidBodyDesc.fixed().setTranslation(
-              randomX,
-              rockY + 1.5 * rockScale,
-              startState.endZ + pathPoint.z
-            )
-          );
-          const rockCollider = this.rapier.ColliderDesc.ball(1.5 * rockScale)
-            .setFriction(0.9)
-            .setRestitution(0);
-          this.world.createCollider(rockCollider, rockBody);
-          this.obstacleBodies.push(rockBody);
+          this.deadTreeMesh.setMatrixAt(deadTreeIndex, dummy.matrix);
+          deadTreeIndex++;
         }
 
-        rockInstanceIndex++;
+        // Place rock
+        if (placeRock && rockInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
+          const rockY = y;
+          const rockScale = 0.8 + Math.random() * 0.6;
+          const euler = new THREE.Euler(
+            Math.random() * Math.PI * 0.3,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 0.3
+          );
+          matrix.makeRotationFromEuler(euler);
+          matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
+          matrix.setPosition(x, rockY, pathPoint.z);
+          this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
+
+          // Create physics body for rocks on track/bank
+          if (isOnTrack || isOnBank) {
+            const rockBody = this.world.createRigidBody(
+              this.rapier.RigidBodyDesc.fixed().setTranslation(
+                x,
+                rockY + 1.5 * rockScale,
+                startState.endZ + pathPoint.z
+              )
+            );
+            const rockCollider = this.rapier.ColliderDesc.ball(1.5 * rockScale)
+              .setFriction(0.9)
+              .setRestitution(0);
+            this.world.createCollider(rockCollider, rockBody);
+            this.obstacleBodies.push(rockBody);
+          }
+
+          rockInstanceIndex++;
+        }
       }
     }
 
-    // Update instance counts
-    this.treeMesh.count = treeInstanceIndex;
+    // Update instance counts and mark for update
+    Object.entries(this.treeBuckets).forEach(([archetype, mesh]) => {
+      mesh.count = indices[archetype as TreeArchetype];
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) {
+        mesh.instanceColor.needsUpdate = true;
+      }
+    });
+    this.deadTreeMesh.count = deadTreeIndex;
+    this.deadTreeMesh.instanceMatrix.needsUpdate = true;
     this.rockMesh.count = rockInstanceIndex;
-    this.treeMesh.instanceMatrix.needsUpdate = true;
     this.rockMesh.instanceMatrix.needsUpdate = true;
   }
 
@@ -562,9 +717,11 @@ export class TerrainChunk {
     // Dispose geometries and materials
     this.snowGeometry.dispose();
     this.snowMaterial.dispose();
-    this.treeGeometry.dispose();
+    Object.values(this.treeGeometries).forEach((geo) => geo.dispose());
+    this.deadTreeGeometry.dispose();
     this.rockGeometry.dispose();
     this.treeMaterial.dispose();
+    this.deadTreeMaterial.dispose();
     this.rockMaterial.dispose();
   }
 

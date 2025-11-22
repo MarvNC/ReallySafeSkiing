@@ -4,8 +4,11 @@
  *
  * Individual asset files:
  * - assets/TreeGeometry.ts
+ * - assets/DeadTreeGeometry.ts
  * - assets/RockGeometry.ts
  */
 
-export { getTreeGeometry } from './assets/TreeGeometry';
+export { getTreeGeometry, createTreeGeometry, TREE_ARCHETYPES } from './assets/TreeGeometry';
+export type { TreeArchetype } from './assets/TreeGeometry';
+export { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
 export { getRockGeometry } from './assets/RockGeometry';
