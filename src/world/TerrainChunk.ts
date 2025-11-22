@@ -4,6 +4,7 @@ import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 import { PhysicsSystem } from '../core/PhysicsSystem';
 import { BiomeType } from './WorldState';
 import type { ChunkState, PathPoint } from './WorldState';
+import { getTreeGeometry, getRockGeometry } from './AssetFactory';
 
 export const CHUNK_WIDTH = 100;
 export const CHUNK_LENGTH = 100;
@@ -23,6 +24,8 @@ const TERRAIN_CONFIG = {
   MOGUL_HEIGHT: 2.0,
   BIOME_TRANSITION_DISTANCE: 2000,
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
+  CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
+  OBSTACLE_COUNT: 200, // Number of obstacles per chunk
 };
 
 export class TerrainChunk {
@@ -33,6 +36,14 @@ export class TerrainChunk {
 
   // Geometry
   private snowGeometry: THREE.PlaneGeometry;
+
+  // Obstacles
+  private treeMesh: THREE.InstancedMesh;
+  private rockMesh: THREE.InstancedMesh;
+  private treeGeometry: THREE.BufferGeometry;
+  private rockGeometry: THREE.BufferGeometry;
+  private treeMaterial: THREE.MeshStandardMaterial;
+  private rockMaterial: THREE.MeshStandardMaterial;
 
   readonly width = CHUNK_WIDTH;
   readonly length = CHUNK_LENGTH;
@@ -50,6 +61,9 @@ export class TerrainChunk {
   private readonly ncols: number;
   private currentZ: number;
 
+  // Obstacle physics bodies
+  private obstacleBodies: RAPIER.RigidBody[] = [];
+
   constructor(physics: PhysicsSystem, baseZ = 0, noise2D: NoiseFunction2D = createNoise2D()) {
     this.rapier = physics.getRapier();
     this.world = physics.getWorld();
@@ -65,6 +79,7 @@ export class TerrainChunk {
       roughness: 0.1,
       flatShading: true,
       side: THREE.DoubleSide,
+      vertexColors: true,
     });
 
     // Initialize Geometries
@@ -79,6 +94,42 @@ export class TerrainChunk {
     this.snowMesh.receiveShadow = true;
 
     this.group.add(this.snowMesh);
+
+    // Initialize obstacle geometries and materials
+    this.treeGeometry = getTreeGeometry();
+    this.rockGeometry = getRockGeometry();
+
+    this.treeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2d5016,
+      roughness: 0.8,
+      flatShading: true,
+    });
+
+    this.rockMaterial = new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      roughness: 0.9,
+      flatShading: true,
+    });
+
+    // Initialize InstancedMeshes
+    this.treeMesh = new THREE.InstancedMesh(
+      this.treeGeometry,
+      this.treeMaterial,
+      TERRAIN_CONFIG.OBSTACLE_COUNT
+    );
+    this.treeMesh.castShadow = true;
+    this.treeMesh.receiveShadow = true;
+
+    this.rockMesh = new THREE.InstancedMesh(
+      this.rockGeometry,
+      this.rockMaterial,
+      TERRAIN_CONFIG.OBSTACLE_COUNT
+    );
+    this.rockMesh.castShadow = true;
+    this.rockMesh.receiveShadow = true;
+
+    this.group.add(this.treeMesh);
+    this.group.add(this.rockMesh);
 
     // Physics setup (Heightfield resolution matches CHUNK_SEGMENTS)
     this.nrows = CHUNK_SEGMENTS + 1;
@@ -128,11 +179,31 @@ export class TerrainChunk {
     return config.widthMin + (widthNoise * 0.5 + 0.5) * (config.widthMax - config.widthMin);
   }
 
-  private getSnowHeight(localX: number, worldZ: number, banking: number): number {
+  private getSnowHeight(
+    localX: number,
+    worldZ: number,
+    banking: number,
+    trackWidth?: number
+  ): number {
     const baseSlope = worldZ * Math.tan(TERRAIN_CONFIG.SLOPE_ANGLE);
     const bankingOffset = localX * banking;
     const moguls = this.noise2D(localX * 0.2, worldZ * 0.2) * 1.5;
-    return baseSlope + bankingOffset + moguls;
+    let height = baseSlope + bankingOffset + moguls;
+
+    // Add canyon walls if trackWidth is provided
+    if (trackWidth !== undefined) {
+      const canyonFloorWidth = trackWidth + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+      const absX = Math.abs(localX);
+
+      if (absX > canyonFloorWidth / 2) {
+        // Steep exponential wall increase
+        const wallDistance = absX - canyonFloorWidth / 2;
+        const wallHeight = Math.pow(wallDistance / 5, TERRAIN_CONFIG.WALL_STEEPNESS) * 10;
+        height += wallHeight;
+      }
+    }
+
+    return height;
   }
 
   private generatePathSpine(startState: ChunkState): { points: PathPoint[]; endState: ChunkState } {
@@ -209,6 +280,16 @@ export class TerrainChunk {
     const snowRows = this.snowGeometry.parameters.heightSegments + 1;
     const snowCols = this.snowGeometry.parameters.widthSegments + 1;
 
+    // Initialize color attribute if it doesn't exist
+    let snowColors: THREE.BufferAttribute;
+    if (!this.snowGeometry.attributes.color) {
+      const colors = new Float32Array(snowPos.count * 3);
+      snowColors = new THREE.BufferAttribute(colors, 3);
+      this.snowGeometry.setAttribute('color', snowColors);
+    } else {
+      snowColors = this.snowGeometry.attributes.color as THREE.BufferAttribute;
+    }
+
     for (let row = 0; row < snowRows; row++) {
       const zFraction = row / (snowRows - 1);
       const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
@@ -224,17 +305,37 @@ export class TerrainChunk {
         // Calculate width at this point
         const trackWidth = pathPoint.width;
 
-        // Map U to [-trackWidth/2, +trackWidth/2]
-        const localX = (u - 0.5) * trackWidth;
+        // Map U to [-CHUNK_WIDTH/2, +CHUNK_WIDTH/2] for full terrain width
+        const localX = (u - 0.5) * CHUNK_WIDTH;
         const worldX = localX + pathPoint.x; // Add spine offset
 
-        const y = this.getSnowHeight(localX, worldZ, pathPoint.banking);
+        const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
         const vertexZ = pathPoint.z;
 
         snowPos.setXYZ(i, worldX, y, vertexZ);
+
+        // Calculate vertex color based on position and slope
+        const absLocalX = Math.abs(localX);
+        const canyonFloorWidth = trackWidth + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+        const halfFloor = canyonFloorWidth / 2;
+
+        let color: THREE.Color;
+        if (absLocalX <= halfFloor) {
+          // Center/Snow area - white
+          color = new THREE.Color(0xffffff);
+        } else {
+          // Wall/Rock area - grey, with noise for blending
+          const wallFactor = Math.min(1, (absLocalX - halfFloor) / 20);
+          const noise = this.noise2D(localX * 0.1, worldZ * 0.1) * 0.2;
+          const greyFactor = Math.min(1, wallFactor + noise);
+          color = new THREE.Color(0xffffff).lerp(new THREE.Color(0x444444), greyFactor);
+        }
+
+        snowColors.setXYZ(i, color.r, color.g, color.b);
       }
     }
     snowPos.needsUpdate = true;
+    snowColors.needsUpdate = true;
     this.snowGeometry.computeVertexNormals();
 
     // --- 2. Update Physics Collider (Heightfield) ---
@@ -251,16 +352,9 @@ export class TerrainChunk {
         const xFraction = col / (this.ncols - 1);
         const localGridX = (xFraction - 0.5) * CHUNK_WIDTH;
         const effectiveLocalX = localGridX - pathPoint.x;
-        const halfWidth = pathPoint.width / 2;
 
-        let y: number;
-
-        if (Math.abs(effectiveLocalX) <= halfWidth) {
-          y = this.getSnowHeight(effectiveLocalX, worldZ, pathPoint.banking);
-        } else {
-          const seamX = effectiveLocalX > 0 ? halfWidth : -halfWidth;
-          y = this.getSnowHeight(seamX, worldZ, pathPoint.banking);
-        }
+        // Use full terrain width including canyon walls
+        const y = this.getSnowHeight(effectiveLocalX, worldZ, pathPoint.banking, pathPoint.width);
 
         heights[heightIndex++] = y;
       }
@@ -268,7 +362,145 @@ export class TerrainChunk {
 
     this.rebuildCollider(heights);
 
+    // --- 3. Scatter Obstacles ---
+    this.scatterObstacles(points, startState);
+
     return endState;
+  }
+
+  private scatterObstacles(points: PathPoint[], startState: ChunkState): void {
+    // Clean up existing obstacle bodies
+    this.obstacleBodies.forEach((body) => {
+      this.world.removeRigidBody(body);
+    });
+    this.obstacleBodies = [];
+
+    const matrix = new THREE.Matrix4();
+    let treeInstanceIndex = 0;
+    let rockInstanceIndex = 0;
+
+    // Reset instance counts
+    this.treeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+    for (let i = 0; i < TERRAIN_CONFIG.OBSTACLE_COUNT; i++) {
+      // Random position within chunk bounds
+      const randomZ = -Math.random() * CHUNK_LENGTH;
+      const randomX = (Math.random() - 0.5) * CHUNK_WIDTH;
+
+      // Find closest path point
+      const zFraction = -randomZ / CHUNK_LENGTH;
+      const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
+      const pathPoint = points[Math.min(pathIndex, points.length - 1)];
+      const worldZ = startState.endZ + pathPoint.z;
+
+      // Calculate local X relative to path spine
+      const localX = randomX - pathPoint.x;
+      const absLocalX = Math.abs(localX);
+      const trackWidth = pathPoint.width;
+      const halfTrack = trackWidth / 2;
+      const canyonFloorWidth = trackWidth + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+      const halfFloor = canyonFloorWidth / 2;
+
+      // Determine terrain type
+      const isOnTrack = absLocalX <= halfTrack;
+      const isOnBank = absLocalX > halfTrack && absLocalX <= halfFloor;
+      const isOnWall = absLocalX > halfFloor;
+
+      // Get height at this position
+      const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+
+      // Placement logic
+      let placeTree = false;
+      let placeRock = false;
+
+      if (isOnTrack) {
+        // Track: Low chance of rock, no trees
+        if (Math.random() < 0.05) {
+          placeRock = true;
+        }
+      } else if (isOnBank) {
+        // Bank: High chance of tree, medium chance of rock
+        if (Math.random() < 0.3) {
+          placeTree = true;
+        } else if (Math.random() < 0.2) {
+          placeRock = true;
+        }
+      } else if (isOnWall) {
+        // Wall: Medium chance of tree
+        if (Math.random() < 0.15) {
+          placeTree = true;
+        }
+      }
+
+      // Place tree
+      if (placeTree && treeInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
+        const treeY = y;
+        const treeScale = 1 + Math.random() * 0.5;
+        const rotationY = Math.random() * Math.PI * 2;
+        matrix.makeRotationY(rotationY);
+        matrix.scale(new THREE.Vector3(treeScale, treeScale, treeScale));
+        matrix.setPosition(randomX, treeY, pathPoint.z);
+        this.treeMesh.setMatrixAt(treeInstanceIndex, matrix);
+
+        // Create physics body for trees on track/bank
+        if (isOnTrack || isOnBank) {
+          const treeBody = this.world.createRigidBody(
+            this.rapier.RigidBodyDesc.fixed().setTranslation(
+              randomX,
+              treeY + 3,
+              startState.endZ + pathPoint.z
+            )
+          );
+          const treeCollider = this.rapier.ColliderDesc.cylinder(3, 0.4)
+            .setFriction(0.8)
+            .setRestitution(0);
+          this.world.createCollider(treeCollider, treeBody);
+          this.obstacleBodies.push(treeBody);
+        }
+
+        treeInstanceIndex++;
+      }
+
+      // Place rock
+      if (placeRock && rockInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
+        const rockY = y;
+        const rockScale = 0.8 + Math.random() * 0.6;
+        const euler = new THREE.Euler(
+          Math.random() * Math.PI * 0.3,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 0.3
+        );
+        matrix.makeRotationFromEuler(euler);
+        matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
+        matrix.setPosition(randomX, rockY, pathPoint.z);
+        this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
+
+        // Create physics body for rocks on track/bank
+        if (isOnTrack || isOnBank) {
+          const rockBody = this.world.createRigidBody(
+            this.rapier.RigidBodyDesc.fixed().setTranslation(
+              randomX,
+              rockY + 1.5 * rockScale,
+              startState.endZ + pathPoint.z
+            )
+          );
+          const rockCollider = this.rapier.ColliderDesc.ball(1.5 * rockScale)
+            .setFriction(0.9)
+            .setRestitution(0);
+          this.world.createCollider(rockCollider, rockBody);
+          this.obstacleBodies.push(rockBody);
+        }
+
+        rockInstanceIndex++;
+      }
+    }
+
+    // Update instance counts
+    this.treeMesh.count = treeInstanceIndex;
+    this.rockMesh.count = rockInstanceIndex;
+    this.treeMesh.instanceMatrix.needsUpdate = true;
+    this.rockMesh.instanceMatrix.needsUpdate = true;
   }
 
   setWireframe(enabled: boolean): void {
@@ -282,8 +514,20 @@ export class TerrainChunk {
       this.collider = undefined;
     }
     this.world.removeRigidBody(this.body);
+
+    // Clean up obstacle bodies
+    this.obstacleBodies.forEach((body) => {
+      this.world.removeRigidBody(body);
+    });
+    this.obstacleBodies = [];
+
+    // Dispose geometries and materials
     this.snowGeometry.dispose();
     this.snowMaterial.dispose();
+    this.treeGeometry.dispose();
+    this.rockGeometry.dispose();
+    this.treeMaterial.dispose();
+    this.rockMaterial.dispose();
   }
 
   private rebuildCollider(heights: Float32Array): void {
