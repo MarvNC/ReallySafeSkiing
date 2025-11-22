@@ -64,7 +64,8 @@ export class GameApp {
     this.terrainManager = new TerrainManager(this.scene, this.physics);
 
     // 2. Get Start Position from generated path
-    const startPoint = this.terrainManager.getStartPoint();
+    // Spawn player a bit farther forward along the path (50 points ahead)
+    const startPoint = this.terrainManager.getPointAtOffset(50);
     // Calculate actual terrain height at start position (accounts for moguls, banking, etc.)
     const terrainHeight = this.terrainManager.getTerrainHeight(startPoint.x, startPoint.z);
     // Spawn player slightly above terrain (player radius + small buffer)

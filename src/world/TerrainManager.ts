@@ -71,6 +71,19 @@ export class TerrainManager {
   }
 
   /**
+   * Get a point at a specific offset along the path.
+   * @param offset Number of points to advance along the path (default: 0 for start point)
+   */
+  getPointAtOffset(offset: number = 0): THREE.Vector3 {
+    if (this.allPoints.length === 0) {
+      return new THREE.Vector3(0, MOUNTAIN_CONFIG.START_ALTITUDE, 0);
+    }
+    const index = Math.min(Math.max(0, offset), this.allPoints.length - 1);
+    const point = this.allPoints[index];
+    return new THREE.Vector3(point.x, point.y, point.z);
+  }
+
+  /**
    * Get the terrain height at a specific world position.
    * This accounts for moguls, banking, and canyon walls.
    */
