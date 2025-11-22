@@ -16,7 +16,7 @@ export const PLAYER_CONFIG = {
     near: 0.1,
     far: 5000,
     eyeHeight: 1.7,
-    tiltRadians: -0.15,
+    tiltRadians: -0.5,
   },
   hands: {
     leftOffset: new THREE.Vector3(-0.3, -0.3, -0.5),
