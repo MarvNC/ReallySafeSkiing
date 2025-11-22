@@ -116,10 +116,10 @@ export class TerrainChunk {
       ),
     };
 
-    // Disable shadows for all tree buckets (colors come from vertex colors)
+    // Enable shadows for all tree buckets
     Object.values(this.treeBuckets).forEach((mesh) => {
-      mesh.castShadow = false;
-      mesh.receiveShadow = false;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
       this.group.add(mesh);
     });
 

@@ -88,3 +88,38 @@ export const TERRAIN_CONFIG = {
   CLIFF_NOISE_SCALE: 0.5, // Higher frequency noise for rocks
   OBSTACLE_COUNT: 200, // Number of obstacles per chunk
 } as const;
+
+export const LIGHTING_CONFIG = {
+  keyLight: {
+    color: '#ffffff',
+    intensity: 1.2,
+    position: new THREE.Vector3(60, 200, 120),
+    castShadow: true,
+    shadow: {
+      mapSize: { width: 2048, height: 2048 },
+      camera: {
+        near: 10,
+        far: 800,
+        left: -250,
+        right: 250,
+        top: 250,
+        bottom: -250,
+      },
+      bias: -0.0005,
+    },
+  },
+  fillLight: {
+    color: '#a7f0ff',
+    intensity: 0.6,
+    position: new THREE.Vector3(-120, 150, -80),
+  },
+  hemisphereLight: {
+    skyColor: '#b5f5ff',
+    groundColor: '#ffe7d3',
+    intensity: 0.7,
+  },
+  ambientLight: {
+    color: '#ffffff',
+    intensity: 0.5,
+  },
+} as const;

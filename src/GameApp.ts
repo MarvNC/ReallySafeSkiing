@@ -5,7 +5,7 @@ import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
 import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
-import { PHYSICS_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
+import { PHYSICS_CONFIG, PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 
 export class GameApp {
@@ -160,23 +160,39 @@ export class GameApp {
   }
 
   private setupLights(): void {
-    const keyLight = new THREE.DirectionalLight('#ffffff', 1.2);
-    keyLight.position.set(60, 200, 120);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(2048, 2048);
-    keyLight.shadow.camera.near = 10;
-    keyLight.shadow.camera.far = 800;
-    keyLight.shadow.camera.left = -250;
-    keyLight.shadow.camera.right = 250;
-    keyLight.shadow.camera.top = 250;
-    keyLight.shadow.camera.bottom = -250;
-    keyLight.shadow.bias = -0.0005;
+    const keyLight = new THREE.DirectionalLight(
+      LIGHTING_CONFIG.keyLight.color,
+      LIGHTING_CONFIG.keyLight.intensity
+    );
+    keyLight.position.copy(LIGHTING_CONFIG.keyLight.position);
+    keyLight.castShadow = LIGHTING_CONFIG.keyLight.castShadow;
+    keyLight.shadow.mapSize.set(
+      LIGHTING_CONFIG.keyLight.shadow.mapSize.width,
+      LIGHTING_CONFIG.keyLight.shadow.mapSize.height
+    );
+    keyLight.shadow.camera.near = LIGHTING_CONFIG.keyLight.shadow.camera.near;
+    keyLight.shadow.camera.far = LIGHTING_CONFIG.keyLight.shadow.camera.far;
+    keyLight.shadow.camera.left = LIGHTING_CONFIG.keyLight.shadow.camera.left;
+    keyLight.shadow.camera.right = LIGHTING_CONFIG.keyLight.shadow.camera.right;
+    keyLight.shadow.camera.top = LIGHTING_CONFIG.keyLight.shadow.camera.top;
+    keyLight.shadow.camera.bottom = LIGHTING_CONFIG.keyLight.shadow.camera.bottom;
+    keyLight.shadow.bias = LIGHTING_CONFIG.keyLight.shadow.bias;
 
-    const fillLight = new THREE.DirectionalLight('#a7f0ff', 0.6);
-    fillLight.position.set(-120, 150, -80);
+    const fillLight = new THREE.DirectionalLight(
+      LIGHTING_CONFIG.fillLight.color,
+      LIGHTING_CONFIG.fillLight.intensity
+    );
+    fillLight.position.copy(LIGHTING_CONFIG.fillLight.position);
 
-    const bounceLight = new THREE.HemisphereLight('#b5f5ff', '#ffe7d3', 0.45);
-    const ambient = new THREE.AmbientLight('#ffffff', 0.15);
+    const bounceLight = new THREE.HemisphereLight(
+      LIGHTING_CONFIG.hemisphereLight.skyColor,
+      LIGHTING_CONFIG.hemisphereLight.groundColor,
+      LIGHTING_CONFIG.hemisphereLight.intensity
+    );
+    const ambient = new THREE.AmbientLight(
+      LIGHTING_CONFIG.ambientLight.color,
+      LIGHTING_CONFIG.ambientLight.intensity
+    );
 
     this.scene.add(keyLight, fillLight, bounceLight, ambient);
   }
