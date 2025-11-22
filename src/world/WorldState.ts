@@ -19,6 +19,7 @@ export interface ChunkState {
 
 export interface PathPoint {
   x: number;
+  y: number;
   z: number;
   angle: number;
   width: number;

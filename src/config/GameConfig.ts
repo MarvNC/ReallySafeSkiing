@@ -51,7 +51,7 @@ export const MOUNTAIN_CONFIG = {
 
 export const TERRAIN_DIMENSIONS = {
   CHUNK_WIDTH: 150,
-  CHUNK_LENGTH: 100,
+  CHUNK_LENGTH: 150,
   CHUNK_SEGMENTS: 60,
 } as const;
 

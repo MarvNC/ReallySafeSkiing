@@ -1,52 +1,54 @@
 import * as THREE from 'three';
 import { PhysicsSystem } from '../core/PhysicsSystem';
-import { CHUNK_LENGTH, TerrainChunk } from './TerrainChunk';
-import { BiomeType } from './WorldState';
-import type { ChunkState } from './WorldState';
+import { TerrainChunk } from './TerrainChunk';
+import type { PathPoint } from './WorldState';
 import { TerrainGenerator } from './TerrainGenerator';
+import { TERRAIN_DIMENSIONS, MOUNTAIN_CONFIG } from '../config/GameConfig';
 
 export class TerrainManager {
   private readonly chunks: TerrainChunk[] = [];
-  private readonly chunkLength = CHUNK_LENGTH;
   private readonly generator: TerrainGenerator;
   private wireframe = false;
-  private lastChunkState: ChunkState;
+  private readonly allPoints: PathPoint[] = [];
+  private finishLine?: THREE.Mesh;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
     this.generator = new TerrainGenerator();
 
-    // Initialize the starting state
-    this.lastChunkState = {
-      endX: 0,
-      endAngle: 0,
-      endZ: 0,
-      biome: BiomeType.Glade,
-      distanceInBiome: 0,
-    };
+    // Generate the entire mountain path once
+    this.allPoints = this.generator.generatePathSegment(0, MOUNTAIN_CONFIG.TOTAL_LENGTH);
 
-    for (let i = 0; i < 3; i++) {
-      const z = -i * this.chunkLength;
-      const chunk = new TerrainChunk(physics, z, this.generator);
-      this.lastChunkState = chunk.regenerate(z, this.lastChunkState);
+    // Create chunks by slicing the allPoints array
+    const { CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
+    for (let i = 0; i < this.allPoints.length; i += CHUNK_SEGMENTS) {
+      const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
+      if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
+
+      const chunk = new TerrainChunk(physics, chunkPoints);
       this.chunks.push(chunk);
       scene.add(chunk.group);
     }
+
+    // Create finish line at the last point
+    if (this.allPoints.length > 0) {
+      const lastPoint = this.allPoints[this.allPoints.length - 1];
+      this.createFinishLine(scene, lastPoint);
+    }
   }
 
-  update(playerPosition: THREE.Vector3): void {
-    const leadingChunk = this.chunks[0];
-    if (!leadingChunk) return;
+  private createFinishLine(scene: THREE.Scene, point: PathPoint): void {
+    // Create a red arch/box as finish line
+    const finishGeometry = new THREE.BoxGeometry(point.width * 1.5, 20, 2);
+    const finishMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    this.finishLine = new THREE.Mesh(finishGeometry, finishMaterial);
+    this.finishLine.position.set(point.x, point.y + 10, point.z);
+    this.finishLine.castShadow = true;
+    this.finishLine.receiveShadow = true;
+    scene.add(this.finishLine);
+  }
 
-    const recycleThreshold = leadingChunk.startZ - this.chunkLength;
-    if (playerPosition.z < recycleThreshold) {
-      const oldChunk = this.chunks.shift()!;
-      const frontChunk = this.chunks[this.chunks.length - 1];
-      const targetZ = (frontChunk?.startZ ?? 0) - this.chunkLength;
-
-      this.lastChunkState = oldChunk.regenerate(targetZ, this.lastChunkState);
-      oldChunk.setWireframe(this.wireframe);
-      this.chunks.push(oldChunk);
-    }
+  update(): void {
+    // Disabled - no infinite recycling in finite mode
   }
 
   setWireframe(enabled: boolean): void {
@@ -60,7 +62,11 @@ export class TerrainManager {
   }
 
   getStartPoint(): THREE.Vector3 {
-    const y = this.generator.getSnowHeight(0, 0, 0);
-    return new THREE.Vector3(0, y, 0);
+    if (this.allPoints.length > 0) {
+      const firstPoint = this.allPoints[0];
+      return new THREE.Vector3(firstPoint.x, firstPoint.y, firstPoint.z);
+    }
+    // Fallback
+    return new THREE.Vector3(0, MOUNTAIN_CONFIG.START_ALTITUDE, 0);
   }
 }

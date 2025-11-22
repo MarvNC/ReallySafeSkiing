@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from '../core/PhysicsSystem';
-import { BiomeType } from './WorldState';
-import type { ChunkState, PathPoint } from './WorldState';
+import type { PathPoint } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
@@ -42,6 +41,7 @@ export class TerrainChunk {
   private readonly rapier: typeof RAPIER;
   private readonly body: RAPIER.RigidBody;
   private collider?: RAPIER.Collider;
+  private readonly points: PathPoint[];
 
   // Physics heightfield data
   private readonly baseX: Float32Array;
@@ -53,11 +53,12 @@ export class TerrainChunk {
   // Obstacle physics bodies
   private obstacleBodies: RAPIER.RigidBody[] = [];
 
-  constructor(physics: PhysicsSystem, baseZ = 0, generator: TerrainGenerator) {
+  constructor(physics: PhysicsSystem, points: PathPoint[]) {
     this.rapier = physics.getRapier();
     this.world = physics.getWorld();
-    this.generator = generator;
-    this.currentZ = baseZ;
+    this.generator = new TerrainGenerator(); // Keep generator for getSnowHeight
+    this.points = points;
+    this.currentZ = points.length > 0 ? points[0].z : 0;
 
     // Initialize Group
     this.group = new THREE.Group();
@@ -175,18 +176,13 @@ export class TerrainChunk {
     }
     physicsGeo.dispose();
 
+    const baseZ = points.length > 0 ? points[0].z : 0;
     this.body = this.world.createRigidBody(
       this.rapier.RigidBodyDesc.fixed().setTranslation(0, 0, baseZ)
     );
 
-    const initialState: ChunkState = {
-      endX: 0,
-      endAngle: 0,
-      endZ: baseZ,
-      biome: BiomeType.Glade,
-      distanceInBiome: 0,
-    };
-    this.regenerate(baseZ, initialState);
+    // Build the chunk from the provided points
+    this.buildFromPoints();
   }
 
   get startZ(): number {
@@ -195,13 +191,15 @@ export class TerrainChunk {
 
   // Helper Methods
 
-  regenerate(startZ: number, startState: ChunkState): ChunkState {
+  private buildFromPoints(): void {
+    if (this.points.length === 0) return;
+
+    const startZ = this.points[0].z;
     this.currentZ = startZ;
     this.group.position.set(0, 0, startZ);
     this.body.setTranslation({ x: 0, y: 0, z: startZ }, true);
 
-    // Generate the path spine first
-    const { points, endState } = this.generator.generatePathSpine(startState);
+    const points = this.points;
 
     // --- 1. Update Snow Geometry ---
     const snowPos = this.snowGeometry.attributes.position as THREE.BufferAttribute;
@@ -220,9 +218,12 @@ export class TerrainChunk {
 
     for (let row = 0; row < snowRows; row++) {
       const zFraction = row / (snowRows - 1);
-      const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
+      const pathIndex = Math.floor(zFraction * (points.length - 1));
       const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-      const worldZ = startState.endZ + pathPoint.z; // Approximate
+
+      // Calculate local Z relative to chunk start (0 to -CHUNK_LENGTH)
+      const localZ = -zFraction * CHUNK_LENGTH;
+      const worldZ = startZ + localZ; // Absolute Z for height calculations
 
       for (let col = 0; col < snowCols; col++) {
         const i = row * snowCols + col;
@@ -238,7 +239,7 @@ export class TerrainChunk {
         const worldX = localX + pathPoint.x; // Add spine offset
 
         const y = this.generator.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
-        const vertexZ = pathPoint.z;
+        const vertexZ = localZ; // Relative to chunk start
 
         snowPos.setXYZ(i, worldX, y, vertexZ);
 
@@ -310,17 +311,17 @@ export class TerrainChunk {
       // Row N corresponds to Z = 0 (start of chunk)
       const zProgress = row / (this.nrows - 1); // 0 to 1
 
-      // Map to path points (which go from 0 to -CHUNK_LENGTH)
-      // If row=0 (Z=-100), we want path index near end.
-      // If row=N (Z=0), we want path index 0.
-      const pathZ = -CHUNK_LENGTH + zProgress * CHUNK_LENGTH; // -100 to 0
+      // Map to path points - points have absolute Z coordinates
+      // Calculate local Z within this chunk (relative to startZ)
+      const localZ = -CHUNK_LENGTH + zProgress * CHUNK_LENGTH; // -CHUNK_LENGTH to 0
+      const absoluteZ = startZ + localZ;
 
-      // Find corresponding path point
-      const pathFraction = Math.abs(pathZ) / CHUNK_LENGTH; // 1 to 0
-      const pathIndex = Math.floor(pathFraction * CHUNK_SEGMENTS);
+      // Find corresponding path point by interpolating
+      const pathFraction = Math.abs(localZ) / CHUNK_LENGTH; // 0 to 1
+      const pathIndex = Math.floor(pathFraction * (points.length - 1));
       const pathPoint = points[Math.min(Math.max(0, pathIndex), points.length - 1)];
 
-      const worldZ = startState.endZ + pathZ;
+      const worldZ = absoluteZ;
 
       for (let col = 0; col < this.ncols; col++) {
         const xFraction = col / (this.ncols - 1);
@@ -350,12 +351,10 @@ export class TerrainChunk {
     this.rebuildCollider(heights);
 
     // --- 3. Scatter Obstacles ---
-    this.scatterObstacles(points, startState);
-
-    return endState;
+    this.scatterObstacles(points, startZ);
   }
 
-  private scatterObstacles(points: PathPoint[], startState: ChunkState): void {
+  private scatterObstacles(points: PathPoint[], startZ: number): void {
     // Clean up existing obstacle bodies
     this.obstacleBodies.forEach((body) => {
       this.world.removeRigidBody(body);
@@ -398,9 +397,9 @@ export class TerrainChunk {
       for (let z = -CHUNK_LENGTH; z < 0; z += gridSize) {
         // Find closest path point
         const zFraction = -z / CHUNK_LENGTH;
-        const pathIndex = Math.floor(zFraction * CHUNK_SEGMENTS);
+        const pathIndex = Math.floor(zFraction * (points.length - 1));
         const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-        const worldZ = startState.endZ + pathPoint.z;
+        const worldZ = startZ + z; // Absolute Z coordinate
 
         // Calculate local X relative to path spine
         const localX = x - pathPoint.x;
@@ -410,8 +409,11 @@ export class TerrainChunk {
         const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
         const distFromTrackEdge = absLocalX - canyonFloorWidth;
 
-        // Determine terrain type
-        const isOnTrack = absLocalX <= halfTrack;
+        // STRICT SAFETY: Never spawn obstacles on the track
+        const distFromCenter = absLocalX;
+        if (distFromCenter < halfTrack) {
+          continue; // Skip this position - it's on the track
+        }
         const isOnBank = absLocalX > halfTrack && distFromTrackEdge <= 0;
         const isOnCliff = distFromTrackEdge > 0 && distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH;
         const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
@@ -428,12 +430,7 @@ export class TerrainChunk {
         let placeDeadTree = false;
         let placeRock = false;
 
-        if (isOnTrack) {
-          // Track: Low chance of rock, no trees
-          if (Math.random() < 0.05) {
-            placeRock = true;
-          }
-        } else if (isOnBank) {
+        if (isOnBank) {
           // Bank: Medium chance of tree, some rocks
           if (normalizedNoise > 0.3 && normalizedNoise < 0.5 && Math.random() < 0.25) {
             placeTree = 'small';
@@ -492,7 +489,8 @@ export class TerrainChunk {
 
           const rotationY = Math.random() * Math.PI * 2;
 
-          dummy.position.set(x, treeY, pathPoint.z);
+          const absoluteZ = startZ + z;
+          dummy.position.set(x, treeY, z);
           dummy.rotation.set(0, rotationY, 0); // Keep trees upright (no X/Z rotation)
           dummy.scale.set(treeScale, treeScale, treeScale);
           dummy.updateMatrix();
@@ -507,14 +505,14 @@ export class TerrainChunk {
           dummyColor.offsetHSL(hueShift, saturationShift, lightnessShift);
           this.treeBuckets[placeTree].setColorAt(indices[placeTree], dummyColor);
 
-          // Create physics body for trees on track/bank
-          if (isOnTrack || isOnBank) {
+          // Create physics body for trees on bank (never on track due to safety check)
+          if (isOnBank) {
             const treeHeight = placeTree === 'small' ? 2.5 : placeTree === 'medium' ? 3.5 : 4.5;
             const treeBody = this.world.createRigidBody(
               this.rapier.RigidBodyDesc.fixed().setTranslation(
                 x,
                 treeY + treeHeight * treeScale,
-                startState.endZ + pathPoint.z
+                absoluteZ
               )
             );
             const treeCollider = this.rapier.ColliderDesc.cylinder(
@@ -538,7 +536,7 @@ export class TerrainChunk {
           const rotationAxis = Math.random() > 0.5 ? 'x' : 'z';
           const rotationAngle = Math.random() * Math.PI * 2;
 
-          dummy.position.set(x, logY, pathPoint.z);
+          dummy.position.set(x, logY, z);
           if (rotationAxis === 'x') {
             dummy.rotation.x = Math.PI / 2;
             dummy.rotation.z = rotationAngle;
@@ -564,16 +562,17 @@ export class TerrainChunk {
           );
           matrix.makeRotationFromEuler(euler);
           matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
-          matrix.setPosition(x, rockY, pathPoint.z);
+          const absoluteZ = startZ + z;
+          matrix.setPosition(x, rockY, z);
           this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
 
-          // Create physics body for rocks on track/bank
-          if (isOnTrack || isOnBank) {
+          // Create physics body for rocks on bank (never on track due to safety check)
+          if (isOnBank) {
             const rockBody = this.world.createRigidBody(
               this.rapier.RigidBodyDesc.fixed().setTranslation(
                 x,
                 rockY + 1.5 * rockScale,
-                startState.endZ + pathPoint.z
+                absoluteZ
               )
             );
             const rockCollider = this.rapier.ColliderDesc.ball(1.5 * rockScale)
