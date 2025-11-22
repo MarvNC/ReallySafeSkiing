@@ -3,11 +3,13 @@
 ## Keyboard Controls
 
 ### Camera Controls
+
 - **`C`** - Toggle between debug orbit camera and first-person camera
   - Debug orbit camera: Free-roaming camera with mouse controls
   - First-person camera: Camera attached to player
 
 ### Visual Debug Controls
+
 - **`D`** - Toggle debug information overlay
   - Shows/hides the debug UI panel (top-left corner)
   - Displays player position, velocity, direction vectors, rotation, camera info, and FPS
@@ -45,6 +47,7 @@ When debug mode is enabled (press `D`), the overlay displays:
 - **Camera Rot** - Current camera rotation
 
 Visual indicators in the 3D scene:
+
 - **Green Arrow** - Forward direction
 - **Red Arrow** - Right direction
 - **Blue Arrow** - Up direction
@@ -57,4 +60,3 @@ Visual indicators in the 3D scene:
 - Use wireframe mode (`V`) to inspect terrain generation
 - Enable debug info (`D`) to monitor player physics and movement
 - The grid (`G`) helps visualize the world space and terrain alignment
-

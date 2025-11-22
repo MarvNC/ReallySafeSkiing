@@ -88,8 +88,8 @@ export class DebugUI {
         <div class="debug-row">
           <span class="debug-label">Camera Rot:</span>
           <span class="debug-value">(${format(cameraEuler.x)}, ${format(cameraEuler.y)}, ${format(
-      cameraEuler.z
-    )})</span>
+            cameraEuler.z
+          )})</span>
         </div>
       </div>
       <div class="debug-section">
@@ -113,4 +113,3 @@ export class DebugUI {
     this.container.style.display = this.isVisible ? 'block' : 'none';
   }
 }
-

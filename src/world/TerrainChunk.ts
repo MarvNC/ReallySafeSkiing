@@ -116,7 +116,7 @@ export class TerrainChunk {
 
     // Materials
     this.treeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x4b8b3b,
+      color: 0x2d7a2d, // Better forest green color
       roughness: 0.8,
       flatShading: true,
       vertexColors: true, // Enable instance colors
@@ -491,7 +491,6 @@ export class TerrainChunk {
     this.deadTreeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-
     // Grid-based placement with noise sampling
     const gridSize = 5; // Spacing between potential tree positions
     const noiseScale = 0.1; // Frequency of noise sampling
@@ -583,18 +582,26 @@ export class TerrainChunk {
         // Place tree in appropriate bucket
         if (placeTree && indices[placeTree] < maxCapacities[placeTree]) {
           const treeY = y;
-          const treeScale = 0.8 + Math.random() * 0.4; // Scale variation
+
+          // Normal distribution for tree scale (mean ~2.0, std dev ~0.5, clamped to 1.0-3.0)
+          // Using Box-Muller transform for normal distribution
+          const u1 = Math.random();
+          const u2 = Math.random();
+          const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+          const normalValue = 2.0 + z0 * 0.5; // Mean 2.0, std dev 0.5
+          const treeScale = Math.max(1.0, Math.min(3.0, normalValue)); // Clamp to 1.0-3.0 range
+
           const rotationY = Math.random() * Math.PI * 2;
 
           dummy.position.set(x, treeY, pathPoint.z);
-          dummy.rotation.y = rotationY;
+          dummy.rotation.set(0, rotationY, 0); // Keep trees upright (no X/Z rotation)
           dummy.scale.set(treeScale, treeScale, treeScale);
           dummy.updateMatrix();
 
           this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
 
-          // Color variation
-          dummyColor.setHex(0x4b8b3b);
+          // Color variation with better base green
+          dummyColor.setHex(0x2d7a2d);
           const hueShift = (Math.random() - 0.5) * 0.1; // Small hue variation
           const saturationShift = (Math.random() - 0.5) * 0.1;
           const lightnessShift = (Math.random() - 0.5) * 0.1;
@@ -740,7 +747,7 @@ export class TerrainChunk {
         .setFriction(0.05)
         .setRestitution(0)
         .setRotation({ x: 0, y: 1, z: 0, w: 0 })
-        .setTranslation(0, 0, -CHUNK_LENGTH);
+        .setTranslation(0, 0, -CHUNK_LENGTH * 0.5);
 
       this.collider = this.world.createCollider(colliderDesc, this.body);
     } catch (error) {

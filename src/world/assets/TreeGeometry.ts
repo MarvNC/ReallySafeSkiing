@@ -4,7 +4,7 @@ import { mergeGeometries } from '../utils/mergeGeometries';
 /**
  * Creates a low-poly pine tree geometry with variable layer count.
  * Uses CylinderGeometry for both trunk and foliage layers to achieve the low-poly look.
- * 
+ *
  * @param layerCount - Number of foliage layers (2-4 recommended for performance)
  * @returns Merged BufferGeometry ready for InstancedMesh
  */

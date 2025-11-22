@@ -52,11 +52,7 @@ export class DebugHelpers {
     this.playerHelpers.add(this.forwardArrow, this.rightArrow, this.upArrow, this.velocityArrow);
   }
 
-  update(
-    position: THREE.Vector3,
-    rotation: THREE.Quaternion,
-    velocity: THREE.Vector3
-  ): void {
+  update(position: THREE.Vector3, rotation: THREE.Quaternion, velocity: THREE.Vector3): void {
     if (!this.isVisible) return;
 
     // Update position
@@ -104,4 +100,3 @@ export class DebugHelpers {
     this.scene.remove(this.playerHelpers);
   }
 }
-
