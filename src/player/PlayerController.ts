@@ -23,6 +23,8 @@ export class PlayerController {
       roughness: 0.4,
       metalness: 0.05,
       flatShading: true,
+      emissive: '#ff2200',
+      emissiveIntensity: 0.5,
     });
 
     this.mesh = new THREE.Mesh(geometry, material);
