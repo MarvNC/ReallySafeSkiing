@@ -91,7 +91,7 @@ export class TerrainChunk {
     });
 
     // Initialize Geometries (higher width resolution for better cliff quality)
-    this.snowGeometry = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 40, CHUNK_SEGMENTS);
+    this.snowGeometry = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 80, CHUNK_SEGMENTS);
 
     // Initialize Meshes
     this.snowMesh = new THREE.Mesh(this.snowGeometry, this.snowMaterial);
@@ -259,23 +259,31 @@ export class TerrainChunk {
         // Calculate progress up the cliff (0.0 = bottom, 1.0 = top)
         const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
 
-        // Base cliff height (linear ramp)
-        const cliffHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
-
-        // Add jagged noise to cliff face
         if (progress < 1.0) {
-          // Cliff face - heavy, jagged noise
-          const cliffNoise =
-            this.noise2D(
-              localX * TERRAIN_CONFIG.CLIFF_NOISE_SCALE,
-              worldZ * TERRAIN_CONFIG.CLIFF_NOISE_SCALE
-            ) * 8.0;
-          const cliffNoise2 =
-            this.noise2D(
-              localX * TERRAIN_CONFIG.CLIFF_NOISE_SCALE * 2,
-              worldZ * TERRAIN_CONFIG.CLIFF_NOISE_SCALE * 2
-            ) * 4.0;
-          height += cliffHeight + cliffNoise + cliffNoise2;
+          // Cliff face - terraced low-poly style
+          // Calculate wall height in world space (for proper noise mapping)
+          const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+
+          // Create terraced/blocky profile with quantization
+          const terraceSteps = 6; // Number of distinct ledges
+          const terraceStepSize = TERRAIN_CONFIG.CANYON_HEIGHT / terraceSteps;
+          const quantizedProgress = Math.floor(progress * terraceSteps) / terraceSteps;
+          const baseTerraceHeight = quantizedProgress * TERRAIN_CONFIG.CANYON_HEIGHT;
+
+          // Use wall-space coordinates for noise (wallHeight instead of localX)
+          // This prevents vertical stretching by mapping noise to the wall face
+          const wallSpaceX = worldZ * 0.1; // Horizontal along the wall
+          const wallSpaceY = wallHeight * 0.15; // Vertical up the wall
+
+          // Large-scale noise to displace terraces (creates chunky rock formations)
+          const terraceDisplacement = this.noise2D(wallSpaceX, wallSpaceY) * terraceStepSize * 0.6;
+
+          // Fine detail noise for texture (smaller amplitude)
+          const detailNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 2.0;
+
+          // Combine terraced base with displacements
+          const cliffHeight = baseTerraceHeight + terraceDisplacement + detailNoise;
+          height += cliffHeight;
         } else {
           // Plateau - gentle rolling noise
           const plateauNoise = this.noise2D(localX * 0.05, worldZ * 0.05) * 3.0;
@@ -405,13 +413,38 @@ export class TerrainChunk {
           // Track level - white snow
           color = new THREE.Color(0xffffff);
         } else if (heightAboveBase < TERRAIN_CONFIG.CANYON_HEIGHT - 5) {
-          // Cliff face - grey rock with snow dusting
-          const dustNoise = this.noise2D(localX * 0.3, worldZ * 0.3) * 0.5 + 0.5;
-          const rockColor = new THREE.Color(0x555555);
-          const snowColor = new THREE.Color(0xdddddd);
-          // More snow at bottom and top of cliff
-          const snowAmount = Math.min(dustNoise * 0.4, 0.5);
-          color = rockColor.clone().lerp(snowColor, snowAmount);
+          // Cliff face - detect terraced structure for appropriate coloring
+          const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+          const distFromTrackEdge = Math.abs(localX) - canyonFloorWidth;
+          const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
+
+          // Match terrace structure from getSnowHeight
+          const terraceSteps = 6;
+          const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+
+          // Use wall-space coordinates for noise (matching getSnowHeight)
+          const wallSpaceX = worldZ * 0.1;
+          const wallSpaceY = wallHeight * 0.15;
+
+          // Detect if we're on a flat ledge (near terrace step) or vertical face
+          const progressInStep = (progress * terraceSteps) % 1.0;
+          const isOnLedge = progressInStep < 0.15 || progressInStep > 0.85; // Top/bottom 15% of each step
+
+          if (isOnLedge) {
+            // Flat ledge - snow accumulation with some rock showing through
+            const ledgeNoise = this.noise2D(wallSpaceX, wallSpaceY) * 0.5 + 0.5;
+            const rockColor = new THREE.Color(0x666666);
+            const snowColor = new THREE.Color(0xeeeeee);
+            const snowAmount = Math.min(ledgeNoise * 0.6 + 0.3, 0.8); // More snow on ledges
+            color = rockColor.clone().lerp(snowColor, snowAmount);
+          } else {
+            // Vertical face - primarily rock with minimal snow
+            const faceNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 0.5 + 0.5;
+            const rockColor = new THREE.Color(0x555555);
+            const snowColor = new THREE.Color(0xaaaaaa);
+            const snowAmount = Math.min(faceNoise * 0.2, 0.3); // Less snow on vertical faces
+            color = rockColor.clone().lerp(snowColor, snowAmount);
+          }
         } else {
           // Plateau top - white snow
           const plateauNoise = this.noise2D(localX * 0.1, worldZ * 0.1) * 0.3 + 0.7;
