@@ -116,10 +116,9 @@ export class TerrainChunk {
 
     // Materials
     this.treeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2d7a2d, // Better forest green color
+      color: 0xffffff, // White to allow instance colors to show correctly
       roughness: 0.8,
       flatShading: true,
-      vertexColors: true, // Enable instance colors
     });
 
     this.deadTreeMaterial = new THREE.MeshStandardMaterial({
