@@ -116,6 +116,10 @@ export class GameApp {
     this.input.bindKey('d', Action.ToggleDebugUi);
     this.input.bindKey('s', Action.ToggleShadows);
 
+    // Player controls
+    this.input.bindKey('w', Action.Forward);
+    this.input.bindKey('arrowup', Action.Forward);
+
     // Camera toggle
     this.input.on(Action.ToggleCamera, (_action, phase) => {
       if (phase !== 'pressed' || !this.player) return;

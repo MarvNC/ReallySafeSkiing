@@ -8,6 +8,7 @@ export const Action = {
   SteerLeft: 'SteerLeft',
   SteerRight: 'SteerRight',
   Jump: 'Jump',
+  Forward: 'Forward',
 } as const;
 
 export type Action = (typeof Action)[keyof typeof Action];

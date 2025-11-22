@@ -176,6 +176,9 @@ export class PlayerController extends GameEntity {
         }
       }
 
+      // --- POLING MECHANIC ---
+      const isPoling = this.input.isActive(Action.Forward);
+
       // --- FORCES ---
       const linvel = this.body.linvel();
       const vel = new THREE.Vector3(linvel.x, linvel.y, linvel.z);
@@ -189,12 +192,31 @@ export class PlayerController extends GameEntity {
 
       // Calculate Local Velocity (relative to facing)
       const localVelX = vel.dot(right); // Lateral speed
-      const localVelZ = vel.dot(forward); // Forward speed
+      const localVelZ = vel.dot(forward); // Forward speed (forward speed)
+      const forwardSpeed = Math.abs(localVelZ); // Magnitude of forward speed
 
       // Lateral Force (Friction/Edge Grip)
       // Apply force opposite to lateral velocity to stop sliding sideways
       const lateralForceMag = -localVelX * SKI_PHYSICS.lateralFriction;
       const lateralForce = right.clone().multiplyScalar(lateralForceMag);
+
+      // --- POLING PHYSICS ---
+      if (isPoling) {
+        if (forwardSpeed < SKI_PHYSICS.maxPoleSpeed) {
+          // Poling is effective at low speeds: apply forward impulse
+          const poleImpulse = forward.clone().multiplyScalar(SKI_PHYSICS.poleForce * deltaTime);
+          this.body.addForce({ x: poleImpulse.x, y: poleImpulse.y, z: poleImpulse.z }, true);
+          // Keep damping low (tucked position)
+          this.body.setLinearDamping(SKI_PHYSICS.baseDrag);
+        } else {
+          // Poling at high speed: penalty - standing up creates drag
+          // Do NOT apply forward force, just set high drag
+          this.body.setLinearDamping(SKI_PHYSICS.polingDrag);
+        }
+      } else {
+        // Not poling: reset to normal drag
+        this.body.setLinearDamping(SKI_PHYSICS.baseDrag);
+      }
 
       // Forward Force (Friction/Drag)
       let forwardFriction: number = SKI_PHYSICS.forwardFriction;
@@ -226,6 +248,7 @@ export class PlayerController extends GameEntity {
     const steerLeft = this.input.isActive(Action.SteerLeft);
     const steerRight = this.input.isActive(Action.SteerRight);
     const isBraking = this.input.isBraking();
+    const isPoling = this.input.isActive(Action.Forward);
 
     const vel = this.body.linvel();
     const speed = Math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2);
@@ -279,20 +302,50 @@ export class PlayerController extends GameEntity {
       this.mesh.quaternion.multiply(bankQuat);
     }
 
-    // 3. Bobbing Animation (Hands)
-    const bobAmount = Math.min(speed * 0.02, PLAYER_CONFIG.animation.maxBobAmount);
-    const bobFrequency = Math.max(
-      speed * PLAYER_CONFIG.animation.bobSpeedScale,
-      PLAYER_CONFIG.animation.baseBobFrequency
-    );
+    // 3. Hand Animation (Poling or Bobbing)
+    if (isPoling) {
+      // Poling animation: hands move forward and backward (alternating)
+      const poleFrequency = 2.5; // Cycles per second for poling motion
+      const poleReach = 0.4; // How far forward the hands reach
+      const poleVertical = 0.15; // Vertical movement during pole plant
 
-    const leftBob = Math.sin(time * bobFrequency) * bobAmount;
-    const rightBob = Math.sin(time * bobFrequency + Math.PI) * bobAmount;
+      // Alternating motion: left and right hands are out of phase
+      const leftPhase = Math.sin(time * poleFrequency * Math.PI * 2);
+      const rightPhase = Math.sin(time * poleFrequency * Math.PI * 2 + Math.PI); // 180 degrees out of phase
 
-    this.leftHand.position.y = -0.3 + leftBob;
-    this.rightHand.position.y = -0.3 + rightBob;
+      // Left hand: forward when pushing, back when recovering
+      this.leftHand.position.z = PLAYER_CONFIG.hands.leftOffset.z + leftPhase * poleReach;
+      this.leftHand.position.y =
+        PLAYER_CONFIG.hands.leftOffset.y + Math.max(0, leftPhase) * poleVertical;
 
-    this.leftHand.position.z = -0.5 + leftBob * 0.5;
-    this.rightHand.position.z = -0.5 + rightBob * 0.5;
+      // Right hand: forward when pushing, back when recovering
+      this.rightHand.position.z = PLAYER_CONFIG.hands.rightOffset.z + rightPhase * poleReach;
+      this.rightHand.position.y =
+        PLAYER_CONFIG.hands.rightOffset.y + Math.max(0, rightPhase) * poleVertical;
+
+      // Keep X position at default
+      this.leftHand.position.x = PLAYER_CONFIG.hands.leftOffset.x;
+      this.rightHand.position.x = PLAYER_CONFIG.hands.rightOffset.x;
+    } else {
+      // Normal bobbing animation when not poling (tucked position)
+      const bobAmount = Math.min(speed * 0.02, PLAYER_CONFIG.animation.maxBobAmount);
+      const bobFrequency = Math.max(
+        speed * PLAYER_CONFIG.animation.bobSpeedScale,
+        PLAYER_CONFIG.animation.baseBobFrequency
+      );
+
+      const leftBob = Math.sin(time * bobFrequency) * bobAmount;
+      const rightBob = Math.sin(time * bobFrequency + Math.PI) * bobAmount;
+
+      this.leftHand.position.y = PLAYER_CONFIG.hands.leftOffset.y + leftBob;
+      this.rightHand.position.y = PLAYER_CONFIG.hands.rightOffset.y + rightBob;
+
+      this.leftHand.position.z = PLAYER_CONFIG.hands.leftOffset.z + leftBob * 0.5;
+      this.rightHand.position.z = PLAYER_CONFIG.hands.rightOffset.z + rightBob * 0.5;
+
+      // Keep X position at default
+      this.leftHand.position.x = PLAYER_CONFIG.hands.leftOffset.x;
+      this.rightHand.position.x = PLAYER_CONFIG.hands.rightOffset.x;
+    }
   }
 }

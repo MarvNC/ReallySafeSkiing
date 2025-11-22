@@ -2,6 +2,11 @@
 - Sun
 - Proper player character rotation
 - Fix weird sides of rocks things, and make them wider
+- Animations
+  - Player
+  - Ski?
+  - Snow?
+- Starting guaranteed easy slope to build momentum?
 
 --- far future
 

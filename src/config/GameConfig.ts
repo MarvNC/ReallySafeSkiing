@@ -15,6 +15,10 @@ export const SKI_PHYSICS = {
   forwardFriction: 0.05, // "Wax" - how easily they glide forward
   snowplowDrag: 3.0, // Extra drag when A+D are pressed
   gravityScale: 2.0, // Gravity multiplier for punchy feel
+  poleForce: 100.0, // Force applied when pushing
+  maxPoleSpeed: 8.0, // Max speed where poling works effectively
+  baseDrag: 0.1, // Normal air resistance
+  polingDrag: 1.5, // High air resistance when standing up to pole at speed
 } as const;
 
 export const PLAYER_CONFIG = {
