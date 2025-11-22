@@ -6,7 +6,7 @@ import { BiomeType } from './WorldState';
 import type { ChunkState, PathPoint } from './WorldState';
 import { getTreeGeometry, getRockGeometry } from './AssetFactory';
 
-export const CHUNK_WIDTH = 100;
+export const CHUNK_WIDTH = 150;
 export const CHUNK_LENGTH = 100;
 export const CHUNK_SEGMENTS = 60;
 
@@ -25,6 +25,9 @@ const TERRAIN_CONFIG = {
   BIOME_TRANSITION_DISTANCE: 2000,
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
+  CANYON_HEIGHT: 40, // The max height of the cliff
+  WALL_WIDTH: 15, // How wide the slope is horizontally
+  CLIFF_NOISE_SCALE: 0.5, // Higher frequency noise for rocks
   OBSTACLE_COUNT: 200, // Number of obstacles per chunk
 };
 
@@ -82,8 +85,8 @@ export class TerrainChunk {
       vertexColors: true,
     });
 
-    // Initialize Geometries
-    this.snowGeometry = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 30, CHUNK_SEGMENTS);
+    // Initialize Geometries (higher width resolution for better cliff quality)
+    this.snowGeometry = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 40, CHUNK_SEGMENTS);
 
     // Initialize Meshes
     this.snowMesh = new THREE.Mesh(this.snowGeometry, this.snowMaterial);
@@ -192,14 +195,35 @@ export class TerrainChunk {
 
     // Add canyon walls if trackWidth is provided
     if (trackWidth !== undefined) {
-      const canyonFloorWidth = trackWidth + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-      const absX = Math.abs(localX);
+      const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+      const distFromTrackEdge = Math.abs(localX) - canyonFloorWidth;
 
-      if (absX > canyonFloorWidth / 2) {
-        // Steep exponential wall increase
-        const wallDistance = absX - canyonFloorWidth / 2;
-        const wallHeight = Math.pow(wallDistance / 5, TERRAIN_CONFIG.WALL_STEEPNESS) * 10;
-        height += wallHeight;
+      if (distFromTrackEdge > 0) {
+        // Calculate progress up the cliff (0.0 = bottom, 1.0 = top)
+        const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
+
+        // Base cliff height (linear ramp)
+        const cliffHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+
+        // Add jagged noise to cliff face
+        if (progress < 1.0) {
+          // Cliff face - heavy, jagged noise
+          const cliffNoise =
+            this.noise2D(
+              localX * TERRAIN_CONFIG.CLIFF_NOISE_SCALE,
+              worldZ * TERRAIN_CONFIG.CLIFF_NOISE_SCALE
+            ) * 8.0;
+          const cliffNoise2 =
+            this.noise2D(
+              localX * TERRAIN_CONFIG.CLIFF_NOISE_SCALE * 2,
+              worldZ * TERRAIN_CONFIG.CLIFF_NOISE_SCALE * 2
+            ) * 4.0;
+          height += cliffHeight + cliffNoise + cliffNoise2;
+        } else {
+          // Plateau - gentle rolling noise
+          const plateauNoise = this.noise2D(localX * 0.05, worldZ * 0.05) * 3.0;
+          height += TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
+        }
       }
     }
 
@@ -314,21 +338,27 @@ export class TerrainChunk {
 
         snowPos.setXYZ(i, worldX, y, vertexZ);
 
-        // Calculate vertex color based on position and slope
-        const absLocalX = Math.abs(localX);
-        const canyonFloorWidth = trackWidth + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-        const halfFloor = canyonFloorWidth / 2;
+        // Calculate vertex color based on height (track vs cliff vs plateau)
+        const baseHeight =
+          worldZ * Math.tan(TERRAIN_CONFIG.SLOPE_ANGLE) + pathPoint.banking * localX;
+        const heightAboveBase = y - baseHeight;
 
         let color: THREE.Color;
-        if (absLocalX <= halfFloor) {
-          // Center/Snow area - white
+        if (heightAboveBase < 2) {
+          // Track level - white snow
           color = new THREE.Color(0xffffff);
+        } else if (heightAboveBase < TERRAIN_CONFIG.CANYON_HEIGHT - 5) {
+          // Cliff face - grey rock with snow dusting
+          const dustNoise = this.noise2D(localX * 0.3, worldZ * 0.3) * 0.5 + 0.5;
+          const rockColor = new THREE.Color(0x555555);
+          const snowColor = new THREE.Color(0xdddddd);
+          // More snow at bottom and top of cliff
+          const snowAmount = Math.min(dustNoise * 0.4, 0.5);
+          color = rockColor.clone().lerp(snowColor, snowAmount);
         } else {
-          // Wall/Rock area - grey, with noise for blending
-          const wallFactor = Math.min(1, (absLocalX - halfFloor) / 20);
-          const noise = this.noise2D(localX * 0.1, worldZ * 0.1) * 0.2;
-          const greyFactor = Math.min(1, wallFactor + noise);
-          color = new THREE.Color(0xffffff).lerp(new THREE.Color(0x444444), greyFactor);
+          // Plateau top - white snow
+          const plateauNoise = this.noise2D(localX * 0.1, worldZ * 0.1) * 0.3 + 0.7;
+          color = new THREE.Color(0xffffff).multiplyScalar(plateauNoise);
         }
 
         snowColors.setXYZ(i, color.r, color.g, color.b);
@@ -399,13 +429,14 @@ export class TerrainChunk {
       const absLocalX = Math.abs(localX);
       const trackWidth = pathPoint.width;
       const halfTrack = trackWidth / 2;
-      const canyonFloorWidth = trackWidth + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-      const halfFloor = canyonFloorWidth / 2;
+      const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+      const distFromTrackEdge = absLocalX - canyonFloorWidth;
 
-      // Determine terrain type
+      // Determine terrain type based on distance from track edge
       const isOnTrack = absLocalX <= halfTrack;
-      const isOnBank = absLocalX > halfTrack && absLocalX <= halfFloor;
-      const isOnWall = absLocalX > halfFloor;
+      const isOnBank = absLocalX > halfTrack && distFromTrackEdge <= 0;
+      const isOnCliff = distFromTrackEdge > 0 && distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH;
+      const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
 
       // Get height at this position
       const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
@@ -420,15 +451,22 @@ export class TerrainChunk {
           placeRock = true;
         }
       } else if (isOnBank) {
-        // Bank: High chance of tree, medium chance of rock
-        if (Math.random() < 0.3) {
+        // Bank: Medium chance of tree, some rocks
+        if (Math.random() < 0.25) {
           placeTree = true;
-        } else if (Math.random() < 0.2) {
+        } else if (Math.random() < 0.15) {
           placeRock = true;
         }
-      } else if (isOnWall) {
-        // Wall: Medium chance of tree
-        if (Math.random() < 0.15) {
+      } else if (isOnCliff) {
+        // Cliff: Sparse trees and rocks
+        if (Math.random() < 0.1) {
+          placeTree = true;
+        } else if (Math.random() < 0.08) {
+          placeRock = true;
+        }
+      } else if (isOnPlateau) {
+        // Plateau: High density forest
+        if (Math.random() < 0.7) {
           placeTree = true;
         }
       }
