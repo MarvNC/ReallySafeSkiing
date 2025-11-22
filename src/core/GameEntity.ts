@@ -37,8 +37,11 @@ export abstract class GameEntity {
    * Default update implementation keeps visuals fully in sync with physics.
    * Subclasses can override to add behavior but should usually call one of
    * the sync helpers above.
+   *
+   * @param deltaTime - Time elapsed since last frame in seconds.
    */
-  update(): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  update(deltaTime: number): void {
     this.syncPhysicsTransform();
   }
 }
