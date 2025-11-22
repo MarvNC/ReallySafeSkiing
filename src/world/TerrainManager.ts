@@ -29,7 +29,7 @@ export class TerrainManager {
       const chunk = new TerrainChunk(physics, z, this.noise2D);
       this.lastChunkState = chunk.regenerate(z, this.lastChunkState);
       this.chunks.push(chunk);
-      scene.add(chunk.mesh);
+      scene.add(chunk.group);
     }
   }
 
@@ -37,11 +37,11 @@ export class TerrainManager {
     const leadingChunk = this.chunks[0];
     if (!leadingChunk) return;
 
-    const recycleThreshold = leadingChunk.centerZ - this.chunkLength;
+    const recycleThreshold = leadingChunk.startZ - this.chunkLength;
     if (playerPosition.z < recycleThreshold) {
       const oldChunk = this.chunks.shift()!;
       const frontChunk = this.chunks[this.chunks.length - 1];
-      const targetZ = (frontChunk?.centerZ ?? 0) - this.chunkLength;
+      const targetZ = (frontChunk?.startZ ?? 0) - this.chunkLength;
 
       this.lastChunkState = oldChunk.regenerate(targetZ, this.lastChunkState);
       oldChunk.setWireframe(this.wireframe);
