@@ -34,7 +34,9 @@ export class TerrainGenerator {
     trackWidth?: number
   ): number {
     const bankingOffset = localX * banking;
-    const moguls = this.noise2D(localX * 0.2, worldZ * 0.2) * 1.5;
+    const moguls =
+      this.noise2D(localX * TERRAIN_CONFIG.MOGUL_SCALE, worldZ * TERRAIN_CONFIG.MOGUL_SCALE) *
+      TERRAIN_CONFIG.MOGUL_HEIGHT;
     let height = pathY + bankingOffset + moguls;
 
     // Add canyon walls if trackWidth is provided

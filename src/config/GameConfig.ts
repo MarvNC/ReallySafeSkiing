@@ -79,7 +79,7 @@ export const TERRAIN_CONFIG = {
   BANKING_STRENGTH: 0.8,
   WALL_STEEPNESS: 3.0,
   MOGUL_SCALE: 0.2,
-  MOGUL_HEIGHT: 1.0,
+  MOGUL_HEIGHT: 0.5, // Reduced from 1.0 to make ground less bumpy
   BIOME_TRANSITION_DISTANCE: 2000,
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
