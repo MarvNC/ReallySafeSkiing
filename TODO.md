@@ -1,0 +1,4 @@
+- Distant mountains/background
+- Sun
+- Proper player character rotation
+- 
