@@ -79,7 +79,7 @@ export class GameApp {
     keyLight.shadow.camera.right = 250;
     keyLight.shadow.camera.top = 250;
     keyLight.shadow.camera.bottom = -250;
-    keyLight.shadow.bias = -0.0001;
+    keyLight.shadow.bias = -0.0005;
 
     const fillLight = new THREE.DirectionalLight('#a7f0ff', 0.6);
     fillLight.position.set(-120, 150, -80);

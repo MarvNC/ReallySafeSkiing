@@ -67,12 +67,14 @@ export class TerrainChunk {
       color: 0xffffff,
       roughness: 0.1,
       flatShading: true,
+      side: THREE.DoubleSide,
     });
 
     this.canyonMaterial = new THREE.MeshStandardMaterial({
       color: 0x5a5a5a,
       roughness: 0.9,
       flatShading: true,
+      side: THREE.DoubleSide,
     });
 
     // Initialize Geometries
@@ -85,11 +87,15 @@ export class TerrainChunk {
     this.snowMesh = new THREE.Mesh(this.snowGeometry, this.snowMaterial);
     this.canyonMesh = new THREE.Mesh(this.canyonGeometry, this.canyonMaterial);
 
+    // Prevent the renderer from hiding the mesh because it thinks it's off-screen
+    this.snowMesh.frustumCulled = false;
+    this.canyonMesh.frustumCulled = false;
+
     this.snowMesh.receiveShadow = true;
     this.canyonMesh.receiveShadow = true;
 
     this.group.add(this.snowMesh);
-    this.group.add(this.canyonMesh);
+    // this.group.add(this.canyonMesh); // Disabled for debugging
 
     // Physics setup (Heightfield resolution matches CHUNK_SEGMENTS)
     this.nrows = CHUNK_SEGMENTS + 1;
