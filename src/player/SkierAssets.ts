@@ -46,7 +46,7 @@ export function createPole(): THREE.Group {
       flatShading: true,
     })
   );
-  shaft.position.y = 0.6; // Pivot at bottom
+  shaft.position.y = -0.6; // Pivot at top (hand position)
 
   // Basket - the circular disc near the bottom
   const basket = new THREE.Mesh(
@@ -56,7 +56,7 @@ export function createPole(): THREE.Group {
       flatShading: true,
     })
   );
-  basket.position.y = 0.1;
+  basket.position.y = -1.1;
 
   // Handle - grip at the top
   const handle = new THREE.Mesh(
@@ -66,7 +66,7 @@ export function createPole(): THREE.Group {
       flatShading: true,
     })
   );
-  handle.position.y = 1.15;
+  handle.position.y = 0;
 
   group.add(shaft, basket, handle);
   return group;
@@ -124,7 +124,7 @@ export function createHandWithPole(): THREE.Group {
 
   // Angle pole back slightly for realistic skiing pose
   pole.rotation.x = Math.PI / 8;
-  pole.position.y = 0.1;
+  pole.position.y = 0;
 
   handGroup.add(mitten, pole);
   return handGroup;
