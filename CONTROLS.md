@@ -10,7 +10,7 @@
 
 ### Visual Debug Controls
 
-- **`D`** - Toggle debug information overlay
+- **`F2`** - Toggle debug information overlay
   - Shows/hides the debug UI panel (top-left corner)
   - Displays player position, velocity, direction vectors, rotation, camera info, and FPS
   - Also toggles visual debug helpers (direction arrows and world axes)
@@ -37,7 +37,7 @@ When in debug orbit camera mode (press `C` to activate), you can control the cam
 
 ## Debug Information Display
 
-When debug mode is enabled (press `D`), the overlay displays:
+When debug mode is enabled (press `F2`), the overlay displays:
 
 - **FPS** - Current frames per second
 - **Position** - Player's world coordinates (x, y, z)
@@ -62,5 +62,5 @@ Visual indicators in the 3D scene:
 
 - Start with debug orbit camera (`C`) to get an overview of the scene
 - Use wireframe mode (`V`) to inspect terrain generation
-- Enable debug info (`D`) to monitor player physics and movement
+- Enable debug info (`F2`) to monitor player physics and movement
 - The grid (`G`) helps visualize the world space and terrain alignment

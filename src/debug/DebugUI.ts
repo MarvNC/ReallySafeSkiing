@@ -2,13 +2,14 @@ import * as THREE from 'three';
 
 export class DebugUI {
   private container: HTMLElement;
-  private isVisible = true;
+  private isVisible = false;
   private fpsCounter = 0;
   private currentFps = 0;
 
   constructor(parent: HTMLElement) {
     this.container = document.createElement('div');
     this.container.id = 'debug-ui';
+    this.container.style.display = 'none';
     parent.appendChild(this.container);
   }
 
@@ -102,7 +103,7 @@ export class DebugUI {
         <div class="debug-row"><span class="debug-label">V:</span> Toggle Wireframe</div>
         <div class="debug-row"><span class="debug-label">G:</span> Toggle Grid</div>
         <div class="debug-row"><span class="debug-label">S:</span> Toggle Shadows</div>
-        <div class="debug-row"><span class="debug-label">D:</span> Toggle Debug UI</div>
+        <div class="debug-row"><span class="debug-label">F2:</span> Toggle Debug UI</div>
       </div>
     `;
   }

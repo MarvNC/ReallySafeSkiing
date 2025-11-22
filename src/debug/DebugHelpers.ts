@@ -8,11 +8,12 @@ export class DebugHelpers {
   private rightArrow?: THREE.ArrowHelper;
   private upArrow?: THREE.ArrowHelper;
   private velocityArrow?: THREE.ArrowHelper;
-  private isVisible = true;
+  private isVisible = false;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this.playerHelpers = new THREE.Group();
+    this.playerHelpers.visible = false;
     this.scene.add(this.playerHelpers);
 
     // Create direction arrows
@@ -76,6 +77,9 @@ export class DebugHelpers {
   setVisible(visible: boolean): void {
     this.isVisible = visible;
     this.playerHelpers.visible = visible;
+    if (this.axesHelper) {
+      this.axesHelper.visible = visible;
+    }
   }
 
   toggle(): boolean {
@@ -89,6 +93,7 @@ export class DebugHelpers {
       this.scene.remove(this.axesHelper);
     }
     this.axesHelper = new THREE.AxesHelper(size);
+    this.axesHelper.visible = this.isVisible;
     this.scene.add(this.axesHelper);
   }
 

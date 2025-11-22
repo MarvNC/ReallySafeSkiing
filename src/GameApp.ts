@@ -20,7 +20,7 @@ export class GameApp {
   private debugCamera?: THREE.PerspectiveCamera;
   private debugControls?: OrbitControls;
   private activeCamera?: THREE.PerspectiveCamera;
-  private useDebugCamera = true;
+  private useDebugCamera = false;
   private grid?: THREE.GridHelper;
   private debugUI?: DebugUI;
   private debugHelpers?: DebugHelpers;
@@ -113,7 +113,7 @@ export class GameApp {
     this.input.bindKey('c', Action.ToggleCamera);
     this.input.bindKey('v', Action.ToggleWireframe);
     this.input.bindKey('g', Action.ToggleGrid);
-    this.input.bindKey('d', Action.ToggleDebugUi);
+    this.input.bindKey('F2', Action.ToggleDebugUi);
     this.input.bindKey('s', Action.ToggleShadows);
 
     // Player controls
@@ -184,6 +184,7 @@ export class GameApp {
     const axes = new THREE.AxesHelper(10);
     this.grid = new THREE.GridHelper(200, 20, '#ff6b35', '#8c9ea8');
     this.grid.position.set(0, 0.01, 0);
+    this.grid.visible = false;
     this.scene.add(axes, this.grid);
   }
 

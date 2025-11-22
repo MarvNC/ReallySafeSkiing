@@ -15,7 +15,7 @@ export const SKI_PHYSICS = {
   forwardFriction: 0.05, // "Wax" - how easily they glide forward
   snowplowDrag: 3.0, // Extra drag when A+D are pressed
   gravityScale: 2.0, // Gravity multiplier for punchy feel
-  poleForce: 100.0, // Force applied when pushing
+  poleForce: 200.0, // Force applied when pushing
   maxPoleSpeed: 8.0, // Max speed where poling works effectively
   baseDrag: 0.1, // Normal air resistance
   polingDrag: 1.5, // High air resistance when standing up to pole at speed
@@ -79,7 +79,7 @@ export const TERRAIN_CONFIG = {
   BANKING_STRENGTH: 0.8,
   WALL_STEEPNESS: 3.0,
   MOGUL_SCALE: 0.2,
-  MOGUL_HEIGHT: 2.0,
+  MOGUL_HEIGHT: 1.0,
   BIOME_TRANSITION_DISTANCE: 2000,
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
