@@ -4,7 +4,6 @@ export class DebugUI {
   private container: HTMLElement;
   private isVisible = true;
   private fpsCounter = 0;
-  private lastFpsUpdate = 0;
   private currentFps = 0;
 
   constructor(parent: HTMLElement) {
