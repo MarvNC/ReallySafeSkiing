@@ -106,6 +106,7 @@ export class GameApp {
 
     const delta = this.clock.getDelta();
     this.physics.update(delta);
+    this.player.update(delta);
     this.terrainManager.update(this.player.mesh.position);
 
     // Update debug info
