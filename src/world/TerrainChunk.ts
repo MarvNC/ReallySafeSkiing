@@ -116,21 +116,11 @@ export class TerrainChunk {
       ),
     };
 
-    // Enable shadows and initialize instance colors for all tree buckets
+    // Disable shadows for all tree buckets (colors come from vertex colors)
     Object.values(this.treeBuckets).forEach((mesh) => {
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
       this.group.add(mesh);
-
-      // Initialize instance colors
-      const colors = new Float32Array(mesh.count * 3);
-      const baseColor = new THREE.Color(0x4b8b3b);
-      for (let i = 0; i < mesh.count; i++) {
-        colors[i * 3] = baseColor.r;
-        colors[i * 3 + 1] = baseColor.g;
-        colors[i * 3 + 2] = baseColor.b;
-      }
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
     });
 
     // Dead tree mesh
@@ -369,7 +359,6 @@ export class TerrainChunk {
 
     const matrix = new THREE.Matrix4();
     const dummy = new THREE.Object3D(); // Helper for matrix calculations
-    const dummyColor = new THREE.Color();
 
     // Track instance counts for each bucket
     const indices: Record<TreeArchetype, number> = {
@@ -508,14 +497,6 @@ export class TerrainChunk {
           dummy.updateMatrix();
 
           this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
-
-          // Color variation with better base green
-          dummyColor.setHex(0x2d7a2d);
-          const hueShift = (Math.random() - 0.5) * 0.1; // Small hue variation
-          const saturationShift = (Math.random() - 0.5) * 0.1;
-          const lightnessShift = (Math.random() - 0.5) * 0.1;
-          dummyColor.offsetHSL(hueShift, saturationShift, lightnessShift);
-          this.treeBuckets[placeTree].setColorAt(indices[placeTree], dummyColor);
 
           // Create physics body for trees on bank (never on track due to safety check)
           if (isOnBank) {

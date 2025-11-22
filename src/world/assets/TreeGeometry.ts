@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../utils/mergeGeometries';
+import { COLOR_PALETTE } from '../../constants/colors';
 
 /**
  * Creates a low-poly pine tree geometry with variable layer count.
@@ -10,11 +11,13 @@ import { mergeGeometries } from '../utils/mergeGeometries';
  */
 export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
   const geometries: THREE.BufferGeometry[] = [];
+  const geometryInfo: Array<{ geometry: THREE.BufferGeometry; isTrunk: boolean }> = [];
 
   // Trunk: cylinder with low radial segments for low-poly look
   const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 7);
   trunkGeo.translate(0, 0.75, 0); // Move pivot to bottom
   geometries.push(trunkGeo);
+  geometryInfo.push({ geometry: trunkGeo, isTrunk: true });
 
   // Foliage Layers: stacked cylinders (cones) with decreasing size
   const layerHeight = 1.2;
@@ -34,6 +37,7 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
     coneGeo.translate(0, currentY + layerHeight / 2, 0);
 
     geometries.push(coneGeo);
+    geometryInfo.push({ geometry: coneGeo, isTrunk: false });
 
     // Move cursor up for next layer (with slight overlap)
     currentY += layerHeight * 0.8;
@@ -43,6 +47,30 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
   // Merge into one draw call
   const mergedGeometry = mergeGeometries(geometries);
   mergedGeometry.computeVertexNormals(); // Vital for lighting
+
+  // Add vertex colors: brown for trunk, green for foliage
+  const colors: number[] = [];
+
+  for (const info of geometryInfo) {
+    const vertexCount = info.geometry.attributes.position.count;
+    const isTrunk = info.isTrunk;
+
+    if (isTrunk) {
+      // Brown color for trunk from constants
+      const trunkColor = new THREE.Color(COLOR_PALETTE.terrainAndObjects.darkBarkBrown);
+      for (let i = 0; i < vertexCount; i++) {
+        colors.push(trunkColor.r, trunkColor.g, trunkColor.b);
+      }
+    } else {
+      // Green color for foliage from constants
+      const foliageColor = new THREE.Color(COLOR_PALETTE.trees.pineGreen);
+      for (let i = 0; i < vertexCount; i++) {
+        colors.push(foliageColor.r, foliageColor.g, foliageColor.b);
+      }
+    }
+  }
+
+  mergedGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
   // Cleanup
   geometries.forEach((geo) => geo.dispose());

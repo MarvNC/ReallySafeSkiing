@@ -24,6 +24,7 @@ export function getTerrainMaterials(): TerrainMaterials {
     color: 0xffffff, // White to allow instance colors to show correctly
     roughness: 0.8,
     flatShading: true,
+    vertexColors: true, // Enable vertex colors for brown trunks
   });
 
   const deadTree = new THREE.MeshStandardMaterial({
