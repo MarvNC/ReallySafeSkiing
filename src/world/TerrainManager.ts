@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { PhysicsSystem } from '../core/PhysicsSystem';
 import { TerrainChunk } from './TerrainChunk';
 import type { PathPoint } from './WorldState';
 import { TerrainGenerator } from './TerrainGenerator';
@@ -12,7 +11,7 @@ export class TerrainManager {
   private readonly allPoints: PathPoint[] = [];
   private finishLine?: THREE.Mesh;
 
-  constructor(scene: THREE.Scene, physics: PhysicsSystem) {
+  constructor(scene: THREE.Scene) {
     this.generator = new TerrainGenerator();
 
     // Generate the entire mountain path once
@@ -24,7 +23,7 @@ export class TerrainManager {
       const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
       if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
 
-      const chunk = new TerrainChunk(physics, chunkPoints);
+      const chunk = new TerrainChunk(chunkPoints);
       this.chunks.push(chunk);
       scene.add(chunk.group);
     }

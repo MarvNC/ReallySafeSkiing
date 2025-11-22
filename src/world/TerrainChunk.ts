@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
-import { PhysicsSystem } from '../core/PhysicsSystem';
 import type { PathPoint } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
@@ -37,25 +35,10 @@ export class TerrainChunk {
   readonly length = CHUNK_LENGTH;
 
   private readonly generator: TerrainGenerator;
-  private readonly world: RAPIER.World;
-  private readonly rapier: typeof RAPIER;
-  private readonly body: RAPIER.RigidBody;
-  private collider?: RAPIER.Collider;
   private readonly points: PathPoint[];
-
-  // Physics heightfield data
-  private readonly baseX: Float32Array;
-  private readonly baseZ: Float32Array;
-  private readonly nrows: number;
-  private readonly ncols: number;
   private currentZ: number;
 
-  // Obstacle physics bodies
-  private obstacleBodies: RAPIER.RigidBody[] = [];
-
-  constructor(physics: PhysicsSystem, points: PathPoint[]) {
-    this.rapier = physics.getRapier();
-    this.world = physics.getWorld();
+  constructor(points: PathPoint[]) {
     this.generator = new TerrainGenerator(); // Keep generator for getSnowHeight
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
@@ -144,33 +127,6 @@ export class TerrainChunk {
 
     this.group.add(this.rockMesh);
 
-    // Physics setup (Heightfield resolution matches CHUNK_SEGMENTS)
-    this.nrows = CHUNK_SEGMENTS + 1;
-    this.ncols = CHUNK_SEGMENTS + 1;
-
-    const physicsGeo = new THREE.PlaneGeometry(
-      CHUNK_WIDTH,
-      CHUNK_LENGTH,
-      CHUNK_SEGMENTS,
-      CHUNK_SEGMENTS
-    );
-    const position = physicsGeo.attributes.position as THREE.BufferAttribute;
-    const vertexCount = position.count;
-
-    this.baseX = new Float32Array(vertexCount);
-    this.baseZ = new Float32Array(vertexCount);
-
-    for (let i = 0; i < vertexCount; i++) {
-      this.baseX[i] = position.getX(i);
-      this.baseZ[i] = position.getY(i);
-    }
-    physicsGeo.dispose();
-
-    const baseZ = points.length > 0 ? points[0].z : 0;
-    this.body = this.world.createRigidBody(
-      this.rapier.RigidBodyDesc.fixed().setTranslation(0, 0, baseZ)
-    );
-
     // Build the chunk from the provided points
     this.buildFromPoints();
   }
@@ -187,7 +143,6 @@ export class TerrainChunk {
     const startZ = this.points[0].z;
     this.currentZ = startZ;
     this.group.position.set(0, 0, startZ);
-    this.body.setTranslation({ x: 0, y: 0, z: startZ }, true);
 
     const points = this.points;
 
@@ -294,69 +249,11 @@ export class TerrainChunk {
     snowColors.needsUpdate = true;
     this.snowGeometry.computeVertexNormals();
 
-    // --- 2. Update Physics Collider (Heightfield) ---
-    const heights = new Float32Array(this.nrows * this.ncols);
-    let heightIndex = 0;
-    let minHeight = Infinity;
-    let maxHeight = -Infinity;
-
-    // Iterate rows from Z = -CHUNK_LENGTH to 0 (Min Z to Max Z in physics local space)
-    for (let row = 0; row < this.nrows; row++) {
-      // Row 0 corresponds to Z = -CHUNK_LENGTH (end of chunk)
-      // Row N corresponds to Z = 0 (start of chunk)
-      const zProgress = row / (this.nrows - 1); // 0 to 1
-
-      // Map to path points - points have absolute Z coordinates
-      // Calculate local Z within this chunk (relative to startZ)
-      const localZ = -CHUNK_LENGTH + zProgress * CHUNK_LENGTH; // -CHUNK_LENGTH to 0
-      const absoluteZ = startZ + localZ;
-
-      // Find corresponding path point by interpolating
-      const pathFraction = Math.abs(localZ) / CHUNK_LENGTH; // 0 to 1
-      const pathIndex = Math.floor(pathFraction * (points.length - 1));
-      const pathPoint = points[Math.min(Math.max(0, pathIndex), points.length - 1)];
-
-      const worldZ = absoluteZ;
-
-      for (let col = 0; col < this.ncols; col++) {
-        const xFraction = col / (this.ncols - 1);
-        const localGridX = (xFraction - 0.5) * CHUNK_WIDTH;
-
-        // Calculate distance from the curved path spine
-        const effectiveLocalX = localGridX - pathPoint.x;
-
-        // Use full terrain width including canyon walls
-        const y = this.generator.getSnowHeight(
-          effectiveLocalX,
-          worldZ,
-          pathPoint.y,
-          pathPoint.banking,
-          pathPoint.width
-        );
-
-        heights[heightIndex++] = y;
-        minHeight = Math.min(minHeight, y);
-        maxHeight = Math.max(maxHeight, y);
-      }
-    }
-
-    console.log(
-      `Chunk at Z=${startZ}: Height range: ${minHeight.toFixed(2)} to ${maxHeight.toFixed(2)}`
-    );
-
-    this.rebuildCollider(heights);
-
-    // --- 3. Scatter Obstacles ---
+    // --- 2. Scatter Obstacles ---
     this.scatterObstacles(points, startZ);
   }
 
   private scatterObstacles(points: PathPoint[], startZ: number): void {
-    // Clean up existing obstacle bodies
-    this.obstacleBodies.forEach((body) => {
-      this.world.removeRigidBody(body);
-    });
-    this.obstacleBodies = [];
-
     const matrix = new THREE.Matrix4();
     const dummy = new THREE.Object3D(); // Helper for matrix calculations
 
@@ -490,33 +387,12 @@ export class TerrainChunk {
 
           const rotationY = Math.random() * Math.PI * 2;
 
-          const absoluteZ = startZ + z;
           dummy.position.set(x, treeY, z);
           dummy.rotation.set(0, rotationY, 0); // Keep trees upright (no X/Z rotation)
           dummy.scale.set(treeScale, treeScale, treeScale);
           dummy.updateMatrix();
 
           this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
-
-          // Create physics body for trees on bank (never on track due to safety check)
-          if (isOnBank) {
-            const treeHeight = placeTree === 'small' ? 2.5 : placeTree === 'medium' ? 3.5 : 4.5;
-            const treeBody = this.world.createRigidBody(
-              this.rapier.RigidBodyDesc.fixed().setTranslation(
-                x,
-                treeY + treeHeight * treeScale,
-                absoluteZ
-              )
-            );
-            const treeCollider = this.rapier.ColliderDesc.cylinder(
-              treeHeight * treeScale,
-              0.4 * treeScale
-            )
-              .setFriction(0.8)
-              .setRestitution(0);
-            this.world.createCollider(treeCollider, treeBody);
-            this.obstacleBodies.push(treeBody);
-          }
 
           indices[placeTree]++;
         }
@@ -555,25 +431,8 @@ export class TerrainChunk {
           );
           matrix.makeRotationFromEuler(euler);
           matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
-          const absoluteZ = startZ + z;
           matrix.setPosition(x, rockY, z);
           this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
-
-          // Create physics body for rocks on bank (never on track due to safety check)
-          if (isOnBank) {
-            const rockBody = this.world.createRigidBody(
-              this.rapier.RigidBodyDesc.fixed().setTranslation(
-                x,
-                rockY + 1.5 * rockScale,
-                absoluteZ
-              )
-            );
-            const rockCollider = this.rapier.ColliderDesc.ball(1.5 * rockScale)
-              .setFriction(0.9)
-              .setRestitution(0);
-            this.world.createCollider(rockCollider, rockBody);
-            this.obstacleBodies.push(rockBody);
-          }
 
           rockInstanceIndex++;
         }
@@ -600,83 +459,10 @@ export class TerrainChunk {
   }
 
   dispose(): void {
-    if (this.collider) {
-      this.world.removeCollider(this.collider, true);
-      this.collider = undefined;
-    }
-    this.world.removeRigidBody(this.body);
-
-    // Clean up obstacle bodies
-    this.obstacleBodies.forEach((body) => {
-      this.world.removeRigidBody(body);
-    });
-    this.obstacleBodies = [];
-
     // Dispose geometries (materials are shared and owned by TerrainMaterials)
     this.snowGeometry.dispose();
     Object.values(this.treeGeometries).forEach((geo) => geo.dispose());
     this.deadTreeGeometry.dispose();
     this.rockGeometry.dispose();
-  }
-
-  private rebuildCollider(heights: Float32Array): void {
-    if (this.collider) {
-      this.world.removeCollider(this.collider, true);
-      this.collider = undefined;
-    }
-
-    try {
-      // Create Trimesh collider instead of Heightfield to avoid WASM crashes
-      // We reconstruct the vertex grid explicitly
-      const numVertices = this.nrows * this.ncols;
-      const vertices = new Float32Array(numVertices * 3);
-      const indices = new Uint32Array((this.nrows - 1) * (this.ncols - 1) * 6);
-
-      let vertIdx = 0;
-      for (let row = 0; row < this.nrows; row++) {
-        const zProgress = row / (this.nrows - 1);
-        // Z range from -CHUNK_LENGTH to 0 (relative to chunk startZ)
-        const localZ = -CHUNK_LENGTH + zProgress * CHUNK_LENGTH;
-
-        for (let col = 0; col < this.ncols; col++) {
-          const xFraction = col / (this.ncols - 1);
-          // X range centered around 0
-          const localX = (xFraction - 0.5) * CHUNK_WIDTH;
-
-          const height = heights[row * this.ncols + col];
-
-          vertices[vertIdx++] = localX;
-          vertices[vertIdx++] = Number.isFinite(height) ? height : 0;
-          vertices[vertIdx++] = localZ;
-        }
-      }
-
-      let indIdx = 0;
-      for (let row = 0; row < this.nrows - 1; row++) {
-        for (let col = 0; col < this.ncols - 1; col++) {
-          const i = row * this.ncols + col;
-          const iBelow = (row + 1) * this.ncols + col;
-
-          // Triangle 1
-          indices[indIdx++] = i;
-          indices[indIdx++] = iBelow;
-          indices[indIdx++] = i + 1;
-
-          // Triangle 2
-          indices[indIdx++] = i + 1;
-          indices[indIdx++] = iBelow;
-          indices[indIdx++] = iBelow + 1;
-        }
-      }
-
-      const colliderDesc = this.rapier.ColliderDesc.trimesh(vertices, indices)
-        .setFriction(0.05)
-        .setRestitution(0);
-
-      this.collider = this.world.createCollider(colliderDesc, this.body);
-      console.log(`✓ Trimesh collider created successfully at Z=${this.currentZ}`);
-    } catch (error) {
-      console.error('✗ Failed to rebuild terrain collider', error);
-    }
   }
 }

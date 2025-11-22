@@ -1,18 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { PhysicsSystem } from './core/PhysicsSystem';
 import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
 import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
-import { PHYSICS_CONFIG, PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
+import { PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private clock: THREE.Clock;
-  private physics!: PhysicsSystem;
   private terrainManager!: TerrainManager;
   private player!: PlayerController;
   private isRunning = false;
@@ -56,12 +54,11 @@ export class GameApp {
     this.debugControls.enableDamping = true;
     this.activeCamera = this.debugCamera;
 
-    this.physics = await PhysicsSystem.create(PHYSICS_CONFIG.gravity);
     this.setupLights();
     this.addHelpers();
 
     // 1. Create Terrain Manager (generates the world)
-    this.terrainManager = new TerrainManager(this.scene, this.physics);
+    this.terrainManager = new TerrainManager(this.scene);
 
     // 2. Get Start Position from generated path
     // Spawn player a bit farther forward along the path (50 points ahead)
@@ -72,24 +69,8 @@ export class GameApp {
     const playerHeight = terrainHeight + PLAYER_CONFIG.radius + 0.5;
     const startPos = new THREE.Vector3(startPoint.x, playerHeight, startPoint.z);
 
-    // DEBUG: Add a simple ground plane to test if collision works at all
-    const rapier = this.physics.getRapier();
-    // Move ground plane to be under the start position approximately
-    const groundBody = this.physics
-      .getWorld()
-      .createRigidBody(
-        rapier.RigidBodyDesc.fixed().setTranslation(
-          startPoint.x,
-          startPoint.y - 5,
-          startPoint.z - 50
-        )
-      );
-    const groundCollider = rapier.ColliderDesc.cuboid(100, 0.1, 100);
-    this.physics.getWorld().createCollider(groundCollider, groundBody);
-    console.log('DEBUG: Ground plane collider created');
-
     // 3. Create Player at Start Position
-    this.player = new PlayerController(this.scene, this.physics, this.input!, {
+    this.player = new PlayerController(this.scene, this.input!, {
       startPosition: startPos,
     });
 
@@ -120,6 +101,10 @@ export class GameApp {
     // Player controls
     this.input.bindKey('w', Action.Forward);
     this.input.bindKey('arrowup', Action.Forward);
+    this.input.bindKey('a', Action.SteerLeft);
+    this.input.bindKey('arrowleft', Action.SteerLeft);
+    this.input.bindKey('d', Action.SteerRight);
+    this.input.bindKey('arrowright', Action.SteerRight);
 
     // Camera toggle
     this.input.on(Action.ToggleCamera, (_action, phase) => {
@@ -209,17 +194,12 @@ export class GameApp {
     if (!this.isRunning) return;
 
     const delta = this.clock.getDelta();
-    this.physics.update(delta);
     this.player.update(delta);
     this.terrainManager.update();
 
     // Update debug info
     if (this.debugUI && this.debugHelpers && this.player) {
-      const velocity = new THREE.Vector3(
-        this.player.body.linvel().x,
-        this.player.body.linvel().y,
-        this.player.body.linvel().z
-      );
+      const velocity = new THREE.Vector3(0, 0, 0); // No physics, so no velocity
       const rotation = this.player.mesh.quaternion.clone();
 
       this.debugUI.update(
