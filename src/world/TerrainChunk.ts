@@ -428,6 +428,8 @@ export class TerrainChunk {
     // --- 2. Update Physics Collider (Heightfield) ---
     const heights = new Float32Array(this.nrows * this.ncols);
     let heightIndex = 0;
+    let minHeight = Infinity;
+    let maxHeight = -Infinity;
 
     // Iterate rows from Z = -CHUNK_LENGTH to 0 (Min Z to Max Z in physics local space)
     for (let row = 0; row < this.nrows; row++) {
@@ -458,8 +460,14 @@ export class TerrainChunk {
         const y = this.getSnowHeight(effectiveLocalX, worldZ, pathPoint.banking, pathPoint.width);
 
         heights[heightIndex++] = y;
+        minHeight = Math.min(minHeight, y);
+        maxHeight = Math.max(maxHeight, y);
       }
     }
+
+    console.log(
+      `Chunk at Z=${startZ}: Height range: ${minHeight.toFixed(2)} to ${maxHeight.toFixed(2)}`
+    );
 
     this.rebuildCollider(heights);
 
@@ -752,18 +760,33 @@ export class TerrainChunk {
     }
 
     try {
-      const colliderDesc = this.rapier.ColliderDesc.heightfield(this.nrows, this.ncols, heights, {
-        x: CHUNK_WIDTH,
-        y: 1,
-        z: CHUNK_LENGTH,
-      })
+      // RAPIER expects the heightfield scale as a Vector with {x, y, z}
+      const scale = { x: CHUNK_WIDTH, y: 1.0, z: CHUNK_LENGTH };
+
+      console.log(
+        `Creating heightfield: nrows=${this.nrows}, ncols=${this.ncols}, scale=${JSON.stringify(scale)}`
+      );
+
+      // Use FIX_INTERNAL_EDGES flag to improve collision detection on flat surfaces
+      const HeightFieldFlags = this.rapier.HeightFieldFlags;
+      const colliderDesc = this.rapier.ColliderDesc.heightfield(
+        this.nrows,
+        this.ncols,
+        heights,
+        scale,
+        HeightFieldFlags.FIX_INTERNAL_EDGES
+      )
         .setFriction(0.05)
         .setRestitution(0)
         .setTranslation(0, 0, -CHUNK_LENGTH * 0.5);
 
       this.collider = this.world.createCollider(colliderDesc, this.body);
+      console.log(`✓ Heightfield collider created successfully at Z=${this.currentZ}`);
     } catch (error) {
-      console.error('Failed to rebuild terrain collider', error);
+      console.error('✗ Failed to rebuild terrain collider', error);
+      console.error('Heights array length:', heights.length);
+      console.error('nrows:', this.nrows, 'ncols:', this.ncols);
+      console.error('Expected length:', this.nrows * this.ncols);
     }
   }
 }

@@ -57,6 +57,15 @@ export class GameApp {
 
     this.terrainManager = new TerrainManager(this.scene, this.physics);
 
+    // DEBUG: Add a simple ground plane to test if collision works at all
+    const rapier = this.physics.getRapier();
+    const groundBody = this.physics
+      .getWorld()
+      .createRigidBody(rapier.RigidBodyDesc.fixed().setTranslation(0, -5, -50));
+    const groundCollider = rapier.ColliderDesc.cuboid(100, 0.1, 100);
+    this.physics.getWorld().createCollider(groundCollider, groundBody);
+    console.log('DEBUG: Ground plane collider created at Y=-5, Z=-50');
+
     this.player = new PlayerController(this.scene, this.physics);
     if (!this.useDebugCamera) {
       this.activeCamera = this.player.camera;

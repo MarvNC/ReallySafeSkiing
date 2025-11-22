@@ -58,11 +58,30 @@ export class PlayerController {
       rapier.RigidBodyDesc.dynamic()
         .setTranslation(startPosition.x, startPosition.y, startPosition.z)
         .setLinearDamping(0.05)
-        .setAngularDamping(0.6),
+        .setAngularDamping(0.6)
+        .setCcdEnabled(true), // Enable Continuous Collision Detection to prevent tunneling
       rapier.ColliderDesc.ball(radius).setFriction(0.02).setRestitution(0.1)
     );
 
     scene.add(this.mesh);
+
+    console.log(
+      `Player created at position: (${startPosition.x}, ${startPosition.y}, ${startPosition.z}) with radius ${radius}`
+    );
+
+    // Debug: Log player position periodically
+    let lastLogTime = 0;
+    setInterval(() => {
+      const pos = this.body.translation();
+      const vel = this.body.linvel();
+      const now = Date.now();
+      if (now - lastLogTime > 1000) {
+        console.log(
+          `Player pos: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) vel: (${vel.x.toFixed(1)}, ${vel.y.toFixed(1)}, ${vel.z.toFixed(1)})`
+        );
+        lastLogTime = now;
+      }
+    }, 100);
   }
 
   /**
