@@ -238,14 +238,19 @@ export class TerrainChunk {
         const localX = (u - 0.5) * CHUNK_WIDTH;
         const worldX = localX + pathPoint.x; // Add spine offset
 
-        const y = this.generator.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+        const y = this.generator.getSnowHeight(
+          localX,
+          worldZ,
+          pathPoint.y,
+          pathPoint.banking,
+          trackWidth
+        );
         const vertexZ = localZ; // Relative to chunk start
 
         snowPos.setXYZ(i, worldX, y, vertexZ);
 
         // Calculate vertex color based on height (track vs cliff vs plateau)
-        const baseHeight =
-          worldZ * Math.tan(TERRAIN_CONFIG.SLOPE_ANGLE) + pathPoint.banking * localX;
+        const baseHeight = pathPoint.y + pathPoint.banking * localX;
         const heightAboveBase = y - baseHeight;
 
         let color: THREE.Color;
@@ -334,6 +339,7 @@ export class TerrainChunk {
         const y = this.generator.getSnowHeight(
           effectiveLocalX,
           worldZ,
+          pathPoint.y,
           pathPoint.banking,
           pathPoint.width
         );
@@ -423,7 +429,13 @@ export class TerrainChunk {
         const normalizedNoise = (noiseValue + 1) / 2; // Convert from [-1, 1] to [0, 1]
 
         // Get height at this position
-        const y = this.generator.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+        const y = this.generator.getSnowHeight(
+          localX,
+          worldZ,
+          pathPoint.y,
+          pathPoint.banking,
+          trackWidth
+        );
 
         // Determine what to place based on terrain and noise
         let placeTree: TreeArchetype | null = null;

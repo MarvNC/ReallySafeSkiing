@@ -5,7 +5,7 @@ import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
 import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
-import { PHYSICS_CONFIG } from './config/GameConfig';
+import { PHYSICS_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 
 export class GameApp {
@@ -65,7 +65,11 @@ export class GameApp {
 
     // 2. Get Start Position from generated path
     const startPoint = this.terrainManager.getStartPoint();
-    const startPos = new THREE.Vector3(startPoint.x, startPoint.y + 2, startPoint.z);
+    // Calculate actual terrain height at start position (accounts for moguls, banking, etc.)
+    const terrainHeight = this.terrainManager.getTerrainHeight(startPoint.x, startPoint.z);
+    // Spawn player slightly above terrain (player radius + small buffer)
+    const playerHeight = terrainHeight + PLAYER_CONFIG.radius + 0.5;
+    const startPos = new THREE.Vector3(startPoint.x, playerHeight, startPoint.z);
 
     // DEBUG: Add a simple ground plane to test if collision works at all
     const rapier = this.physics.getRapier();

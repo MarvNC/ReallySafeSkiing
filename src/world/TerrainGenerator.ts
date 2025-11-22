@@ -26,11 +26,16 @@ export class TerrainGenerator {
     return config.widthMin + (widthNoise * 0.5 + 0.5) * (config.widthMax - config.widthMin);
   }
 
-  getSnowHeight(localX: number, worldZ: number, banking: number, trackWidth?: number): number {
-    const baseSlope = worldZ * Math.tan(TERRAIN_CONFIG.SLOPE_ANGLE);
+  getSnowHeight(
+    localX: number,
+    worldZ: number,
+    pathY: number,
+    banking: number,
+    trackWidth?: number
+  ): number {
     const bankingOffset = localX * banking;
     const moguls = this.noise2D(localX * 0.2, worldZ * 0.2) * 1.5;
-    let height = baseSlope + bankingOffset + moguls;
+    let height = pathY + bankingOffset + moguls;
 
     // Add canyon walls if trackWidth is provided
     if (trackWidth !== undefined) {

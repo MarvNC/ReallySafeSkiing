@@ -69,4 +69,38 @@ export class TerrainManager {
     // Fallback
     return new THREE.Vector3(0, MOUNTAIN_CONFIG.START_ALTITUDE, 0);
   }
+
+  /**
+   * Get the terrain height at a specific world position.
+   * This accounts for moguls, banking, and canyon walls.
+   */
+  getTerrainHeight(worldX: number, worldZ: number): number {
+    if (this.allPoints.length === 0) {
+      return MOUNTAIN_CONFIG.START_ALTITUDE;
+    }
+
+    // Find the closest path point by Z coordinate
+    let closestPoint = this.allPoints[0];
+    let minDist = Math.abs(this.allPoints[0].z - worldZ);
+
+    for (const point of this.allPoints) {
+      const dist = Math.abs(point.z - worldZ);
+      if (dist < minDist) {
+        minDist = dist;
+        closestPoint = point;
+      }
+    }
+
+    // Calculate localX relative to the path spine
+    const localX = worldX - closestPoint.x;
+
+    // Get terrain height using the generator
+    return this.generator.getSnowHeight(
+      localX,
+      worldZ,
+      closestPoint.y,
+      closestPoint.banking,
+      closestPoint.width
+    );
+  }
 }

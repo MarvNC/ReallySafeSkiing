@@ -43,7 +43,7 @@ export class PhysicsSystem {
 
   update(deltaTime: number): void {
     const clampedDt = Math.min(Math.max(deltaTime, 0), PHYSICS_CONFIG.maxDeltaTime);
-    this.world.integrationParameters.dt = clampedDt;
+    this.world.timestep = clampedDt;
     this.world.step();
 
     for (const { mesh, body } of this.synced) {
