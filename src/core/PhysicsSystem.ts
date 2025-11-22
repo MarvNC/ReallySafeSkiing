@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { PHYSICS_CONFIG } from '../config/GameConfig';
 
 type SyncedBody = {
   mesh: THREE.Object3D;
@@ -16,7 +17,7 @@ export class PhysicsSystem {
     this.world = world;
   }
 
-  static async create(gravity = new THREE.Vector3(0, -9.81, 0)): Promise<PhysicsSystem> {
+  static async create(gravity: THREE.Vector3 = PHYSICS_CONFIG.gravity): Promise<PhysicsSystem> {
     await RAPIER.init();
     const world = new RAPIER.World({
       x: gravity.x,
@@ -41,7 +42,7 @@ export class PhysicsSystem {
   }
 
   update(deltaTime: number): void {
-    const clampedDt = Math.min(Math.max(deltaTime, 0), 1 / 20);
+    const clampedDt = Math.min(Math.max(deltaTime, 0), PHYSICS_CONFIG.maxDeltaTime);
     this.world.integrationParameters.dt = clampedDt;
     this.world.step();
 

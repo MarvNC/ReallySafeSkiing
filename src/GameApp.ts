@@ -5,6 +5,8 @@ import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
 import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
+import { PHYSICS_CONFIG } from './config/GameConfig';
+import { Action, InputManager } from './core/InputManager';
 
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
@@ -22,6 +24,7 @@ export class GameApp {
   private grid?: THREE.GridHelper;
   private debugUI?: DebugUI;
   private debugHelpers?: DebugHelpers;
+  private input?: InputManager;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -42,7 +45,9 @@ export class GameApp {
     this.container.appendChild(this.renderer.domElement);
     this.onResize();
     window.addEventListener('resize', this.onResize);
-    window.addEventListener('keydown', this.onKeyDown);
+
+    this.input = new InputManager(window);
+    this.setupInputBindings();
 
     this.debugCamera = new THREE.PerspectiveCamera(70, this.getAspect(), 0.1, 8000);
     this.debugCamera.position.set(160, 180, 260);
@@ -51,7 +56,7 @@ export class GameApp {
     this.debugControls.enableDamping = true;
     this.activeCamera = this.debugCamera;
 
-    this.physics = await PhysicsSystem.create(new THREE.Vector3(0, -20, 0));
+    this.physics = await PhysicsSystem.create(PHYSICS_CONFIG.gravity);
     this.setupLights();
     this.addHelpers();
 
@@ -79,6 +84,54 @@ export class GameApp {
     this.isRunning = true;
     this.clock.start();
     this.animate();
+  }
+
+  private setupInputBindings(): void {
+    if (!this.input) return;
+
+    // Map keys to high-level actions
+    this.input.bindKey('c', Action.ToggleCamera);
+    this.input.bindKey('v', Action.ToggleWireframe);
+    this.input.bindKey('g', Action.ToggleGrid);
+    this.input.bindKey('d', Action.ToggleDebugUi);
+    this.input.bindKey('s', Action.ToggleShadows);
+
+    // Camera toggle
+    this.input.on(Action.ToggleCamera, (_action, phase) => {
+      if (phase !== 'pressed' || !this.player) return;
+      this.useDebugCamera = !this.useDebugCamera;
+      this.activeCamera = this.useDebugCamera ? this.debugCamera : this.player.camera;
+      console.info(`Camera toggled to ${this.useDebugCamera ? 'debug orbit' : 'first-person'}`);
+    });
+
+    // Terrain wireframe
+    this.input.on(Action.ToggleWireframe, (_action, phase) => {
+      if (phase !== 'pressed' || !this.terrainManager) return;
+      const isWireframe = this.terrainManager.toggleWireframe();
+      console.info(`Slope wireframe ${isWireframe ? 'on' : 'off'}`);
+    });
+
+    // Grid helper visibility
+    this.input.on(Action.ToggleGrid, (_action, phase) => {
+      if (phase !== 'pressed' || !this.grid) return;
+      this.grid.visible = !this.grid.visible;
+      console.info(`Grid ${this.grid.visible ? 'visible' : 'hidden'}`);
+    });
+
+    // Debug UI and helpers visibility
+    this.input.on(Action.ToggleDebugUi, (_action, phase) => {
+      if (phase !== 'pressed') return;
+      const isVisible = this.debugUI?.toggle() ?? false;
+      this.debugHelpers?.setVisible(isVisible);
+      console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
+    });
+
+    // Global shadows
+    this.input.on(Action.ToggleShadows, (_action, phase) => {
+      if (phase !== 'pressed') return;
+      this.renderer.shadowMap.enabled = !this.renderer.shadowMap.enabled;
+      console.info(`Shadows ${this.renderer.shadowMap.enabled ? 'enabled' : 'disabled'}`);
+    });
   }
 
   private setupLights(): void {
@@ -159,32 +212,6 @@ export class GameApp {
     if (this.debugCamera) {
       this.debugCamera.aspect = aspect;
       this.debugCamera.updateProjectionMatrix();
-    }
-  };
-
-  private onKeyDown = (event: KeyboardEvent): void => {
-    const key = event.key.toLowerCase();
-    if (key === 'c' && this.player) {
-      this.useDebugCamera = !this.useDebugCamera;
-      this.activeCamera = this.useDebugCamera ? this.debugCamera : this.player.camera;
-      console.info(`Camera toggled to ${this.useDebugCamera ? 'debug orbit' : 'first-person'}`);
-    }
-    if (key === 'v' && this.terrainManager) {
-      const isWireframe = this.terrainManager.toggleWireframe();
-      console.info(`Slope wireframe ${isWireframe ? 'on' : 'off'}`);
-    }
-    if (key === 'g' && this.grid) {
-      this.grid.visible = !this.grid.visible;
-      console.info(`Grid ${this.grid.visible ? 'visible' : 'hidden'}`);
-    }
-    if (key === 'd') {
-      const isVisible = this.debugUI?.toggle() ?? false;
-      this.debugHelpers?.setVisible(isVisible);
-      console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
-    }
-    if (key === 's') {
-      this.renderer.shadowMap.enabled = !this.renderer.shadowMap.enabled;
-      console.info(`Shadows ${this.renderer.shadowMap.enabled ? 'enabled' : 'disabled'}`);
     }
   };
 

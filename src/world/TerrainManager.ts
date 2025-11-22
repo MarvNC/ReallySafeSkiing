@@ -1,19 +1,19 @@
 import * as THREE from 'three';
-import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 import { PhysicsSystem } from '../core/PhysicsSystem';
 import { CHUNK_LENGTH, TerrainChunk } from './TerrainChunk';
 import { BiomeType } from './WorldState';
 import type { ChunkState } from './WorldState';
+import { TerrainGenerator } from './TerrainGenerator';
 
 export class TerrainManager {
   private readonly chunks: TerrainChunk[] = [];
   private readonly chunkLength = CHUNK_LENGTH;
-  private readonly noise2D: NoiseFunction2D;
+  private readonly generator: TerrainGenerator;
   private wireframe = false;
   private lastChunkState: ChunkState;
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem) {
-    this.noise2D = createNoise2D();
+    this.generator = new TerrainGenerator();
 
     // Initialize the starting state
     this.lastChunkState = {
@@ -26,7 +26,7 @@ export class TerrainManager {
 
     for (let i = 0; i < 3; i++) {
       const z = -i * this.chunkLength;
-      const chunk = new TerrainChunk(physics, z, this.noise2D);
+      const chunk = new TerrainChunk(physics, z, this.generator);
       this.lastChunkState = chunk.regenerate(z, this.lastChunkState);
       this.chunks.push(chunk);
       scene.add(chunk.group);

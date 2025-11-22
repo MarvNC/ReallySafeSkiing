@@ -1,37 +1,18 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 import { PhysicsSystem } from '../core/PhysicsSystem';
 import { BiomeType } from './WorldState';
 import type { ChunkState, PathPoint } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
+import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import { getTerrainMaterials } from './TerrainMaterials';
+import { TerrainGenerator } from './TerrainGenerator';
 
-export const CHUNK_WIDTH = 150;
-export const CHUNK_LENGTH = 100;
-export const CHUNK_SEGMENTS = 60;
-
-const TERRAIN_CONFIG = {
-  SLOPE_ANGLE: 0.5,
-  BIOME_DEFAULTS: {
-    [BiomeType.Glade]: { turnSpeed: 0.02, widthMin: 25, widthMax: 40 },
-    [BiomeType.Chute]: { turnSpeed: 0.05, widthMin: 10, widthMax: 15 },
-    [BiomeType.Slalom]: { turnSpeed: 0.08, widthMin: 15, widthMax: 25 },
-    [BiomeType.Cruiser]: { turnSpeed: 0.01, widthMin: 30, widthMax: 50 },
-  },
-  BANKING_STRENGTH: 0.8,
-  WALL_STEEPNESS: 3.0,
-  MOGUL_SCALE: 0.2,
-  MOGUL_HEIGHT: 2.0,
-  BIOME_TRANSITION_DISTANCE: 2000,
-  ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
-  CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
-  CANYON_HEIGHT: 40, // The max height of the cliff
-  WALL_WIDTH: 15, // How wide the slope is horizontally
-  CLIFF_NOISE_SCALE: 0.5, // Higher frequency noise for rocks
-  OBSTACLE_COUNT: 200, // Number of obstacles per chunk
-};
+export const CHUNK_WIDTH = TERRAIN_DIMENSIONS.CHUNK_WIDTH;
+export const CHUNK_LENGTH = TERRAIN_DIMENSIONS.CHUNK_LENGTH;
+export const CHUNK_SEGMENTS = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS;
 
 export class TerrainChunk {
   // Visuals
@@ -56,7 +37,7 @@ export class TerrainChunk {
   readonly width = CHUNK_WIDTH;
   readonly length = CHUNK_LENGTH;
 
-  private readonly noise2D: NoiseFunction2D;
+  private readonly generator: TerrainGenerator;
   private readonly world: RAPIER.World;
   private readonly rapier: typeof RAPIER;
   private readonly body: RAPIER.RigidBody;
@@ -72,23 +53,18 @@ export class TerrainChunk {
   // Obstacle physics bodies
   private obstacleBodies: RAPIER.RigidBody[] = [];
 
-  constructor(physics: PhysicsSystem, baseZ = 0, noise2D: NoiseFunction2D = createNoise2D()) {
+  constructor(physics: PhysicsSystem, baseZ = 0, generator: TerrainGenerator) {
     this.rapier = physics.getRapier();
     this.world = physics.getWorld();
-    this.noise2D = noise2D;
+    this.generator = generator;
     this.currentZ = baseZ;
 
     // Initialize Group
     this.group = new THREE.Group();
 
-    // Initialize Materials
-    this.snowMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.1,
-      flatShading: true,
-      side: THREE.DoubleSide,
-      vertexColors: true,
-    });
+    // Initialize shared materials
+    const materials = getTerrainMaterials();
+    this.snowMaterial = materials.snow;
 
     // Initialize Geometries (higher width resolution for better cliff quality)
     this.snowGeometry = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 80, CHUNK_SEGMENTS);
@@ -115,23 +91,9 @@ export class TerrainChunk {
     };
 
     // Materials
-    this.treeMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff, // White to allow instance colors to show correctly
-      roughness: 0.8,
-      flatShading: true,
-    });
-
-    this.deadTreeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x5a4a3a,
-      roughness: 0.9,
-      flatShading: true,
-    });
-
-    this.rockMaterial = new THREE.MeshStandardMaterial({
-      color: 0x555555,
-      roughness: 0.9,
-      flatShading: true,
-    });
+    this.treeMaterial = materials.tree;
+    this.deadTreeMaterial = materials.deadTree;
+    this.rockMaterial = materials.rock;
 
     // Initialize InstancedMeshes for tree buckets
     const maxTreesPerBucket = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT / 3);
@@ -233,136 +195,13 @@ export class TerrainChunk {
 
   // Helper Methods
 
-  private getTrackWidth(z: number, biome: BiomeType): number {
-    const widthNoise = this.noise2D(z * 0.01, 100);
-    const config = TERRAIN_CONFIG.BIOME_DEFAULTS[biome];
-    return config.widthMin + (widthNoise * 0.5 + 0.5) * (config.widthMax - config.widthMin);
-  }
-
-  private getSnowHeight(
-    localX: number,
-    worldZ: number,
-    banking: number,
-    trackWidth?: number
-  ): number {
-    const baseSlope = worldZ * Math.tan(TERRAIN_CONFIG.SLOPE_ANGLE);
-    const bankingOffset = localX * banking;
-    const moguls = this.noise2D(localX * 0.2, worldZ * 0.2) * 1.5;
-    let height = baseSlope + bankingOffset + moguls;
-
-    // Add canyon walls if trackWidth is provided
-    if (trackWidth !== undefined) {
-      const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-      const distFromTrackEdge = Math.abs(localX) - canyonFloorWidth;
-
-      if (distFromTrackEdge > 0) {
-        // Calculate progress up the cliff (0.0 = bottom, 1.0 = top)
-        const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
-
-        if (progress < 1.0) {
-          // Cliff face - terraced low-poly style
-          // Calculate wall height in world space (for proper noise mapping)
-          const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
-
-          // Create terraced/blocky profile with quantization
-          const terraceSteps = 6; // Number of distinct ledges
-          const terraceStepSize = TERRAIN_CONFIG.CANYON_HEIGHT / terraceSteps;
-          const quantizedProgress = Math.floor(progress * terraceSteps) / terraceSteps;
-          const baseTerraceHeight = quantizedProgress * TERRAIN_CONFIG.CANYON_HEIGHT;
-
-          // Use wall-space coordinates for noise (wallHeight instead of localX)
-          // This prevents vertical stretching by mapping noise to the wall face
-          const wallSpaceX = worldZ * 0.1; // Horizontal along the wall
-          const wallSpaceY = wallHeight * 0.15; // Vertical up the wall
-
-          // Large-scale noise to displace terraces (creates chunky rock formations)
-          const terraceDisplacement = this.noise2D(wallSpaceX, wallSpaceY) * terraceStepSize * 0.6;
-
-          // Fine detail noise for texture (smaller amplitude)
-          const detailNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 2.0;
-
-          // Combine terraced base with displacements
-          const cliffHeight = baseTerraceHeight + terraceDisplacement + detailNoise;
-          height += cliffHeight;
-        } else {
-          // Plateau - gentle rolling noise
-          const plateauNoise = this.noise2D(localX * 0.05, worldZ * 0.05) * 3.0;
-          height += TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
-        }
-      }
-    }
-
-    return height;
-  }
-
-  private generatePathSpine(startState: ChunkState): { points: PathPoint[]; endState: ChunkState } {
-    const points: PathPoint[] = [];
-    let currentX = startState.endX;
-    let currentAngle = startState.endAngle;
-    let currentBiome = startState.biome;
-    let distanceInBiome = startState.distanceInBiome;
-
-    const segmentLength = CHUNK_LENGTH / CHUNK_SEGMENTS;
-
-    for (let i = 0; i <= CHUNK_SEGMENTS; i++) {
-      const localZ = -i * segmentLength;
-      const worldZ = startState.endZ + localZ;
-
-      // Check if we should transition to a new biome
-      if (distanceInBiome > TERRAIN_CONFIG.BIOME_TRANSITION_DISTANCE) {
-        const biomes = [BiomeType.Glade, BiomeType.Chute, BiomeType.Slalom, BiomeType.Cruiser];
-        currentBiome = biomes[Math.floor(Math.random() * biomes.length)];
-        distanceInBiome = 0;
-      }
-
-      const biomeConfig = TERRAIN_CONFIG.BIOME_DEFAULTS[currentBiome];
-
-      // Generate target angle using noise
-      const noiseFreq = biomeConfig.turnSpeed;
-      const noiseValue = this.noise2D(0, worldZ * noiseFreq);
-      const targetAngle = noiseValue * Math.PI * 0.3; // Max ~54 degrees
-
-      // Smoothly interpolate current angle toward target (momentum)
-      currentAngle += (targetAngle - currentAngle) * TERRAIN_CONFIG.ANGLE_INTERPOLATION;
-
-      // Update X position based on angle
-      currentX += Math.sin(currentAngle) * segmentLength;
-
-      // Track width
-      const width = this.getTrackWidth(worldZ, currentBiome);
-
-      // Calculate banking based on current angle
-      const banking = currentAngle * TERRAIN_CONFIG.BANKING_STRENGTH;
-
-      points.push({
-        x: currentX,
-        z: localZ,
-        angle: currentAngle,
-        width: width,
-        banking: banking,
-      });
-
-      distanceInBiome += segmentLength;
-    }
-
-    const endState: ChunkState = {
-      endX: currentX,
-      endAngle: currentAngle,
-      endZ: startState.endZ - CHUNK_LENGTH,
-      biome: currentBiome,
-      distanceInBiome: distanceInBiome,
-    };
-
-    return { points, endState };
-  }
-
   regenerate(startZ: number, startState: ChunkState): ChunkState {
     this.currentZ = startZ;
     this.group.position.set(0, 0, startZ);
     this.body.setTranslation({ x: 0, y: 0, z: startZ }, true);
 
     // Generate the path spine first
-    const { points, endState } = this.generatePathSpine(startState);
+    const { points, endState } = this.generator.generatePathSpine(startState);
 
     // --- 1. Update Snow Geometry ---
     const snowPos = this.snowGeometry.attributes.position as THREE.BufferAttribute;
@@ -398,7 +237,7 @@ export class TerrainChunk {
         const localX = (u - 0.5) * CHUNK_WIDTH;
         const worldX = localX + pathPoint.x; // Add spine offset
 
-        const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+        const y = this.generator.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
         const vertexZ = pathPoint.z;
 
         snowPos.setXYZ(i, worldX, y, vertexZ);
@@ -432,14 +271,15 @@ export class TerrainChunk {
 
           if (isOnLedge) {
             // Flat ledge - snow accumulation with some rock showing through
-            const ledgeNoise = this.noise2D(wallSpaceX, wallSpaceY) * 0.5 + 0.5;
+            const ledgeNoise = this.generator.sampleNoise(wallSpaceX, wallSpaceY) * 0.5 + 0.5;
             const rockColor = new THREE.Color(0x666666);
             const snowColor = new THREE.Color(0xeeeeee);
             const snowAmount = Math.min(ledgeNoise * 0.6 + 0.3, 0.8); // More snow on ledges
             color = rockColor.clone().lerp(snowColor, snowAmount);
           } else {
             // Vertical face - primarily rock with minimal snow
-            const faceNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 0.5 + 0.5;
+            const faceNoise =
+              this.generator.sampleNoise(wallSpaceX * 2, wallSpaceY * 2) * 0.5 + 0.5;
             const rockColor = new THREE.Color(0x555555);
             const snowColor = new THREE.Color(0xaaaaaa);
             const snowAmount = Math.min(faceNoise * 0.2, 0.3); // Less snow on vertical faces
@@ -447,7 +287,7 @@ export class TerrainChunk {
           }
         } else {
           // Plateau top - white snow
-          const plateauNoise = this.noise2D(localX * 0.1, worldZ * 0.1) * 0.3 + 0.7;
+          const plateauNoise = this.generator.sampleNoise(localX * 0.1, worldZ * 0.1) * 0.3 + 0.7;
           color = new THREE.Color(0xffffff).multiplyScalar(plateauNoise);
         }
 
@@ -490,7 +330,12 @@ export class TerrainChunk {
         const effectiveLocalX = localGridX - pathPoint.x;
 
         // Use full terrain width including canyon walls
-        const y = this.getSnowHeight(effectiveLocalX, worldZ, pathPoint.banking, pathPoint.width);
+        const y = this.generator.getSnowHeight(
+          effectiveLocalX,
+          worldZ,
+          pathPoint.banking,
+          pathPoint.width
+        );
 
         heights[heightIndex++] = y;
         minHeight = Math.min(minHeight, y);
@@ -572,11 +417,11 @@ export class TerrainChunk {
         const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
 
         // Sample noise for tree placement and type determination
-        const noiseValue = this.noise2D(x * noiseScale, worldZ * noiseScale);
+        const noiseValue = this.generator.sampleNoise(x * noiseScale, worldZ * noiseScale);
         const normalizedNoise = (noiseValue + 1) / 2; // Convert from [-1, 1] to [0, 1]
 
         // Get height at this position
-        const y = this.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
+        const y = this.generator.getSnowHeight(localX, worldZ, pathPoint.banking, trackWidth);
 
         // Determine what to place based on terrain and noise
         let placeTree: TreeArchetype | null = null;
@@ -775,15 +620,11 @@ export class TerrainChunk {
     });
     this.obstacleBodies = [];
 
-    // Dispose geometries and materials
+    // Dispose geometries (materials are shared and owned by TerrainMaterials)
     this.snowGeometry.dispose();
-    this.snowMaterial.dispose();
     Object.values(this.treeGeometries).forEach((geo) => geo.dispose());
     this.deadTreeGeometry.dispose();
     this.rockGeometry.dispose();
-    this.treeMaterial.dispose();
-    this.deadTreeMaterial.dispose();
-    this.rockMaterial.dispose();
   }
 
   private rebuildCollider(heights: Float32Array): void {

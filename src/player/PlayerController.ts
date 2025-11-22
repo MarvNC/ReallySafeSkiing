@@ -1,60 +1,54 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
 import { PhysicsSystem } from '../core/PhysicsSystem';
 import { createSkiPair, createHandWithPole } from './SkierAssets';
+import { PLAYER_CONFIG } from '../config/GameConfig';
+import { GameEntity } from '../core/GameEntity';
 
 type PlayerOptions = {
   startPosition?: THREE.Vector3;
   radius?: number;
 };
 
-export class PlayerController {
-  readonly mesh: THREE.Group; // Changed from Mesh to Group for complex hierarchy
+export class PlayerController extends GameEntity {
   readonly camera: THREE.PerspectiveCamera;
-  readonly body: RAPIER.RigidBody;
 
   // Visual components for animation
   private skis!: THREE.Group;
   private leftHand!: THREE.Group;
   private rightHand!: THREE.Group;
-  private physicsMesh!: THREE.Mesh; // Invisible mesh synced with physics
 
   constructor(scene: THREE.Scene, physics: PhysicsSystem, options?: PlayerOptions) {
     const rapier = physics.getRapier();
-    const radius = options?.radius ?? 1.6;
-    const startPosition = options?.startPosition ?? new THREE.Vector3(0, 15, -5);
+    const radius = options?.radius ?? PLAYER_CONFIG.radius;
+    const startPosition = options?.startPosition ?? PLAYER_CONFIG.startPosition.clone();
 
     // 1. Main container for all visual elements
-    this.mesh = new THREE.Group();
-    this.mesh.position.copy(startPosition);
+    const mesh = new THREE.Group();
+    mesh.position.copy(startPosition);
 
     // 2. Camera setup (acts as the "head" in first-person view)
-    this.camera = new THREE.PerspectiveCamera(
-      75,
+    const camera = new THREE.PerspectiveCamera(
+      PLAYER_CONFIG.camera.fov,
       window.innerWidth / window.innerHeight,
-      0.1,
-      5000
+      PLAYER_CONFIG.camera.near,
+      PLAYER_CONFIG.camera.far
     );
-    this.camera.position.set(0, 1.7, 0); // Eye height
-    this.camera.rotation.x = -0.15; // Slight downward tilt to see skis
-    this.mesh.add(this.camera);
+    camera.position.set(0, PLAYER_CONFIG.camera.eyeHeight, 0); // Eye height
+    camera.rotation.x = PLAYER_CONFIG.camera.tiltRadians; // Slight downward tilt to see skis
+    mesh.add(camera);
 
-    // 3. Setup visual components
-    this.setupHands();
-    this.setupSkis();
-
-    // 4. Physics body - invisible sphere for smooth sliding mechanics
+    // 3. Physics body - invisible sphere for smooth sliding mechanics
     // We create a separate mesh that PhysicsSystem can sync, but make it invisible
-    this.physicsMesh = new THREE.Mesh(
+    const physicsMesh = new THREE.Mesh(
       new THREE.SphereGeometry(radius),
       new THREE.MeshBasicMaterial({ visible: false })
     );
-    this.physicsMesh.visible = false;
-    this.physicsMesh.position.copy(startPosition);
-    scene.add(this.physicsMesh);
+    physicsMesh.visible = false;
+    physicsMesh.position.copy(startPosition);
+    scene.add(physicsMesh);
 
-    this.body = physics.addBody(
-      this.physicsMesh,
+    const body = physics.addBody(
+      physicsMesh,
       rapier.RigidBodyDesc.dynamic()
         .setTranslation(startPosition.x, startPosition.y, startPosition.z)
         .setLinearDamping(0.05)
@@ -62,6 +56,14 @@ export class PlayerController {
         .setCcdEnabled(true), // Enable Continuous Collision Detection to prevent tunneling
       rapier.ColliderDesc.ball(radius).setFriction(0.02).setRestitution(0.1)
     );
+
+    super(mesh, body);
+
+    this.camera = camera;
+
+    // 4. Setup visual components
+    this.setupHands();
+    this.setupSkis();
 
     scene.add(this.mesh);
 
@@ -90,15 +92,15 @@ export class PlayerController {
   private setupHands(): void {
     // Left Hand
     this.leftHand = createHandWithPole();
-    this.leftHand.position.set(-0.3, -0.3, -0.5);
-    this.leftHand.rotation.z = -Math.PI / 12; // Slight outward angle
+    this.leftHand.position.copy(PLAYER_CONFIG.hands.leftOffset);
+    this.leftHand.rotation.z = -PLAYER_CONFIG.hands.poleAngleRadians; // Slight outward angle
     this.camera.add(this.leftHand);
 
     // Right Hand (mirrored)
     this.rightHand = createHandWithPole();
-    this.rightHand.position.set(0.3, -0.3, -0.5);
-    this.rightHand.rotation.z = Math.PI / 12; // Slight outward angle
-    this.rightHand.scale.x = -1; // Mirror the geometry
+    this.rightHand.position.copy(PLAYER_CONFIG.hands.rightOffset);
+    this.rightHand.rotation.z = PLAYER_CONFIG.hands.poleAngleRadians; // Slight outward angle
+    this.rightHand.scale.x = PLAYER_CONFIG.hands.rightMirrorScaleX; // Mirror the geometry
     this.camera.add(this.rightHand);
   }
 
@@ -107,7 +109,7 @@ export class PlayerController {
    */
   private setupSkis(): void {
     this.skis = createSkiPair();
-    this.skis.position.set(0, -1.5, 0.3); // Below the player, slightly forward
+    this.skis.position.copy(PLAYER_CONFIG.skis.offset); // Below the player, slightly forward
     this.skis.castShadow = true;
     this.skis.receiveShadow = true;
     this.mesh.add(this.skis);
@@ -119,8 +121,8 @@ export class PlayerController {
    */
   update(deltaTime: number): void {
     // 1. Sync visual group position with physics body
-    const translation = this.body.translation();
-    this.mesh.position.set(translation.x, translation.y, translation.z);
+    // Use base helper to keep position in sync while allowing custom rotation logic.
+    (this as unknown as { syncPhysicsPosition: () => void }).syncPhysicsPosition();
 
     // 2. Rotate to face movement direction (skiing behavior)
     // Don't copy physics rotation - calculate based on velocity instead
@@ -141,8 +143,11 @@ export class PlayerController {
     // 3. Procedural animation - bobbing hands for skiing motion
     const speed = Math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2);
     const time = performance.now() / 1000; // Convert to seconds
-    const bobAmount = Math.min(speed * 0.02, 0.1); // Cap the bob amount
-    const bobFrequency = Math.max(speed * 2, 1); // Faster bobbing at higher speeds
+    const bobAmount = Math.min(speed * 0.02, PLAYER_CONFIG.animation.maxBobAmount); // Cap the bob amount
+    const bobFrequency = Math.max(
+      speed * PLAYER_CONFIG.animation.bobSpeedScale,
+      PLAYER_CONFIG.animation.baseBobFrequency
+    ); // Faster bobbing at higher speeds
 
     // Alternating hand motion
     const leftBob = Math.sin(time * bobFrequency) * bobAmount;
