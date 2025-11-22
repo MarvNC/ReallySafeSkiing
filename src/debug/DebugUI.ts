@@ -17,7 +17,8 @@ export class DebugUI {
     playerVelocity: THREE.Vector3,
     playerRotation: THREE.Quaternion,
     camera: THREE.Camera,
-    deltaTime: number
+    deltaTime: number,
+    shadowsEnabled: boolean
   ): void {
     if (!this.isVisible) return;
 
@@ -90,12 +91,17 @@ export class DebugUI {
             cameraEuler.z
           )})</span>
         </div>
+        <div class="debug-row">
+          <span class="debug-label">Shadows:</span>
+          <span class="debug-value">${shadowsEnabled ? 'ON' : 'OFF'}</span>
+        </div>
       </div>
       <div class="debug-section">
         <h3>Controls</h3>
         <div class="debug-row"><span class="debug-label">C:</span> Toggle Camera</div>
         <div class="debug-row"><span class="debug-label">V:</span> Toggle Wireframe</div>
         <div class="debug-row"><span class="debug-label">G:</span> Toggle Grid</div>
+        <div class="debug-row"><span class="debug-label">S:</span> Toggle Shadows</div>
         <div class="debug-row"><span class="debug-label">D:</span> Toggle Debug UI</div>
       </div>
     `;

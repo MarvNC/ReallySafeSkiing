@@ -132,7 +132,8 @@ export class GameApp {
         velocity,
         rotation,
         this.activeCamera ?? this.player.camera,
-        delta
+        delta,
+        this.renderer.shadowMap.enabled
       );
 
       this.debugHelpers.update(this.player.mesh.position, rotation, velocity);
@@ -180,6 +181,10 @@ export class GameApp {
       const isVisible = this.debugUI?.toggle() ?? false;
       this.debugHelpers?.setVisible(isVisible);
       console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
+    }
+    if (key === 's') {
+      this.renderer.shadowMap.enabled = !this.renderer.shadowMap.enabled;
+      console.info(`Shadows ${this.renderer.shadowMap.enabled ? 'enabled' : 'disabled'}`);
     }
   };
 

@@ -23,6 +23,10 @@
   - Shows/hides the ground grid helper
   - Helps visualize the world coordinate system
 
+- **`S`** - Toggle shadows
+  - Enables/disables shadow rendering globally
+  - Useful for performance debugging or visual comparison
+
 ## Mouse Controls (Debug Orbit Camera Mode)
 
 When in debug orbit camera mode (press `C` to activate), you can control the camera with your mouse:
