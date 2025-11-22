@@ -2,14 +2,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { PhysicsSystem } from './core/PhysicsSystem';
 import { PlayerController } from './player/PlayerController';
-import { SlopeGenerator } from './world/SlopeGenerator';
+import { TerrainManager } from './world/TerrainManager';
 
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private clock: THREE.Clock;
   private physics!: PhysicsSystem;
-  private slope!: SlopeGenerator;
+  private terrainManager!: TerrainManager;
   private player!: PlayerController;
   private isRunning = false;
   private container: HTMLElement;
@@ -56,9 +56,7 @@ export class GameApp {
     this.setupLights();
     this.addHelpers();
 
-    this.slope = new SlopeGenerator();
-    this.scene.add(this.slope.mesh);
-    this.slope.register(this.physics);
+    this.terrainManager = new TerrainManager(this.scene, this.physics);
 
     this.player = new PlayerController(this.scene, this.physics);
     if (!this.useDebugCamera) {
@@ -103,6 +101,7 @@ export class GameApp {
 
     const delta = this.clock.getDelta();
     this.physics.update(delta);
+    this.terrainManager.update(this.player.mesh.position);
 
     this.debugControls?.update();
     const camera = this.activeCamera ?? this.player.camera;
@@ -128,17 +127,17 @@ export class GameApp {
   };
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key.toLowerCase() === 'c') {
+    const key = event.key.toLowerCase();
+    if (key === 'c' && this.player) {
       this.useDebugCamera = !this.useDebugCamera;
       this.activeCamera = this.useDebugCamera ? this.debugCamera : this.player.camera;
       console.info(`Camera toggled to ${this.useDebugCamera ? 'debug orbit' : 'first-person'}`);
     }
-    if (event.key.toLowerCase() === 'v') {
-      const isWireframe = !this.slope.mesh.material.wireframe;
-      this.slope.setWireframe(isWireframe);
+    if (key === 'v' && this.terrainManager) {
+      const isWireframe = this.terrainManager.toggleWireframe();
       console.info(`Slope wireframe ${isWireframe ? 'on' : 'off'}`);
     }
-    if (event.key.toLowerCase() === 'g' && this.grid) {
+    if (key === 'g' && this.grid) {
       this.grid.visible = !this.grid.visible;
       console.info(`Grid ${this.grid.visible ? 'visible' : 'hidden'}`);
     }
