@@ -15,7 +15,7 @@ export class PlayerController {
   constructor(scene: THREE.Scene, physics: PhysicsSystem, options?: PlayerOptions) {
     const rapier = physics.getRapier();
     const radius = options?.radius ?? 1.6;
-    const startPosition = options?.startPosition ?? new THREE.Vector3(0, 50, 20);
+    const startPosition = options?.startPosition ?? new THREE.Vector3(0, 15, 0);
 
     const geometry = new THREE.IcosahedronGeometry(radius, 0);
     const material = new THREE.MeshStandardMaterial({
