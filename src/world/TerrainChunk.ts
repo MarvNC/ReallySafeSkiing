@@ -7,7 +7,7 @@ export const CHUNK_WIDTH = 100;
 export const CHUNK_LENGTH = 100;
 export const CHUNK_SEGMENTS = 60;
 
-const SLOPE_ANGLE = 0.2;
+const SLOPE_ANGLE = 0.5;
 const PATH_AMPLITUDE = 40.0;
 const PATH_FREQUENCY = 0.005;
 const MOGUL_SCALE = 0.2;
