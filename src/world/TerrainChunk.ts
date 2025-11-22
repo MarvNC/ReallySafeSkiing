@@ -7,6 +7,7 @@ import type { ChunkState, PathPoint } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
+import { COLOR_PALETTE } from '../constants/colors';
 
 export const CHUNK_WIDTH = 150;
 export const CHUNK_LENGTH = 100;
@@ -116,7 +117,7 @@ export class TerrainChunk {
 
     // Materials
     this.treeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2d7a2d, // Better forest green color
+      color: 0xffffff, // White base - instance colors provide actual color
       roughness: 0.8,
       flatShading: true,
       vertexColors: true, // Enable instance colors
@@ -157,12 +158,12 @@ export class TerrainChunk {
     // Enable shadows and initialize instance colors for all tree buckets
     Object.values(this.treeBuckets).forEach((mesh) => {
       mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      mesh.receiveShadow = false; // Disable shadow receiving to prevent black appearance
       this.group.add(mesh);
 
       // Initialize instance colors
       const colors = new Float32Array(mesh.count * 3);
-      const baseColor = new THREE.Color(0x4b8b3b);
+      const baseColor = new THREE.Color(COLOR_PALETTE.trees.pineGreen);
       for (let i = 0; i < mesh.count; i++) {
         colors[i * 3] = baseColor.r;
         colors[i * 3 + 1] = baseColor.g;
@@ -600,8 +601,8 @@ export class TerrainChunk {
 
           this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
 
-          // Color variation with better base green
-          dummyColor.setHex(0x2d7a2d);
+          // Color variation using palette colors
+          dummyColor.set(COLOR_PALETTE.trees.pineGreen);
           const hueShift = (Math.random() - 0.5) * 0.1; // Small hue variation
           const saturationShift = (Math.random() - 0.5) * 0.1;
           const lightnessShift = (Math.random() - 0.5) * 0.1;
