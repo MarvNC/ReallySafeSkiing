@@ -49,8 +49,8 @@ export class TerrainChunk {
   private readonly points: PathPoint[];
   private currentZ: number;
 
-  constructor(points: PathPoint[]) {
-    this.generator = new TerrainGenerator(); // Keep generator for getSnowHeight
+  constructor(points: PathPoint[], generator: TerrainGenerator) {
+    this.generator = generator;
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
 
