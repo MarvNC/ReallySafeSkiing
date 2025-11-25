@@ -315,7 +315,16 @@ export class GameApp {
         rotation,
         this.activeCamera ?? this.player.camera,
         delta,
-        this.renderer.shadowMap.enabled
+        this.renderer.shadowMap.enabled,
+        {
+          physics: this.playerPhysics.getDebugState(),
+          input: {
+            forward: this.input?.isActive(Action.Forward) ?? false,
+            steerLeft: this.input?.isActive(Action.SteerLeft) ?? false,
+            steerRight: this.input?.isActive(Action.SteerRight) ?? false,
+            braking: this.input?.isBraking() ?? false,
+          },
+        }
       );
 
       this.debugHelpers.update(this.player.mesh.position, rotation, velocity);

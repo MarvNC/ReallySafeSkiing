@@ -19,7 +19,25 @@ export class DebugUI {
     playerRotation: THREE.Quaternion,
     camera: THREE.Camera,
     deltaTime: number,
-    shadowsEnabled: boolean
+    shadowsEnabled: boolean,
+    extra?: {
+      physics?: {
+        yaw: number;
+        isAwake: boolean;
+        isPushing: boolean;
+        isBraking: boolean;
+        steerInput: number;
+        linearVelocity: THREE.Vector3;
+        lastForwardImpulse: number;
+        lastLateralImpulse: number;
+      };
+      input?: {
+        forward: boolean;
+        steerLeft: boolean;
+        steerRight: boolean;
+        braking: boolean;
+      };
+    }
   ): void {
     if (!this.isVisible) return;
 
@@ -96,6 +114,51 @@ export class DebugUI {
           <span class="debug-label">Shadows:</span>
           <span class="debug-value">${shadowsEnabled ? 'ON' : 'OFF'}</span>
         </div>
+        ${
+          extra?.physics
+            ? `
+        <div class="debug-row">
+          <span class="debug-label">Phys Awake:</span>
+          <span class="debug-value">${extra.physics.isAwake}</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Yaw(deg):</span>
+          <span class="debug-value">${format(THREE.MathUtils.radToDeg(extra.physics.yaw), 1)}</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Steer:</span>
+          <span class="debug-value">${extra.physics.steerInput}</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Push:</span>
+          <span class="debug-value">${extra.physics.isPushing} (${format(
+            extra.physics.lastForwardImpulse,
+            3
+          )})</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Brake:</span>
+          <span class="debug-value">${extra.physics.isBraking} (damp ${
+            extra.physics.isBraking ? 'on' : 'off'
+          })</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Lat Imp:</span>
+          <span class="debug-value">${format(extra.physics.lastLateralImpulse, 3)}</span>
+        </div>
+        `
+            : ''
+        }
+        ${
+          extra?.input
+            ? `
+        <div class="debug-row">
+          <span class="debug-label">Input:</span>
+          <span class="debug-value">F:${extra.input.forward} L:${extra.input.steerLeft} R:${extra.input.steerRight} B:${extra.input.braking}</span>
+        </div>
+        `
+            : ''
+        }
       </div>
       <div class="debug-section">
         <h3>Controls</h3>

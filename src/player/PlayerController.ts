@@ -24,6 +24,7 @@ export class PlayerController {
   // Hand animation state for smooth lateral movement
   private currentLeftHandX: number = PLAYER_CONFIG.hands.leftOffset.x;
   private currentRightHandX: number = PLAYER_CONFIG.hands.rightOffset.x;
+  private smoothedSpeed = 0;
 
   private physics: PlayerPhysics;
   private readonly velocity = new THREE.Vector3();
@@ -113,7 +114,14 @@ export class PlayerController {
     const isBraking = this.input.isBraking();
     const isPoling = this.input.isActive(Action.Forward);
 
-    const speed = this.physics.getVelocity(this.velocity).length();
+    const velocity = this.physics.getVelocity(this.velocity);
+    const speed = velocity.length();
+    const verticalSpeed = Math.abs(velocity.y);
+    const isAirborne = verticalSpeed > 1.5;
+    // Exponential smoothing to damp jitter, especially when falling.
+    const speedLerp = 1 - Math.exp(-6 * deltaTime);
+    const targetAnimSpeed = isAirborne ? 0 : speed;
+    this.smoothedSpeed = THREE.MathUtils.lerp(this.smoothedSpeed, targetAnimSpeed, speedLerp);
     const time = performance.now() / 1000;
 
     // Calculate target X positions for hands based on steering input
@@ -135,16 +143,16 @@ export class PlayerController {
     }
 
     // Smoothly interpolate current X positions toward target
-    const lerpFactor = 1 - Math.exp(-PLAYER_CONFIG.hands.lateralAnimationSpeed * deltaTime);
+    const lateralLerp = 1 - Math.exp(-PLAYER_CONFIG.hands.lateralAnimationSpeed * deltaTime);
     this.currentLeftHandX = THREE.MathUtils.lerp(
       this.currentLeftHandX,
       targetLeftHandX,
-      lerpFactor
+      lateralLerp
     );
     this.currentRightHandX = THREE.MathUtils.lerp(
       this.currentRightHandX,
       targetRightHandX,
-      lerpFactor
+      lateralLerp
     );
 
     // 1. Ski Rotation
@@ -168,7 +176,7 @@ export class PlayerController {
     }
 
     // 3. Hand Animation (Poling or Bobbing)
-    if (isPoling) {
+    if (!isAirborne && isPoling) {
       // Poling animation: hands move forward and backward (alternating)
       const poleFrequency = 2.5; // Cycles per second for poling motion
       const poleReach = 0.4; // How far forward the hands reach
@@ -193,9 +201,9 @@ export class PlayerController {
       this.rightHand.position.x = this.currentRightHandX;
     } else {
       // Normal bobbing animation when not poling (tucked position)
-      const bobAmount = Math.min(speed * 0.02, PLAYER_CONFIG.animation.maxBobAmount);
+      const bobAmount = Math.min(this.smoothedSpeed * 0.02, PLAYER_CONFIG.animation.maxBobAmount);
       const bobFrequency = Math.max(
-        speed * PLAYER_CONFIG.animation.bobSpeedScale,
+        this.smoothedSpeed * PLAYER_CONFIG.animation.bobSpeedScale,
         PLAYER_CONFIG.animation.baseBobFrequency
       );
 

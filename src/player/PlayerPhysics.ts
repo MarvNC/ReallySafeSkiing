@@ -5,12 +5,36 @@ import { Action, InputManager } from '../core/InputManager';
 import { PLAYER_CONFIG } from '../config/GameConfig';
 import { PhysicsLayer, makeCollisionGroups } from '../physics/PhysicsLayers';
 
+export type PlayerPhysicsDebugState = {
+  yaw: number;
+  isAwake: boolean;
+  isPushing: boolean;
+  isBraking: boolean;
+  steerInput: number;
+  linearVelocity: THREE.Vector3;
+  lastForwardImpulse: number;
+  lastLateralImpulse: number;
+};
+
 export class PlayerPhysics {
   private readonly body: RAPIER.RigidBody;
   private readonly collider: RAPIER.Collider;
   private readonly tmpPosition = new THREE.Vector3();
   private readonly tmpVelocity = new THREE.Vector3();
+  private readonly tmpQuat = new THREE.Quaternion();
+  private readonly tmpForward = new THREE.Vector3();
+  private readonly tmpRight = new THREE.Vector3();
   private yaw = 0;
+  private debugState: PlayerPhysicsDebugState = {
+    yaw: 0,
+    isAwake: false,
+    isPushing: false,
+    isBraking: false,
+    steerInput: 0,
+    linearVelocity: new THREE.Vector3(),
+    lastForwardImpulse: 0,
+    lastLateralImpulse: 0,
+  };
 
   constructor(physics: PhysicsWorld, startPosition: THREE.Vector3) {
     const world = physics.getWorld();
@@ -35,6 +59,8 @@ export class PlayerPhysics {
   }
 
   applyControls(input: InputManager, deltaSeconds: number): void {
+    this.body.wakeUp();
+
     const steerLeft = input.isActive(Action.SteerLeft);
     const steerRight = input.isActive(Action.SteerRight);
     const isBraking = input.isBraking();
@@ -42,22 +68,28 @@ export class PlayerPhysics {
 
     // Update heading (yaw) based on steer input.
     let steer = 0;
-    if (steerLeft) steer -= 1;
-    if (steerRight) steer += 1;
+    if (steerLeft) steer += 1;
+    if (steerRight) steer -= 1;
     this.yaw += steer * PLAYER_CONFIG.physics.steerTurnSpeed * deltaSeconds;
 
-    const quat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
-    this.body.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }, true);
+    this.tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+    this.body.setRotation(
+      { x: this.tmpQuat.x, y: this.tmpQuat.y, z: this.tmpQuat.z, w: this.tmpQuat.w },
+      true
+    );
 
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quat).normalize();
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quat).normalize();
+    const forward = this.tmpForward.set(0, 0, -1).applyQuaternion(this.tmpQuat).normalize();
+    const right = this.tmpRight.set(1, 0, 0).applyQuaternion(this.tmpQuat).normalize();
 
+    let forwardImpulseApplied = 0;
+    let lateralImpulseApplied = 0;
     // Move forward when pushing.
     if (isPushing) {
       const impulse = forward
         .clone()
         .multiplyScalar(PLAYER_CONFIG.physics.moveForce * deltaSeconds);
       this.body.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
+      forwardImpulseApplied = impulse.length();
     }
 
     // Subtle lateral impulse when steering for basic carve feel.
@@ -66,6 +98,7 @@ export class PlayerPhysics {
         .clone()
         .multiplyScalar(steer * PLAYER_CONFIG.physics.moveForce * 0.2 * deltaSeconds);
       this.body.applyImpulse({ x: lateral.x, y: lateral.y, z: lateral.z }, true);
+      lateralImpulseApplied = lateral.length();
     }
 
     // Apply extra damping when braking.
@@ -80,6 +113,17 @@ export class PlayerPhysics {
       const scale = PLAYER_CONFIG.physics.maxSpeed / horizontalSpeed;
       this.body.setLinvel({ x: vel.x * scale, y: vel.y, z: vel.z * scale }, true);
     }
+
+    this.debugState = {
+      yaw: this.yaw,
+      isAwake: !this.body.isSleeping(),
+      isPushing,
+      isBraking,
+      steerInput: steer,
+      linearVelocity: this.getVelocity(this.tmpVelocity.clone()),
+      lastForwardImpulse: forwardImpulseApplied,
+      lastLateralImpulse: lateralImpulseApplied,
+    };
   }
 
   syncToThree(target: THREE.Object3D): void {
@@ -103,5 +147,9 @@ export class PlayerPhysics {
     const world = physics.getWorld();
     world.removeCollider(this.collider, true);
     world.removeRigidBody(this.body);
+  }
+
+  getDebugState(): PlayerPhysicsDebugState {
+    return this.debugState;
   }
 }
