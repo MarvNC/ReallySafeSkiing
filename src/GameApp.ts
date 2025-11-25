@@ -96,7 +96,6 @@ export class GameApp {
     this.input.bindKey('v', Action.ToggleWireframe);
     this.input.bindKey('g', Action.ToggleGrid);
     this.input.bindKey('F2', Action.ToggleDebugUi);
-    this.input.bindKey('s', Action.ToggleShadows);
 
     // Player controls
     this.input.bindKey('w', Action.Forward);
@@ -134,13 +133,6 @@ export class GameApp {
       const isVisible = this.debugUI?.toggle() ?? false;
       this.debugHelpers?.setVisible(isVisible);
       console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
-    });
-
-    // Global shadows
-    this.input.on(Action.ToggleShadows, (_action, phase) => {
-      if (phase !== 'pressed') return;
-      this.renderer.shadowMap.enabled = !this.renderer.shadowMap.enabled;
-      console.info(`Shadows ${this.renderer.shadowMap.enabled ? 'enabled' : 'disabled'}`);
     });
   }
 

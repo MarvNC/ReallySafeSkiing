@@ -3,7 +3,6 @@ export const Action = {
   ToggleWireframe: 'ToggleWireframe',
   ToggleGrid: 'ToggleGrid',
   ToggleDebugUi: 'ToggleDebugUi',
-  ToggleShadows: 'ToggleShadows',
   // Reserved for future player controls
   SteerLeft: 'SteerLeft',
   SteerRight: 'SteerRight',
