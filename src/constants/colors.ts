@@ -17,6 +17,11 @@ export const COLOR_PALETTE = {
     redJacket: '#D94B3D',
     orangeRedAccent: '#E24C2A',
   },
+  DEBUG_TEST_COLORS: {
+    brightPink: '#FF00FF',
+    brightGreen: '#00FF00',
+    brightBlue: '#0000FF',
+  },
 } as const;
 
 export type ColorPalette = typeof COLOR_PALETTE;

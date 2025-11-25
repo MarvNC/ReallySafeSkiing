@@ -204,20 +204,16 @@ export class TerrainChunk {
             color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
             break;
           case SurfaceKind.WallLedge:
-            color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite).multiplyScalar(
-              0.95
-            );
+            color = new THREE.Color(COLOR_PALETTE.terrainAndObjects.rockGray);
             break;
           case SurfaceKind.WallVertical:
             color = new THREE.Color(COLOR_PALETTE.terrainAndObjects.rockGray);
             break;
           case SurfaceKind.Plateau:
+            color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
+            break;
           default: {
-            const plateauNoise =
-              this.generator.sampleNoise(sample.localT * 0.1, sample.localS * 0.1) * 0.3 + 0.7;
-            color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite).multiplyScalar(
-              plateauNoise
-            );
+            color = new THREE.Color(COLOR_PALETTE.DEBUG_TEST_COLORS.brightGreen);
             break;
           }
         }
@@ -278,24 +274,23 @@ export class TerrainChunk {
       for (let t = -lateralMax; t < lateralMax; t += gridSize) {
         const worldX = pathPoint.x + pathPoint.rightX * t;
         const worldZ = pathPoint.z + pathPoint.rightZ * t;
-        const { t: localT, s: localS } = this.generator.projectToLocalXZ(worldX, worldZ, pathPoint);
+        const sample = this.generator.sampleTerrainAt(worldX, worldZ, pathPoint);
 
-        const trackWidth = pathPoint.width;
-        const halfTrack = trackWidth / 2;
-        const canyonFloorWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-        const distFromTrackEdge = Math.abs(localT) - canyonFloorWidth;
-
-        if (Math.abs(localT) < halfTrack) {
+        if (sample.kind === SurfaceKind.Track) {
           continue;
         }
 
-        const isOnBank = Math.abs(localT) > halfTrack && distFromTrackEdge <= 0;
-        const isOnCliff = distFromTrackEdge > 0 && distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH;
-        const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
+        const isOnBank = sample.kind === SurfaceKind.Bank;
+        const isOnCliff =
+          sample.kind === SurfaceKind.WallVertical || sample.kind === SurfaceKind.WallLedge;
+        const isOnPlateau = sample.kind === SurfaceKind.Plateau;
 
-        const noiseValue = this.generator.sampleNoise(worldX * noiseScale, localS * noiseScale);
+        const noiseValue = this.generator.sampleNoise(
+          worldX * noiseScale,
+          sample.localS * noiseScale
+        );
         const normalizedNoise = (noiseValue + 1) / 2;
-        const y = this.generator.getSnowHeightAt(worldX, worldZ, pathPoint);
+        const y = sample.height;
 
         let placeTree: TreeArchetype | null = null;
         let placeDeadTree = false;
