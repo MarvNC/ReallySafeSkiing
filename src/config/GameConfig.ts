@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { BiomeType } from '../world/WorldState';
 
 export const PHYSICS_CONFIG = {
   // Global gravity for the game world
@@ -72,17 +71,13 @@ export const TERRAIN_CONFIG = {
   SMOOTHING_WINDOW: 5, // window size for moving average
   SEGMENT_LENGTH: 2.5, // Resolution of points
 
-  BIOME_DEFAULTS: {
-    [BiomeType.Glade]: { turnSpeed: 0.02, widthMin: 25, widthMax: 40 },
-    [BiomeType.Chute]: { turnSpeed: 0.05, widthMin: 10, widthMax: 15 },
-    [BiomeType.Slalom]: { turnSpeed: 0.08, widthMin: 15, widthMax: 25 },
-    [BiomeType.Cruiser]: { turnSpeed: 0.01, widthMin: 30, widthMax: 50 },
-  },
+  TURN_SPEED: 0.04, // Controls how quickly the path changes direction
+  WIDTH_MIN: 20, // Minimum track width
+  WIDTH_MAX: 32.5, // Maximum track width
   BANKING_STRENGTH: 0.8,
   WALL_STEEPNESS: 3.0,
   MOGUL_SCALE: 0.2,
   MOGUL_HEIGHT: 0.5, // Reduced from 1.0 to make ground less bumpy
-  BIOME_TRANSITION_DISTANCE: 2000,
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
   CANYON_HEIGHT: 25, // The max height of the cliff

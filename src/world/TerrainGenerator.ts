@@ -1,5 +1,4 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
-import { BiomeType } from './WorldState';
 import type { ChunkState, PathPoint } from './WorldState';
 import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS, MOUNTAIN_CONFIG } from '../config/GameConfig';
 
@@ -20,10 +19,12 @@ export class TerrainGenerator {
     return this.noise2D(x, y);
   }
 
-  private getTrackWidth(z: number, biome: BiomeType): number {
+  private getTrackWidth(z: number): number {
     const widthNoise = this.noise2D(z * 0.01, 100);
-    const config = TERRAIN_CONFIG.BIOME_DEFAULTS[biome];
-    return config.widthMin + (widthNoise * 0.5 + 0.5) * (config.widthMax - config.widthMin);
+    return (
+      TERRAIN_CONFIG.WIDTH_MIN +
+      (widthNoise * 0.5 + 0.5) * (TERRAIN_CONFIG.WIDTH_MAX - TERRAIN_CONFIG.WIDTH_MIN)
+    );
   }
 
   getSnowHeight(
@@ -192,8 +193,6 @@ export class TerrainGenerator {
     const points: PathPoint[] = [];
     let currentX = startState.endX;
     let currentAngle = startState.endAngle;
-    let currentBiome = startState.biome;
-    let distanceInBiome = startState.distanceInBiome;
 
     const segmentLength = CHUNK_LENGTH / CHUNK_SEGMENTS;
 
@@ -201,17 +200,8 @@ export class TerrainGenerator {
       const localZ = -i * segmentLength;
       const worldZ = startState.endZ + localZ;
 
-      // Check if we should transition to a new biome
-      if (distanceInBiome > TERRAIN_CONFIG.BIOME_TRANSITION_DISTANCE) {
-        const biomes = [BiomeType.Glade, BiomeType.Chute, BiomeType.Slalom, BiomeType.Cruiser];
-        currentBiome = biomes[Math.floor(Math.random() * biomes.length)];
-        distanceInBiome = 0;
-      }
-
-      const biomeConfig = TERRAIN_CONFIG.BIOME_DEFAULTS[currentBiome];
-
       // Generate target angle using noise
-      const noiseFreq = biomeConfig.turnSpeed;
+      const noiseFreq = TERRAIN_CONFIG.TURN_SPEED;
       const noiseValue = this.noise2D(0, worldZ * noiseFreq);
       const targetAngle = noiseValue * Math.PI * 0.3; // Max ~54 degrees
 
@@ -222,7 +212,7 @@ export class TerrainGenerator {
       currentX += Math.sin(currentAngle) * segmentLength;
 
       // Track width
-      const width = this.getTrackWidth(worldZ, currentBiome);
+      const width = this.getTrackWidth(worldZ);
 
       // Calculate banking based on current angle
       const banking = currentAngle * TERRAIN_CONFIG.BANKING_STRENGTH;
@@ -235,16 +225,12 @@ export class TerrainGenerator {
         width: width,
         banking: banking,
       });
-
-      distanceInBiome += segmentLength;
     }
 
     const endState: ChunkState = {
       endX: currentX,
       endAngle: currentAngle,
       endZ: startState.endZ - CHUNK_LENGTH,
-      biome: currentBiome,
-      distanceInBiome: distanceInBiome,
     };
 
     return { points, endState };
