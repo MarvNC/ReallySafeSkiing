@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
 import { DebugUI } from './debug/DebugUI';
@@ -16,13 +15,15 @@ export class GameApp {
   private isRunning = false;
   private container: HTMLElement;
   private debugCamera?: THREE.PerspectiveCamera;
-  private debugControls?: OrbitControls;
   private activeCamera?: THREE.PerspectiveCamera;
   private useDebugCamera = false;
   private grid?: THREE.GridHelper;
   private debugUI?: DebugUI;
   private debugHelpers?: DebugHelpers;
   private input?: InputManager;
+  private isPointerLocked = false;
+  private euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  private debugCameraSpeed = 50;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -50,9 +51,10 @@ export class GameApp {
     this.debugCamera = new THREE.PerspectiveCamera(70, this.getAspect(), 0.1, 8000);
     this.debugCamera.position.set(160, 180, 260);
     this.debugCamera.lookAt(0, 0, 0);
-    this.debugControls = new OrbitControls(this.debugCamera, this.renderer.domElement);
-    this.debugControls.enableDamping = true;
     this.activeCamera = this.debugCamera;
+
+    // Setup mouse look for debug camera
+    this.setupMouseLook();
 
     this.setupLights();
     this.addHelpers();
@@ -105,12 +107,41 @@ export class GameApp {
     this.input.bindKey('d', Action.SteerRight);
     this.input.bindKey('arrowright', Action.SteerRight);
 
+    // Debug camera controls (additional keys: S, Space, Shift)
+    // W/A/D are shared with player controls and checked in debug camera update
+    this.input.bindKey('s', Action.DebugMoveBackward);
+    this.input.bindKey(' ', Action.DebugMoveUp);
+    this.input.bindKey('shift', Action.DebugMoveDown);
+
     // Camera toggle
     this.input.on(Action.ToggleCamera, (_action, phase) => {
       if (phase !== 'pressed' || !this.player) return;
       this.useDebugCamera = !this.useDebugCamera;
       this.activeCamera = this.useDebugCamera ? this.debugCamera : this.player.camera;
-      console.info(`Camera toggled to ${this.useDebugCamera ? 'debug orbit' : 'first-person'}`);
+
+      if (this.useDebugCamera && this.debugCamera) {
+        // Position debug camera at player position
+        const playerWorldPos = new THREE.Vector3();
+        this.player.mesh.getWorldPosition(playerWorldPos);
+        this.debugCamera.position.copy(playerWorldPos);
+
+        // Match player's camera rotation
+        const playerCameraRotation = new THREE.Euler().setFromQuaternion(
+          this.player.camera.quaternion
+        );
+        this.euler.set(playerCameraRotation.x, playerCameraRotation.y, 0);
+        this.debugCamera.rotation.set(this.euler.x, this.euler.y, this.euler.z);
+
+        // Request pointer lock for mouse look
+        this.renderer.domElement.requestPointerLock();
+      } else {
+        // Release pointer lock when switching back
+        if (document.pointerLockElement === this.renderer.domElement) {
+          document.exitPointerLock();
+        }
+      }
+
+      console.info(`Camera toggled to ${this.useDebugCamera ? 'debug free' : 'first-person'}`);
     });
 
     // Terrain wireframe
@@ -134,6 +165,31 @@ export class GameApp {
       this.debugHelpers?.setVisible(isVisible);
       console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
     });
+  }
+
+  private setupMouseLook(): void {
+    const onMouseMove = (event: MouseEvent): void => {
+      if (!this.useDebugCamera || !this.debugCamera || !this.isPointerLocked) return;
+      
+      const movementX = event.movementX || 0;
+      const movementY = event.movementY || 0;
+      
+      this.euler.setFromQuaternion(this.debugCamera.quaternion);
+      this.euler.y -= movementX * 0.002;
+      this.euler.x -= movementY * 0.002;
+      
+      // Clamp vertical rotation
+      this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
+      
+      this.debugCamera.quaternion.setFromEuler(this.euler);
+    };
+
+    const onPointerLockChange = (): void => {
+      this.isPointerLocked = document.pointerLockElement === this.renderer.domElement;
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('pointerlockchange', onPointerLockChange);
   }
 
   private setupLights(): void {
@@ -186,8 +242,54 @@ export class GameApp {
     if (!this.isRunning) return;
 
     const delta = this.clock.getDelta();
-    this.player.update(delta);
+
+    // Only update player when not in debug camera mode (to avoid conflicts)
+    if (!this.useDebugCamera) {
+      this.player.update(delta);
+    }
+
     this.terrainManager.update();
+
+    // Update debug camera movement
+    if (this.useDebugCamera && this.debugCamera && this.input) {
+      const moveVector = new THREE.Vector3();
+      const forward = new THREE.Vector3(0, 0, -1);
+      const right = new THREE.Vector3(1, 0, 0);
+
+      forward.applyQuaternion(this.debugCamera.quaternion);
+      right.applyQuaternion(this.debugCamera.quaternion);
+
+      // Forward/backward (W/S) - W uses Forward action, S uses DebugMoveBackward
+      if (this.input.isActive(Action.Forward)) {
+        moveVector.add(forward);
+      }
+      if (this.input.isActive(Action.DebugMoveBackward)) {
+        moveVector.sub(forward);
+      }
+
+      // Left/right (A/D) - use SteerLeft/SteerRight actions
+      if (this.input.isActive(Action.SteerLeft)) {
+        moveVector.sub(right);
+      }
+      if (this.input.isActive(Action.SteerRight)) {
+        moveVector.add(right);
+      }
+
+      // Up/down (Space/Shift)
+      if (this.input.isActive(Action.DebugMoveUp)) {
+        moveVector.y += 1;
+      }
+      if (this.input.isActive(Action.DebugMoveDown)) {
+        moveVector.y -= 1;
+      }
+
+      // Normalize and apply speed
+      if (moveVector.lengthSq() > 0) {
+        moveVector.normalize();
+        moveVector.multiplyScalar(this.debugCameraSpeed * delta);
+        this.debugCamera.position.add(moveVector);
+      }
+    }
 
     // Update debug info
     if (this.debugUI && this.debugHelpers && this.player) {
@@ -206,7 +308,6 @@ export class GameApp {
       this.debugHelpers.update(this.player.mesh.position, rotation, velocity);
     }
 
-    this.debugControls?.update();
     const camera = this.activeCamera ?? this.player.camera;
     this.renderer.render(this.scene, camera);
     requestAnimationFrame(this.animate);

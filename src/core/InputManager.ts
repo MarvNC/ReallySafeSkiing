@@ -8,6 +8,13 @@ export const Action = {
   SteerRight: 'SteerRight',
   Jump: 'Jump',
   Forward: 'Forward',
+  // Debug camera controls
+  DebugMoveForward: 'DebugMoveForward',
+  DebugMoveBackward: 'DebugMoveBackward',
+  DebugMoveLeft: 'DebugMoveLeft',
+  DebugMoveRight: 'DebugMoveRight',
+  DebugMoveUp: 'DebugMoveUp',
+  DebugMoveDown: 'DebugMoveDown',
 } as const;
 
 export type Action = (typeof Action)[keyof typeof Action];
