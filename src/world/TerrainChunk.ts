@@ -163,83 +163,65 @@ export class TerrainChunk {
 
     for (let row = 0; row < snowRows; row++) {
       const zFraction = row / (snowRows - 1);
-      const pathIndex = Math.floor(zFraction * (points.length - 1));
+      const scaledIndex = zFraction * (points.length - 1);
+      const pathIndex = Math.floor(scaledIndex);
       const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-
-      // Calculate local Z relative to chunk start (0 to -CHUNK_LENGTH)
-      const localZ = -zFraction * CHUNK_LENGTH;
-      const worldZ = startZ + localZ; // Absolute Z for height calculations
-
       for (let col = 0; col < snowCols; col++) {
         const i = row * snowCols + col;
-
-        // U coordinate (0 to 1)
         const u = col / (snowCols - 1);
+        const t = (u - 0.5) * CHUNK_WIDTH;
 
-        // Calculate width at this point
-        const trackWidth = pathPoint.width;
-
-        // Map U to [-CHUNK_WIDTH/2, +CHUNK_WIDTH/2] for full terrain width
-        const localX = (u - 0.5) * CHUNK_WIDTH;
-        const worldX = localX + pathPoint.x; // Add spine offset
-
-        const y = this.generator.getSnowHeight(
-          localX,
-          worldZ,
-          pathPoint.y,
-          pathPoint.banking,
-          trackWidth
-        );
-        const vertexZ = localZ; // Relative to chunk start
+        const worldX = pathPoint.x + pathPoint.rightX * t;
+        const worldZ = pathPoint.z + pathPoint.rightZ * t;
+        const localCoords = this.generator.projectToLocalXZ(worldX, worldZ, pathPoint);
+        const y = this.generator.getSnowHeightAt(worldX, worldZ, pathPoint);
+        const vertexZ = worldZ - startZ;
 
         snowPos.setXYZ(i, worldX, y, vertexZ);
 
-        // Calculate vertex color based on height (track vs cliff vs plateau)
-        const baseHeight = pathPoint.y + pathPoint.banking * localX;
+        const baseHeight = pathPoint.y + pathPoint.banking * localCoords.t;
         const heightAboveBase = y - baseHeight;
 
         let color: THREE.Color;
         if (heightAboveBase < 2) {
-          // Track level - white snow
           color = new THREE.Color(0xffffff);
-        } else if (heightAboveBase < TERRAIN_CONFIG.CANYON_HEIGHT - 5) {
-          // Cliff face - detect terraced structure for appropriate coloring
-          const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-          const distFromTrackEdge = Math.abs(localX) - canyonFloorWidth;
-          const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
-
-          // Match terrace structure from getSnowHeight
-          const terraceSteps = 6;
-          const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
-
-          // Use wall-space coordinates for noise (matching getSnowHeight)
-          const wallSpaceX = worldZ * 0.1;
-          const wallSpaceY = wallHeight * 0.15;
-
-          // Detect if we're on a flat ledge (near terrace step) or vertical face
-          const progressInStep = (progress * terraceSteps) % 1.0;
-          const isOnLedge = progressInStep < 0.15 || progressInStep > 0.85; // Top/bottom 15% of each step
-
-          if (isOnLedge) {
-            // Flat ledge - snow accumulation with some rock showing through
-            const ledgeNoise = this.generator.sampleNoise(wallSpaceX, wallSpaceY) * 0.5 + 0.5;
-            const rockColor = new THREE.Color(0x666666);
-            const snowColor = new THREE.Color(0xeeeeee);
-            const snowAmount = Math.min(ledgeNoise * 0.6 + 0.3, 0.8); // More snow on ledges
-            color = rockColor.clone().lerp(snowColor, snowAmount);
-          } else {
-            // Vertical face - primarily rock with minimal snow
-            const faceNoise =
-              this.generator.sampleNoise(wallSpaceX * 2, wallSpaceY * 2) * 0.5 + 0.5;
-            const rockColor = new THREE.Color(0x555555);
-            const snowColor = new THREE.Color(0xaaaaaa);
-            const snowAmount = Math.min(faceNoise * 0.2, 0.3); // Less snow on vertical faces
-            color = rockColor.clone().lerp(snowColor, snowAmount);
-          }
         } else {
-          // Plateau top - white snow
-          const plateauNoise = this.generator.sampleNoise(localX * 0.1, worldZ * 0.1) * 0.3 + 0.7;
-          color = new THREE.Color(0xffffff).multiplyScalar(plateauNoise);
+          const trackWidth = pathPoint.width;
+          const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+          const distFromTrackEdge = Math.abs(localCoords.t) - canyonFloorWidth;
+
+          if (
+            heightAboveBase < TERRAIN_CONFIG.CANYON_HEIGHT - 5 &&
+            distFromTrackEdge > 0 &&
+            distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH
+          ) {
+            const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
+            const terraceSteps = 6;
+            const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+            const wallSpaceX = localCoords.s * 0.1;
+            const wallSpaceY = wallHeight * 0.15;
+            const progressInStep = (progress * terraceSteps) % 1.0;
+            const isOnLedge = progressInStep < 0.15 || progressInStep > 0.85;
+
+            if (isOnLedge) {
+              const ledgeNoise = this.generator.sampleNoise(wallSpaceX, wallSpaceY) * 0.5 + 0.5;
+              const rockColor = new THREE.Color(0x666666);
+              const snowColor = new THREE.Color(0xeeeeee);
+              const snowAmount = Math.min(ledgeNoise * 0.6 + 0.3, 0.8);
+              color = rockColor.clone().lerp(snowColor, snowAmount);
+            } else {
+              const faceNoise =
+                this.generator.sampleNoise(wallSpaceX * 2, wallSpaceY * 2) * 0.5 + 0.5;
+              const rockColor = new THREE.Color(0x555555);
+              const snowColor = new THREE.Color(0xaaaaaa);
+              const snowAmount = Math.min(faceNoise * 0.2, 0.3);
+              color = rockColor.clone().lerp(snowColor, snowAmount);
+            }
+          } else {
+            const plateauNoise =
+              this.generator.sampleNoise(localCoords.t * 0.1, localCoords.s * 0.1) * 0.3 + 0.7;
+            color = new THREE.Color(0xffffff).multiplyScalar(plateauNoise);
+          }
         }
 
         snowColors.setXYZ(i, color.r, color.g, color.b);
@@ -285,45 +267,36 @@ export class TerrainChunk {
     const gridSize = 5; // Spacing between potential tree positions
     const noiseScale = 0.1; // Frequency of noise sampling
 
-    for (let x = -CHUNK_WIDTH / 2; x < CHUNK_WIDTH / 2; x += gridSize) {
-      for (let z = -CHUNK_LENGTH; z < 0; z += gridSize) {
-        // Find closest path point
-        const zFraction = -z / CHUNK_LENGTH;
-        const pathIndex = Math.floor(zFraction * (points.length - 1));
-        const pathPoint = points[Math.min(pathIndex, points.length - 1)];
-        const worldZ = startZ + z; // Absolute Z coordinate
+    const lateralMax = CHUNK_WIDTH / 2;
 
-        // Calculate local X relative to path spine
-        const localX = x - pathPoint.x;
-        const absLocalX = Math.abs(localX);
+    for (let row = 0; row < CHUNK_LENGTH; row += gridSize) {
+      const zFraction = row / CHUNK_LENGTH;
+      const scaledIndex = zFraction * (points.length - 1);
+      const pathIndex = Math.floor(scaledIndex);
+      const pathPoint = points[Math.min(pathIndex, points.length - 1)];
+
+      for (let t = -lateralMax; t < lateralMax; t += gridSize) {
+        const worldX = pathPoint.x + pathPoint.rightX * t;
+        const worldZ = pathPoint.z + pathPoint.rightZ * t;
+        const { t: localT, s: localS } = this.generator.projectToLocalXZ(worldX, worldZ, pathPoint);
+
         const trackWidth = pathPoint.width;
         const halfTrack = trackWidth / 2;
-        const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-        const distFromTrackEdge = absLocalX - canyonFloorWidth;
+        const canyonFloorWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+        const distFromTrackEdge = Math.abs(localT) - canyonFloorWidth;
 
-        // STRICT SAFETY: Never spawn obstacles on the track
-        const distFromCenter = absLocalX;
-        if (distFromCenter < halfTrack) {
-          continue; // Skip this position - it's on the track
+        if (Math.abs(localT) < halfTrack) {
+          continue;
         }
-        const isOnBank = absLocalX > halfTrack && distFromTrackEdge <= 0;
+
+        const isOnBank = Math.abs(localT) > halfTrack && distFromTrackEdge <= 0;
         const isOnCliff = distFromTrackEdge > 0 && distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH;
         const isOnPlateau = distFromTrackEdge >= TERRAIN_CONFIG.WALL_WIDTH;
 
-        // Sample noise for tree placement and type determination
-        const noiseValue = this.generator.sampleNoise(x * noiseScale, worldZ * noiseScale);
-        const normalizedNoise = (noiseValue + 1) / 2; // Convert from [-1, 1] to [0, 1]
+        const noiseValue = this.generator.sampleNoise(worldX * noiseScale, localS * noiseScale);
+        const normalizedNoise = (noiseValue + 1) / 2;
+        const y = this.generator.getSnowHeightAt(worldX, worldZ, pathPoint);
 
-        // Get height at this position
-        const y = this.generator.getSnowHeight(
-          localX,
-          worldZ,
-          pathPoint.y,
-          pathPoint.banking,
-          trackWidth
-        );
-
-        // Determine what to place based on terrain and noise
         let placeTree: TreeArchetype | null = null;
         let placeDeadTree = false;
         let placeRock = false;
@@ -375,8 +348,6 @@ export class TerrainChunk {
 
         // Place tree in appropriate bucket
         if (placeTree && indices[placeTree] < maxCapacities[placeTree]) {
-          const treeY = y;
-
           // Normal distribution for tree scale (mean ~2.0, std dev ~0.5, clamped to 1.0-3.0)
           // Using Box-Muller transform for normal distribution
           const u1 = Math.random();
@@ -387,7 +358,7 @@ export class TerrainChunk {
 
           const rotationY = Math.random() * Math.PI * 2;
 
-          dummy.position.set(x, treeY, z);
+          dummy.position.set(worldX, y, worldZ - startZ);
           dummy.rotation.set(0, rotationY, 0); // Keep trees upright (no X/Z rotation)
           dummy.scale.set(treeScale, treeScale, treeScale);
           dummy.updateMatrix();
@@ -399,13 +370,13 @@ export class TerrainChunk {
 
         // Place dead tree
         if (placeDeadTree && deadTreeIndex < maxDeadTrees) {
-          const logY = y;
           const logScale = 0.9 + Math.random() * 0.3;
           // Rotate 90 degrees on X or Z axis to lay flat
           const rotationAxis = Math.random() > 0.5 ? 'x' : 'z';
           const rotationAngle = Math.random() * Math.PI * 2;
 
-          dummy.position.set(x, logY, z);
+          dummy.position.set(worldX, y, worldZ - startZ);
+          dummy.rotation.set(0, 0, 0);
           if (rotationAxis === 'x') {
             dummy.rotation.x = Math.PI / 2;
             dummy.rotation.z = rotationAngle;
@@ -422,7 +393,6 @@ export class TerrainChunk {
 
         // Place rock
         if (placeRock && rockInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
-          const rockY = y;
           const rockScale = 0.8 + Math.random() * 0.6;
           const euler = new THREE.Euler(
             Math.random() * Math.PI * 0.3,
@@ -431,7 +401,7 @@ export class TerrainChunk {
           );
           matrix.makeRotationFromEuler(euler);
           matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
-          matrix.setPosition(x, rockY, z);
+          matrix.setPosition(worldX, y, worldZ - startZ);
           this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
 
           rockInstanceIndex++;

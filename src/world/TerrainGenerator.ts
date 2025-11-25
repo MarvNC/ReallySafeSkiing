@@ -27,69 +27,52 @@ export class TerrainGenerator {
     );
   }
 
-  getSnowHeight(
-    localX: number,
-    worldZ: number,
-    pathY: number,
-    banking: number,
-    trackWidth?: number
-  ): number {
-    const bankingOffset = localX * banking;
+  getSnowHeightAt(worldX: number, worldZ: number, point: PathPoint): number {
+    const { t, s } = this.projectToLocalXZ(worldX, worldZ, point);
+    return this.getSnowHeightLocal(t, s, point);
+  }
+
+  projectToLocalXZ(worldX: number, worldZ: number, point: PathPoint): { t: number; s: number } {
+    return this.worldToLocalXZ(worldX, worldZ, point);
+  }
+
+  private getSnowHeightLocal(t: number, s: number, point: PathPoint): number {
+    const bankingOffset = t * point.banking;
     const moguls =
-      this.noise2D(localX * TERRAIN_CONFIG.MOGUL_SCALE, worldZ * TERRAIN_CONFIG.MOGUL_SCALE) *
+      this.noise2D(t * TERRAIN_CONFIG.MOGUL_SCALE, s * TERRAIN_CONFIG.MOGUL_SCALE) *
       TERRAIN_CONFIG.MOGUL_HEIGHT;
-    let height = pathY + bankingOffset + moguls;
+    let height = point.y + bankingOffset + moguls;
 
-    // Add canyon walls if trackWidth is provided
-    if (trackWidth !== undefined) {
-      const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-      const distFromTrackEdge = Math.abs(localX) - canyonFloorWidth;
+    const trackWidth = point.width;
+    const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+    const distFromTrackEdge = Math.abs(t) - canyonFloorWidth;
 
-      if (distFromTrackEdge > 0) {
-        // Calculate progress up the cliff (0.0 = bottom, 1.0 = top)
-        const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
+    if (distFromTrackEdge > 0) {
+      const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
 
-        if (progress < 1.0) {
-          // Cliff face - terraced low-poly style
-          // Calculate wall height in world space (for proper noise mapping)
-          const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+      if (progress < 1.0) {
+        const terraceSteps = 6;
+        const terraceStepSize = TERRAIN_CONFIG.CANYON_HEIGHT / terraceSteps;
+        const quantizedProgress = Math.floor(progress * terraceSteps) / terraceSteps;
+        const baseTerraceHeight = quantizedProgress * TERRAIN_CONFIG.CANYON_HEIGHT;
 
-          // Create terraced/blocky profile with quantization
-          const terraceSteps = 6; // Number of distinct ledges
-          const terraceStepSize = TERRAIN_CONFIG.CANYON_HEIGHT / terraceSteps;
-          const quantizedProgress = Math.floor(progress * terraceSteps) / terraceSteps;
-          const baseTerraceHeight = quantizedProgress * TERRAIN_CONFIG.CANYON_HEIGHT;
+        const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+        const wallSpaceX = s * 0.1;
+        const wallSpaceY = wallHeight * 0.15;
 
-          // Use wall-space coordinates for noise (wallHeight instead of localX)
-          // This prevents vertical stretching by mapping noise to the wall face
-          const wallSpaceX = worldZ * 0.1; // Horizontal along the wall
-          const wallSpaceY = wallHeight * 0.15; // Vertical up the wall
-
-          // Large-scale noise to displace terraces (creates chunky rock formations)
-          const terraceDisplacement = this.noise2D(wallSpaceX, wallSpaceY) * terraceStepSize * 0.6;
-
-          // Fine detail noise for texture (smaller amplitude)
-          const detailNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 2.0;
-
-          // Combine terraced base with displacements
-          const cliffHeight = baseTerraceHeight + terraceDisplacement + detailNoise;
-          height += cliffHeight;
-        } else {
-          // Plateau - gentle rolling noise
-          const plateauNoise = this.noise2D(localX * 0.05, worldZ * 0.05) * 3.0;
-          height += TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
-        }
+        const terraceDisplacement = this.noise2D(wallSpaceX, wallSpaceY) * terraceStepSize * 0.6;
+        const detailNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 2.0;
+        const cliffHeight = baseTerraceHeight + terraceDisplacement + detailNoise;
+        height += cliffHeight;
+      } else {
+        const plateauNoise = this.noise2D(t * 0.05, s * 0.05) * 3.0;
+        height += TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
       }
     }
 
     return height;
   }
 
-  /**
-   * Generate a stateless path segment for finite or infinite generation.
-   * Uses the "Offset Algorithm" for X calculation and linear interpolation for Y.
-   * Applies moving average smoothing to ensure seamless transitions between segments.
-   */
   generatePathSegment(
     startZ: number,
     length: number,
@@ -97,95 +80,114 @@ export class TerrainGenerator {
   ): PathPoint[] {
     const {
       SEGMENT_LENGTH,
-      WINDINESS,
+      AMPLITUDE,
       NOISE_SCALE,
-      MEANDER_AMP,
-      MEANDER_FREQ,
+      MEANDER1_FREQ,
+      MEANDER2_FREQ,
+      WIDTH_BASE,
+      WIDTH_NOISE_SCALE,
       WIDTH_VARIATION,
       SMOOTHING_WINDOW,
       BANKING_STRENGTH,
     } = TERRAIN_CONFIG;
     const { TOTAL_LENGTH, START_ALTITUDE, END_ALTITUDE } = MOUNTAIN_CONFIG;
 
-    // Calculate how many points to generate
     const numPoints = Math.ceil(length / SEGMENT_LENGTH) + 1;
     const rawPoints: Array<{ x: number; y: number; z: number }> = [];
+    const startX = 0;
 
-    // Raw Generation Loop
     for (let i = 0; i < numPoints; i++) {
-      const currentZ = startZ - i * SEGMENT_LENGTH;
-
-      // X Calculation using Offset Algorithm
-      const noiseValue = this.noise2D(0, currentZ * NOISE_SCALE);
-      const meanderValue = Math.sin(currentZ * MEANDER_FREQ);
-      const x = noiseValue * WINDINESS + meanderValue * MEANDER_AMP;
-
-      // Y Calculation - linear interpolation for finite mode
-      const progress = Math.max(0, Math.min(1, (startZ - currentZ) / TOTAL_LENGTH));
-      const y = START_ALTITUDE + (END_ALTITUDE - START_ALTITUDE) * progress;
+      const progress = numPoints === 1 ? 0 : i / (numPoints - 1);
+      const currentZ = startZ - progress * length;
+      const noiseValue = this.noise2D(i * NOISE_SCALE, 0);
+      const lateralNoise = noiseValue * AMPLITUDE;
+      const meander1 = Math.sin(progress * Math.PI * 2 * MEANDER1_FREQ) * AMPLITUDE * 0.3;
+      const meander2 = Math.sin(progress * Math.PI * 2 * MEANDER2_FREQ + 1) * AMPLITUDE * 0.2;
+      const x = startX + lateralNoise + meander1 + meander2;
+      const globalProgress = this.clamp01(-currentZ / TOTAL_LENGTH);
+      const y = START_ALTITUDE + (END_ALTITUDE - START_ALTITUDE) * globalProgress;
 
       rawPoints.push({ x, y, z: currentZ });
     }
 
-    // Seam Smoothing - combine with previous points and apply moving average
-    const combinedPoints = [...previousPoints, ...rawPoints];
+    const combinedPoints = [
+      ...previousPoints.map((point) => ({ x: point.x, y: point.y, z: point.z })),
+      ...rawPoints,
+    ];
     const smoothedX: number[] = [];
 
-    // Apply moving average to X coordinates
     for (let i = 0; i < combinedPoints.length; i++) {
       const windowStart = Math.max(0, i - Math.floor(SMOOTHING_WINDOW / 2));
       const windowEnd = Math.min(combinedPoints.length, i + Math.ceil(SMOOTHING_WINDOW / 2));
       let sum = 0;
       let count = 0;
-
       for (let j = windowStart; j < windowEnd; j++) {
         sum += combinedPoints[j].x;
         count++;
       }
-
-      smoothedX.push(sum / count);
+      smoothedX.push(count > 0 ? sum / count : combinedPoints[i].x);
     }
 
-    // Slice to get only the new smoothed points
-    const newSmoothedPoints = combinedPoints.slice(previousPoints.length);
-    const smoothedXValues = smoothedX.slice(previousPoints.length);
+    const newPoints: PathPoint[] = [];
+    let cumulativeS = previousPoints.length ? previousPoints[previousPoints.length - 1].s : 0;
 
-    // Post-Processing - calculate derived data
-    const finalPoints: PathPoint[] = [];
+    for (let i = 0; i < rawPoints.length; i++) {
+      const combinedIndex = previousPoints.length + i;
+      const x = smoothedX[combinedIndex];
+      const y = combinedPoints[combinedIndex].y;
+      const z = combinedPoints[combinedIndex].z;
 
-    for (let i = 0; i < newSmoothedPoints.length; i++) {
-      const point = newSmoothedPoints[i];
-      const smoothedX = smoothedXValues[i];
-      const nextPoint = i < newSmoothedPoints.length - 1 ? newSmoothedPoints[i + 1] : null;
+      let directionX = 0;
+      let directionZ = -SEGMENT_LENGTH;
 
-      // Width calculation
-      const widthNoise = this.noise2D(0, point.z * 0.01);
-      const widthSin = Math.sin(point.z * MEANDER_FREQ);
-      const baseWidth = 30; // Default base width
-      const width = baseWidth * (1 + widthNoise * WIDTH_VARIATION) * (1 + widthSin * 0.3);
-
-      // Angle calculation
-      let angle = 0;
-      if (nextPoint) {
-        const deltaX = nextPoint.x - smoothedX;
-        const deltaZ = nextPoint.z - point.z;
-        angle = Math.atan2(deltaX, -deltaZ); // Negative deltaZ because we're going down
+      if (combinedIndex > 0) {
+        directionX = x - smoothedX[combinedIndex - 1];
+        directionZ = z - combinedPoints[combinedIndex - 1].z;
+      } else if (combinedIndex + 1 < smoothedX.length) {
+        directionX = smoothedX[combinedIndex + 1] - x;
+        directionZ = combinedPoints[combinedIndex + 1].z - z;
       }
 
-      // Banking calculation
+      let segmentLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
+      if (segmentLength === 0) {
+        segmentLength = SEGMENT_LENGTH;
+        directionX = 0;
+        directionZ = -SEGMENT_LENGTH;
+      }
+
+      if (combinedIndex > 0) {
+        cumulativeS += segmentLength;
+      }
+
+      const angle = Math.atan2(directionX, -directionZ);
+      const forwardX = Math.sin(angle);
+      const forwardZ = -Math.cos(angle);
+      const rightX = forwardZ;
+      const rightZ = -forwardX;
+
+      const widthNoise = this.noise2D(z * WIDTH_NOISE_SCALE, 100);
+      const segmentProgress = this.clamp01((startZ - z) / length);
+      const widthProgressFactor = 1 + Math.sin(segmentProgress * Math.PI - Math.PI / 2) * 0.2;
+      const width =
+        WIDTH_BASE * (1 + widthNoise * WIDTH_VARIATION) * Math.max(0.5, widthProgressFactor);
       const banking = angle * BANKING_STRENGTH;
 
-      finalPoints.push({
-        x: smoothedX,
-        y: point.y,
-        z: point.z,
+      newPoints.push({
+        x,
+        y,
+        z,
         angle,
         width,
         banking,
+        s: cumulativeS,
+        forwardX,
+        forwardZ,
+        rightX,
+        rightZ,
       });
     }
 
-    return finalPoints;
+    return newPoints;
   }
 
   // Keep the old method for backward compatibility during transition
@@ -217,6 +219,12 @@ export class TerrainGenerator {
       // Calculate banking based on current angle
       const banking = currentAngle * TERRAIN_CONFIG.BANKING_STRENGTH;
 
+      const s = points.length > 0 ? points[points.length - 1].s + segmentLength : 0;
+      const forwardX = Math.sin(currentAngle);
+      const forwardZ = -Math.cos(currentAngle);
+      const rightX = forwardZ;
+      const rightZ = -forwardX;
+
       points.push({
         x: currentX,
         y: 0, // Placeholder - will be calculated by new method
@@ -224,6 +232,11 @@ export class TerrainGenerator {
         angle: currentAngle,
         width: width,
         banking: banking,
+        s,
+        forwardX,
+        forwardZ,
+        rightX,
+        rightZ,
       });
     }
 
@@ -234,5 +247,21 @@ export class TerrainGenerator {
     };
 
     return { points, endState };
+  }
+
+  private worldToLocalXZ(
+    worldX: number,
+    worldZ: number,
+    point: PathPoint
+  ): { t: number; s: number } {
+    const dx = worldX - point.x;
+    const dz = worldZ - point.z;
+    const t = dx * point.rightX + dz * point.rightZ;
+    const sOffset = dx * point.forwardX + dz * point.forwardZ;
+    return { t, s: point.s + sOffset };
+  }
+
+  private clamp01(value: number): number {
+    return Math.max(0, Math.min(1, value));
   }
 }

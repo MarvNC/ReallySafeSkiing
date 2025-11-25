@@ -49,7 +49,7 @@ export const PLAYER_CONFIG = {
 } as const;
 
 export const MOUNTAIN_CONFIG = {
-  TOTAL_LENGTH: 6000, // Total Z distance of the run
+  TOTAL_LENGTH: 3000, // Total Z distance of the run
   START_ALTITUDE: 600, // Y height at start
   END_ALTITUDE: 0, // Y height at finish
 } as const;
@@ -61,28 +61,25 @@ export const TERRAIN_DIMENSIONS = {
 } as const;
 
 export const TERRAIN_CONFIG = {
-  SLOPE_ANGLE: 0.5,
-  // Tuning parameters for the new algorithm
-  WINDINESS: 30, // controls noise amplitude
-  NOISE_SCALE: 0.005, // controls noise frequency
-  MEANDER_AMP: 40, // controls sine wave amplitude
-  MEANDER_FREQ: 0.002, // controls sine wave frequency
-  WIDTH_VARIATION: 0.5, // how much the width changes
-  SMOOTHING_WINDOW: 5, // window size for moving average
-  SEGMENT_LENGTH: 2.5, // Resolution of points
-
+  SEGMENT_LENGTH: 8, // Distance between samples along the spine (lower = more detail, more cost)
+  AMPLITUDE: 60, // Overall lateral swing of the path, i.e. “windiness”
+  NOISE_SCALE: 0.02, // Frequency of the Perlin offset used for meanders
+  MEANDER1_FREQ: 1.0, // Slow sine wave that creates large sweeping turns
+  MEANDER2_FREQ: 2.0, // Faster sine wave layered on top for jittery variation
+  WIDTH_BASE: 30, // Average track width before per-point noise
+  WIDTH_NOISE_SCALE: 0.01, // Frequency for width noise sampling along the run
+  WIDTH_VARIATION: 0.4, // Strength of width noise (0 = uniform width)
+  SMOOTHING_WINDOW: 5, // Window size for the moving average used to smooth X offsets
+  BANKING_STRENGTH: 0.5, // Scales how aggressively turns bank the snow surface
   TURN_SPEED: 0.04, // Controls how quickly the path changes direction
   WIDTH_MIN: 20, // Minimum track width
   WIDTH_MAX: 32.5, // Maximum track width
-  BANKING_STRENGTH: 0.8,
-  WALL_STEEPNESS: 3.0,
   MOGUL_SCALE: 0.2,
-  MOGUL_HEIGHT: 0.5, // Reduced from 1.0 to make ground less bumpy
+  MOGUL_HEIGHT: 0.7, // Reduced from 1.0 to make ground less bumpy
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
   CANYON_HEIGHT: 25, // The max height of the cliff
-  WALL_WIDTH: 15, // How wide the slope is horizontally
-  CLIFF_NOISE_SCALE: 0.5, // Higher frequency noise for rocks
+  WALL_WIDTH: 12, // How wide the slope is horizontally
   OBSTACLE_COUNT: 200, // Number of obstacles per chunk
 } as const;
 

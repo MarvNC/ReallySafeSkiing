@@ -103,16 +103,6 @@ export class TerrainManager {
       }
     }
 
-    // Calculate localX relative to the path spine
-    const localX = worldX - closestPoint.x;
-
-    // Get terrain height using the generator
-    return this.generator.getSnowHeight(
-      localX,
-      worldZ,
-      closestPoint.y,
-      closestPoint.banking,
-      closestPoint.width
-    );
+    return this.generator.getSnowHeightAt(worldX, worldZ, closestPoint);
   }
 }

@@ -13,4 +13,9 @@ export interface PathPoint {
   angle: number;
   width: number;
   banking: number;
+  s: number;
+  forwardX: number;
+  forwardZ: number;
+  rightX: number;
+  rightZ: number;
 }
