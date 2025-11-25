@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import RAPIER from '@dimforge/rapier3d-compat';
 import type { PathPoint } from './WorldState';
 import { SurfaceKind } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
@@ -8,6 +9,8 @@ import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
 import { getTerrainMaterials } from './TerrainMaterials';
 import { TerrainGenerator } from './TerrainGenerator';
 import { COLOR_PALETTE } from '../constants/colors';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { PhysicsLayer, makeCollisionGroups } from '../physics/PhysicsLayers';
 
 const SURFACE_KIND_TO_INDEX: Record<SurfaceKind, number> = {
   [SurfaceKind.Track]: 0,
@@ -48,11 +51,17 @@ export class TerrainChunk {
   private readonly generator: TerrainGenerator;
   private readonly points: PathPoint[];
   private currentZ: number;
+  private readonly physics?: PhysicsWorld;
+  private terrainBody?: RAPIER.RigidBody;
+  private terrainCollider?: RAPIER.Collider;
+  private obstacleBodies: RAPIER.RigidBody[] = [];
+  private obstacleColliders: RAPIER.Collider[] = [];
 
-  constructor(points: PathPoint[], generator: TerrainGenerator) {
+  constructor(points: PathPoint[], generator: TerrainGenerator, physics?: PhysicsWorld) {
     this.generator = generator;
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
+    this.physics = physics;
 
     // Initialize Group
     this.group = new THREE.Group();
@@ -228,10 +237,14 @@ export class TerrainChunk {
     this.snowGeometry.computeVertexNormals();
 
     // --- 2. Scatter Obstacles ---
-    this.scatterObstacles(points, startZ);
+    this.scatterObstacles(points, startZ, this.physics);
+
+    if (this.physics) {
+      this.createTerrainCollider(snowPos, startZ);
+    }
   }
 
-  private scatterObstacles(points: PathPoint[], startZ: number): void {
+  private scatterObstacles(points: PathPoint[], startZ: number, physics?: PhysicsWorld): void {
     const matrix = new THREE.Matrix4();
     const dummy = new THREE.Object3D(); // Helper for matrix calculations
 
@@ -360,6 +373,16 @@ export class TerrainChunk {
 
           this.treeBuckets[placeTree].setMatrixAt(indices[placeTree], dummy.matrix);
 
+          if (physics) {
+            this.createTreeCollider(
+              physics,
+              dummy.position.x,
+              dummy.position.y,
+              dummy.position.z + startZ,
+              treeScale
+            );
+          }
+
           indices[placeTree]++;
         }
 
@@ -383,6 +406,14 @@ export class TerrainChunk {
           dummy.updateMatrix();
 
           this.deadTreeMesh.setMatrixAt(deadTreeIndex, dummy.matrix);
+          if (physics) {
+            this.createDeadTreeCollider(
+              physics,
+              dummy.position.clone().add(new THREE.Vector3(0, 0, startZ)),
+              dummy.rotation.clone(),
+              logScale
+            );
+          }
           deadTreeIndex++;
         }
 
@@ -398,6 +429,12 @@ export class TerrainChunk {
           matrix.scale(new THREE.Vector3(rockScale, rockScale, rockScale));
           matrix.setPosition(worldX, y, worldZ - startZ);
           this.rockMesh.setMatrixAt(rockInstanceIndex, matrix);
+
+          if (physics) {
+            const worldPos = new THREE.Vector3().setFromMatrixPosition(matrix);
+            worldPos.z += startZ;
+            this.createRockCollider(physics, worldPos, rockScale);
+          }
 
           rockInstanceIndex++;
         }
@@ -424,10 +461,105 @@ export class TerrainChunk {
   }
 
   dispose(): void {
+    if (this.physics) {
+      const world = this.physics.getWorld();
+      if (this.terrainCollider) {
+        world.removeCollider(this.terrainCollider, true);
+      }
+      if (this.terrainBody) {
+        world.removeRigidBody(this.terrainBody);
+      }
+      this.obstacleColliders.forEach((collider) => world.removeCollider(collider, true));
+      this.obstacleBodies.forEach((body) => world.removeRigidBody(body));
+      this.obstacleColliders = [];
+      this.obstacleBodies = [];
+    }
+
     // Dispose geometries (materials are shared and owned by TerrainMaterials)
     this.snowGeometry.dispose();
     Object.values(this.treeGeometries).forEach((geo) => geo.dispose());
     this.deadTreeGeometry.dispose();
     this.rockGeometry.dispose();
+  }
+
+  private createTerrainCollider(snowPos: THREE.BufferAttribute, startZ: number): void {
+    if (!this.physics) return;
+    const world = this.physics.getWorld();
+    const vertices = new Float32Array(snowPos.array as ArrayLike<number>);
+    const indexAttr = this.snowGeometry.getIndex();
+    const indices = indexAttr ? new Uint32Array(indexAttr.array as ArrayLike<number>) : undefined;
+
+    const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, startZ);
+    this.terrainBody = world.createRigidBody(bodyDesc);
+
+    const colliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices ?? new Uint32Array());
+    colliderDesc.setCollisionGroups(makeCollisionGroups(PhysicsLayer.World, PhysicsLayer.Player));
+
+    this.terrainCollider = world.createCollider(colliderDesc, this.terrainBody);
+  }
+
+  private createTreeCollider(
+    physics: PhysicsWorld,
+    worldX: number,
+    worldY: number,
+    worldZ: number,
+    scale: number
+  ): void {
+    const world = physics.getWorld();
+    const radius = 0.8 * scale;
+    const halfHeight = 4 * scale;
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(worldX, worldY + halfHeight, worldZ)
+    );
+    const collider = world.createCollider(
+      RAPIER.ColliderDesc.cylinder(halfHeight, radius).setCollisionGroups(
+        makeCollisionGroups(PhysicsLayer.World, PhysicsLayer.Player)
+      ),
+      body
+    );
+    this.obstacleBodies.push(body);
+    this.obstacleColliders.push(collider);
+  }
+
+  private createRockCollider(physics: PhysicsWorld, worldPos: THREE.Vector3, scale: number): void {
+    const world = physics.getWorld();
+    const radius = 1.2 * scale;
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(worldPos.x, worldPos.y + radius, worldPos.z)
+    );
+    const collider = world.createCollider(
+      RAPIER.ColliderDesc.ball(radius).setCollisionGroups(
+        makeCollisionGroups(PhysicsLayer.World, PhysicsLayer.Player)
+      ),
+      body
+    );
+    this.obstacleBodies.push(body);
+    this.obstacleColliders.push(collider);
+  }
+
+  private createDeadTreeCollider(
+    physics: PhysicsWorld,
+    position: THREE.Vector3,
+    rotation: THREE.Euler,
+    scale: number
+  ): void {
+    const world = physics.getWorld();
+    const halfHeight = 1.5 * scale;
+    const radius = 0.3 * scale;
+    const quaternion = new THREE.Quaternion().setFromEuler(rotation);
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(position.x, position.y + radius, position.z)
+    );
+    const colliderDesc = RAPIER.ColliderDesc.capsule(halfHeight, radius)
+      .setRotation({
+        x: quaternion.x,
+        y: quaternion.y,
+        z: quaternion.z,
+        w: quaternion.w,
+      })
+      .setCollisionGroups(makeCollisionGroups(PhysicsLayer.World, PhysicsLayer.Player));
+    const collider = world.createCollider(colliderDesc, body);
+    this.obstacleBodies.push(body);
+    this.obstacleColliders.push(collider);
   }
 }

@@ -23,6 +23,18 @@ export const SKI_PHYSICS = {
 export const PLAYER_CONFIG = {
   radius: 1.6,
   startPosition: new THREE.Vector3(0, 15, -5),
+  physics: {
+    capsuleRadius: 0.5,
+    capsuleHalfHeight: 1.0,
+    mass: 85,
+    linearDamping: 1.25,
+    angularDamping: 2.5,
+    moveForce: 260,
+    maxSpeed: 40,
+    brakeDamping: 4.0,
+    steerTurnSpeed: 2.5,
+    jumpImpulse: 12,
+  },
   camera: {
     fov: 75,
     near: 0.1,

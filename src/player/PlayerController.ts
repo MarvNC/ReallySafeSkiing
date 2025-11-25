@@ -2,10 +2,12 @@ import * as THREE from 'three';
 import { createSkiPair, createHandWithPole } from './SkierAssets';
 import { PLAYER_CONFIG } from '../config/GameConfig';
 import { Action, InputManager } from '../core/InputManager';
+import { PlayerPhysics } from './PlayerPhysics';
 
 type PlayerOptions = {
   startPosition?: THREE.Vector3;
   radius?: number;
+  playerPhysics: PlayerPhysics;
 };
 
 export class PlayerController {
@@ -23,8 +25,11 @@ export class PlayerController {
   private currentLeftHandX: number = PLAYER_CONFIG.hands.leftOffset.x;
   private currentRightHandX: number = PLAYER_CONFIG.hands.rightOffset.x;
 
-  constructor(scene: THREE.Scene, input: InputManager, options?: PlayerOptions) {
-    const startPosition = options?.startPosition ?? PLAYER_CONFIG.startPosition.clone();
+  private physics: PlayerPhysics;
+  private readonly velocity = new THREE.Vector3();
+
+  constructor(scene: THREE.Scene, input: InputManager, options: PlayerOptions) {
+    const startPosition = options.startPosition ?? PLAYER_CONFIG.startPosition.clone();
 
     // 1. Main container for all visual elements
     const mesh = new THREE.Group();
@@ -44,12 +49,16 @@ export class PlayerController {
     this.mesh = mesh;
     this.camera = camera;
     this.input = input;
+    this.physics = options.playerPhysics;
 
     // 4. Setup visual components
     this.setupHands();
     this.setupSkis();
 
     scene.add(this.mesh);
+
+    // Ensure visuals start aligned with physics
+    this.physics.syncToThree(this.mesh);
 
     console.log(
       `Player created at position: (${startPosition.x}, ${startPosition.y}, ${startPosition.z})`
@@ -89,8 +98,13 @@ export class PlayerController {
    * Update player animations.
    */
   update(deltaTime: number): void {
-    // Procedural animation only
+    this.physics.applyControls(this.input, deltaTime);
+    this.physics.syncToThree(this.mesh);
     this.updateVisuals(deltaTime);
+  }
+
+  syncFromPhysics(): void {
+    this.physics.syncToThree(this.mesh);
   }
 
   private updateVisuals(deltaTime: number): void {
@@ -99,8 +113,7 @@ export class PlayerController {
     const isBraking = this.input.isBraking();
     const isPoling = this.input.isActive(Action.Forward);
 
-    // No physics, so no velocity - use a default speed for animation purposes
-    const speed = 0;
+    const speed = this.physics.getVelocity(this.velocity).length();
     const time = performance.now() / 1000;
 
     // Calculate target X positions for hands based on steering input

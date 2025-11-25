@@ -3,6 +3,7 @@ import { TerrainChunk } from './TerrainChunk';
 import type { PathPoint } from './WorldState';
 import { TerrainGenerator } from './TerrainGenerator';
 import { TERRAIN_DIMENSIONS, MOUNTAIN_CONFIG } from '../config/GameConfig';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
 
 export class TerrainManager {
   private readonly chunks: TerrainChunk[] = [];
@@ -11,7 +12,7 @@ export class TerrainManager {
   private readonly allPoints: PathPoint[] = [];
   private finishLine?: THREE.Mesh;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, physics?: PhysicsWorld) {
     this.generator = new TerrainGenerator();
 
     // Generate the entire mountain path once
@@ -23,7 +24,7 @@ export class TerrainManager {
       const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
       if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
 
-      const chunk = new TerrainChunk(chunkPoints, this.generator);
+      const chunk = new TerrainChunk(chunkPoints, this.generator, physics);
       this.chunks.push(chunk);
       scene.add(chunk.group);
     }
@@ -46,8 +47,9 @@ export class TerrainManager {
     scene.add(this.finishLine);
   }
 
-  update(): void {
-    // Disabled - no infinite recycling in finite mode
+  update(playerPosition?: THREE.Vector3): void {
+    // Streaming not implemented yet; keep signature ready for future use.
+    void playerPosition;
   }
 
   setWireframe(enabled: boolean): void {

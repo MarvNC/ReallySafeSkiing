@@ -5,6 +5,8 @@ import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
 import { PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
+import { PhysicsWorld } from './physics/PhysicsWorld';
+import { PlayerPhysics } from './player/PlayerPhysics';
 
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
@@ -12,6 +14,8 @@ export class GameApp {
   private clock: THREE.Clock;
   private terrainManager!: TerrainManager;
   private player!: PlayerController;
+  private playerPhysics!: PlayerPhysics;
+  private physics!: PhysicsWorld;
   private isRunning = false;
   private container: HTMLElement;
   private debugCamera?: THREE.PerspectiveCamera;
@@ -59,8 +63,11 @@ export class GameApp {
     this.setupLights();
     this.addHelpers();
 
+    this.physics = new PhysicsWorld();
+    await this.physics.init();
+
     // 1. Create Terrain Manager (generates the world)
-    this.terrainManager = new TerrainManager(this.scene);
+    this.terrainManager = new TerrainManager(this.scene, this.physics);
 
     // 2. Get Start Position from generated path
     // Spawn player a bit farther forward along the path (50 points ahead)
@@ -72,8 +79,10 @@ export class GameApp {
     const startPos = new THREE.Vector3(startPoint.x, playerHeight, startPoint.z);
 
     // 3. Create Player at Start Position
+    this.playerPhysics = new PlayerPhysics(this.physics, startPos);
     this.player = new PlayerController(this.scene, this.input!, {
       startPosition: startPos,
+      playerPhysics: this.playerPhysics,
     });
 
     if (!this.useDebugCamera) {
@@ -243,12 +252,16 @@ export class GameApp {
 
     const delta = this.clock.getDelta();
 
-    // Only update player when not in debug camera mode (to avoid conflicts)
+    this.physics.step(delta);
+
     if (!this.useDebugCamera) {
       this.player.update(delta);
+    } else {
+      // Keep visuals in sync even when free camera is active
+      this.player.syncFromPhysics();
     }
 
-    this.terrainManager.update();
+    this.terrainManager.update(this.playerPhysics.getPosition());
 
     // Update debug camera movement
     if (this.useDebugCamera && this.debugCamera && this.input) {
@@ -292,8 +305,8 @@ export class GameApp {
     }
 
     // Update debug info
-    if (this.debugUI && this.debugHelpers && this.player) {
-      const velocity = new THREE.Vector3(0, 0, 0); // No physics, so no velocity
+    if (this.debugUI && this.debugHelpers && this.player && this.playerPhysics) {
+      const velocity = this.playerPhysics.getVelocity();
       const rotation = this.player.mesh.quaternion.clone();
 
       this.debugUI.update(
