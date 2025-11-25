@@ -213,7 +213,7 @@ export class TerrainChunk {
             color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
             break;
           default: {
-            color = new THREE.Color(COLOR_PALETTE.DEBUG_TEST_COLORS.brightGreen);
+            color = new THREE.Color(COLOR_PALETTE.debugTestColors.brightGreen);
             break;
           }
         }
