@@ -24,10 +24,8 @@ export class PlayerController {
   // Hand animation state for smooth lateral movement
   private currentLeftHandX: number = PLAYER_CONFIG.hands.leftOffset.x;
   private currentRightHandX: number = PLAYER_CONFIG.hands.rightOffset.x;
-  private smoothedSpeed = 0;
 
   private physics: PlayerPhysics;
-  private readonly velocity = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, input: InputManager, options: PlayerOptions) {
     const startPosition = options.startPosition ?? PLAYER_CONFIG.startPosition.clone();
@@ -114,14 +112,6 @@ export class PlayerController {
     const isBraking = this.input.isBraking();
     const isPoling = this.input.isActive(Action.Forward);
 
-    const velocity = this.physics.getVelocity(this.velocity);
-    const speed = velocity.length();
-    const verticalSpeed = Math.abs(velocity.y);
-    const isAirborne = verticalSpeed > 1.5;
-    // Exponential smoothing to damp jitter, especially when falling.
-    const speedLerp = 1 - Math.exp(-6 * deltaTime);
-    const targetAnimSpeed = isAirborne ? 0 : speed;
-    this.smoothedSpeed = THREE.MathUtils.lerp(this.smoothedSpeed, targetAnimSpeed, speedLerp);
     const time = performance.now() / 1000;
 
     // Calculate target X positions for hands based on steering input
@@ -176,7 +166,7 @@ export class PlayerController {
     }
 
     // 3. Hand Animation (Poling or Bobbing)
-    if (!isAirborne && isPoling) {
+    if (isPoling) {
       // Poling animation: hands move forward and backward (alternating)
       const poleFrequency = 2.5; // Cycles per second for poling motion
       const poleReach = 0.4; // How far forward the hands reach
@@ -200,25 +190,17 @@ export class PlayerController {
       this.leftHand.position.x = this.currentLeftHandX;
       this.rightHand.position.x = this.currentRightHandX;
     } else {
-      // Normal bobbing animation when not poling (tucked position)
-      const bobAmount = Math.min(this.smoothedSpeed * 0.02, PLAYER_CONFIG.animation.maxBobAmount);
-      const bobFrequency = Math.max(
-        this.smoothedSpeed * PLAYER_CONFIG.animation.bobSpeedScale,
-        PLAYER_CONFIG.animation.baseBobFrequency
+      // Idle pose: lock to base offsets with lateral smoothing only.
+      this.leftHand.position.set(
+        this.currentLeftHandX,
+        PLAYER_CONFIG.hands.leftOffset.y,
+        PLAYER_CONFIG.hands.leftOffset.z
       );
-
-      const leftBob = Math.sin(time * bobFrequency) * bobAmount;
-      const rightBob = Math.sin(time * bobFrequency + Math.PI) * bobAmount;
-
-      this.leftHand.position.y = PLAYER_CONFIG.hands.leftOffset.y + leftBob;
-      this.rightHand.position.y = PLAYER_CONFIG.hands.rightOffset.y + rightBob;
-
-      this.leftHand.position.z = PLAYER_CONFIG.hands.leftOffset.z + leftBob * 0.5;
-      this.rightHand.position.z = PLAYER_CONFIG.hands.rightOffset.z + rightBob * 0.5;
-
-      // Apply smooth lateral movement
-      this.leftHand.position.x = this.currentLeftHandX;
-      this.rightHand.position.x = this.currentRightHandX;
+      this.rightHand.position.set(
+        this.currentRightHandX,
+        PLAYER_CONFIG.hands.rightOffset.y,
+        PLAYER_CONFIG.hands.rightOffset.z
+      );
     }
   }
 }

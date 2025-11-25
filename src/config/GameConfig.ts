@@ -26,7 +26,7 @@ export const PLAYER_CONFIG = {
   physics: {
     capsuleRadius: 0.5,
     capsuleHalfHeight: 1.0,
-    mass: 85,
+    mass: 200,
     linearDamping: 0.6,
     angularDamping: 2.5,
     moveForce: 10000,
