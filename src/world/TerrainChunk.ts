@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { PathPoint } from './WorldState';
+import { SurfaceKind } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
@@ -7,6 +8,15 @@ import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
 import { getTerrainMaterials } from './TerrainMaterials';
 import { TerrainGenerator } from './TerrainGenerator';
 import { COLOR_PALETTE } from '../constants/colors';
+
+const SURFACE_KIND_TO_INDEX: Record<SurfaceKind, number> = {
+  [SurfaceKind.Track]: 0,
+  [SurfaceKind.Bank]: 1,
+  [SurfaceKind.CanyonFloor]: 2,
+  [SurfaceKind.WallVertical]: 3,
+  [SurfaceKind.WallLedge]: 4,
+  [SurfaceKind.Plateau]: 5,
+};
 
 export const CHUNK_WIDTH = TERRAIN_DIMENSIONS.CHUNK_WIDTH;
 export const CHUNK_LENGTH = TERRAIN_DIMENSIONS.CHUNK_LENGTH;
@@ -151,16 +161,22 @@ export class TerrainChunk {
     const snowPos = this.snowGeometry.attributes.position as THREE.BufferAttribute;
     const snowRows = this.snowGeometry.parameters.heightSegments + 1;
     const snowCols = this.snowGeometry.parameters.widthSegments + 1;
+    const vertexCount = snowPos.count;
 
     // Initialize color attribute if it doesn't exist
     let snowColors: THREE.BufferAttribute;
     if (!this.snowGeometry.attributes.color) {
-      const colors = new Float32Array(snowPos.count * 3);
+      const colors = new Float32Array(vertexCount * 3);
       snowColors = new THREE.BufferAttribute(colors, 3);
       this.snowGeometry.setAttribute('color', snowColors);
     } else {
       snowColors = this.snowGeometry.attributes.color as THREE.BufferAttribute;
     }
+
+    const surfaceKindAttribute = new THREE.Uint8BufferAttribute(new Uint8Array(vertexCount), 1);
+    const wallFlagAttribute = new THREE.Uint8BufferAttribute(new Uint8Array(vertexCount), 1);
+    this.snowGeometry.setAttribute('surfaceKind', surfaceKindAttribute);
+    this.snowGeometry.setAttribute('wallFlag', wallFlagAttribute);
 
     for (let row = 0; row < snowRows; row++) {
       const zFraction = row / (snowRows - 1);
@@ -174,46 +190,35 @@ export class TerrainChunk {
 
         const worldX = pathPoint.x + pathPoint.rightX * t;
         const worldZ = pathPoint.z + pathPoint.rightZ * t;
-        const localCoords = this.generator.projectToLocalXZ(worldX, worldZ, pathPoint);
-        const y = this.generator.getSnowHeightAt(worldX, worldZ, pathPoint);
+        const sample = this.generator.sampleTerrainAt(worldX, worldZ, pathPoint);
         const vertexZ = worldZ - startZ;
-
-        snowPos.setXYZ(i, worldX, y, vertexZ);
-
-        const baseHeight = pathPoint.y + pathPoint.banking * localCoords.t;
-        const heightAboveBase = y - baseHeight;
+        snowPos.setXYZ(i, worldX, sample.height, vertexZ);
+        surfaceKindAttribute.setX(i, SURFACE_KIND_TO_INDEX[sample.kind]);
+        wallFlagAttribute.setX(i, sample.isWall ? 1 : 0);
 
         let color: THREE.Color;
-        if (heightAboveBase < 1) {
-          color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
-        } else {
-          const trackWidth = pathPoint.width;
-          const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
-          const distFromTrackEdge = Math.abs(localCoords.t) - canyonFloorWidth;
-
-          if (
-            heightAboveBase < TERRAIN_CONFIG.CANYON_HEIGHT - 5 &&
-            distFromTrackEdge > 0 &&
-            distFromTrackEdge < TERRAIN_CONFIG.WALL_WIDTH
-          ) {
-            const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
-            const terraceSteps = 6;
-            const progressInStep = (progress * terraceSteps) % 1.0;
-            const isOnLedge = progressInStep < 0.15 || progressInStep > 0.85;
-
-            if (isOnLedge) {
-              // Horizontal ledges are snow
-              color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
-            } else {
-              // Vertical faces are solid grey
-              color = new THREE.Color(COLOR_PALETTE.terrainAndObjects.rockGray);
-            }
-          } else {
+        switch (sample.kind) {
+          case SurfaceKind.Track:
+          case SurfaceKind.Bank:
+          case SurfaceKind.CanyonFloor:
+            color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
+            break;
+          case SurfaceKind.WallLedge:
+            color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite).multiplyScalar(
+              0.95
+            );
+            break;
+          case SurfaceKind.WallVertical:
+            color = new THREE.Color(COLOR_PALETTE.terrainAndObjects.rockGray);
+            break;
+          case SurfaceKind.Plateau:
+          default: {
             const plateauNoise =
-              this.generator.sampleNoise(localCoords.t * 0.1, localCoords.s * 0.1) * 0.3 + 0.7;
+              this.generator.sampleNoise(sample.localT * 0.1, sample.localS * 0.1) * 0.3 + 0.7;
             color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite).multiplyScalar(
               plateauNoise
             );
+            break;
           }
         }
 
@@ -222,6 +227,8 @@ export class TerrainChunk {
     }
     snowPos.needsUpdate = true;
     snowColors.needsUpdate = true;
+    surfaceKindAttribute.needsUpdate = true;
+    wallFlagAttribute.needsUpdate = true;
     this.snowGeometry.computeVertexNormals();
 
     // --- 2. Scatter Obstacles ---
