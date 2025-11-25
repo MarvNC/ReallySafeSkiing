@@ -7,6 +7,7 @@
   - Ski?
   - Snow?
 - Starting guaranteed easy slope to build momentum?
+- animations when carving and braking
 
 --- far future
 
