@@ -19,3 +19,23 @@ export interface PathPoint {
   rightX: number;
   rightZ: number;
 }
+
+export const SurfaceKind = {
+  Track: 'track',
+  Bank: 'bank',
+  CanyonFloor: 'canyonFloor',
+  WallVertical: 'wallVertical',
+  WallLedge: 'wallLedge',
+  Plateau: 'plateau',
+} as const;
+
+export type SurfaceKind = (typeof SurfaceKind)[keyof typeof SurfaceKind];
+
+export interface TerrainSample {
+  height: number;
+  kind: SurfaceKind;
+  isWall: boolean;
+  localT: number;
+  localS: number;
+  distFromTrackEdge: number;
+}

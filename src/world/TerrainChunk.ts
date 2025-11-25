@@ -6,6 +6,7 @@ import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
 import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
 import { getTerrainMaterials } from './TerrainMaterials';
 import { TerrainGenerator } from './TerrainGenerator';
+import { COLOR_PALETTE } from '../constants/colors';
 
 export const CHUNK_WIDTH = TERRAIN_DIMENSIONS.CHUNK_WIDTH;
 export const CHUNK_LENGTH = TERRAIN_DIMENSIONS.CHUNK_LENGTH;
@@ -183,8 +184,8 @@ export class TerrainChunk {
         const heightAboveBase = y - baseHeight;
 
         let color: THREE.Color;
-        if (heightAboveBase < 2) {
-          color = new THREE.Color(0xffffff);
+        if (heightAboveBase < 1) {
+          color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
         } else {
           const trackWidth = pathPoint.width;
           const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
@@ -197,30 +198,22 @@ export class TerrainChunk {
           ) {
             const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
             const terraceSteps = 6;
-            const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
-            const wallSpaceX = localCoords.s * 0.1;
-            const wallSpaceY = wallHeight * 0.15;
             const progressInStep = (progress * terraceSteps) % 1.0;
             const isOnLedge = progressInStep < 0.15 || progressInStep > 0.85;
 
             if (isOnLedge) {
-              const ledgeNoise = this.generator.sampleNoise(wallSpaceX, wallSpaceY) * 0.5 + 0.5;
-              const rockColor = new THREE.Color(0x666666);
-              const snowColor = new THREE.Color(0xeeeeee);
-              const snowAmount = Math.min(ledgeNoise * 0.6 + 0.3, 0.8);
-              color = rockColor.clone().lerp(snowColor, snowAmount);
+              // Horizontal ledges are snow
+              color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite);
             } else {
-              const faceNoise =
-                this.generator.sampleNoise(wallSpaceX * 2, wallSpaceY * 2) * 0.5 + 0.5;
-              const rockColor = new THREE.Color(0x555555);
-              const snowColor = new THREE.Color(0xaaaaaa);
-              const snowAmount = Math.min(faceNoise * 0.2, 0.3);
-              color = rockColor.clone().lerp(snowColor, snowAmount);
+              // Vertical faces are solid grey
+              color = new THREE.Color(COLOR_PALETTE.terrainAndObjects.rockGray);
             }
           } else {
             const plateauNoise =
               this.generator.sampleNoise(localCoords.t * 0.1, localCoords.s * 0.1) * 0.3 + 0.7;
-            color = new THREE.Color(0xffffff).multiplyScalar(plateauNoise);
+            color = new THREE.Color(COLOR_PALETTE.primaryEnvironment.snowWhite).multiplyScalar(
+              plateauNoise
+            );
           }
         }
 

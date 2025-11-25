@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { COLOR_PALETTE } from '../constants/colors';
 
 export type TerrainMaterials = {
   snow: THREE.MeshStandardMaterial;
@@ -28,13 +29,13 @@ export function getTerrainMaterials(): TerrainMaterials {
   });
 
   const deadTree = new THREE.MeshStandardMaterial({
-    color: 0x5a4a3a,
+    color: COLOR_PALETTE.terrainAndObjects.darkBarkBrown,
     roughness: 0.9,
     flatShading: true,
   });
 
   const rock = new THREE.MeshStandardMaterial({
-    color: 0x555555,
+    color: COLOR_PALETTE.terrainAndObjects.rockGray,
     roughness: 0.9,
     flatShading: true,
   });

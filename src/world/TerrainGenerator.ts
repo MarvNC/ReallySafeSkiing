@@ -1,12 +1,12 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
-import type { ChunkState, PathPoint } from './WorldState';
+import type { ChunkState, PathPoint, TerrainSample } from './WorldState';
+import { SurfaceKind } from './WorldState';
 import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS, MOUNTAIN_CONFIG } from '../config/GameConfig';
 
 const { CHUNK_LENGTH, CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
 
 /**
  * Pure terrain-generation logic: heightfields, path spine, and noise sampling.
- * Contains no Three.js dependencies so it can be moved to a worker later.
  */
 export class TerrainGenerator {
   private readonly noise2D: NoiseFunction2D;
@@ -28,26 +28,39 @@ export class TerrainGenerator {
   }
 
   getSnowHeightAt(worldX: number, worldZ: number, point: PathPoint): number {
-    const { t, s } = this.projectToLocalXZ(worldX, worldZ, point);
-    return this.getSnowHeightLocal(t, s, point);
+    return this.sampleTerrainAt(worldX, worldZ, point).height;
+  }
+
+  sampleTerrainAt(worldX: number, worldZ: number, point: PathPoint): TerrainSample {
+    const { t, s } = this.worldToLocalXZ(worldX, worldZ, point);
+    return this.sampleTerrainLocal(t, s, point);
   }
 
   projectToLocalXZ(worldX: number, worldZ: number, point: PathPoint): { t: number; s: number } {
     return this.worldToLocalXZ(worldX, worldZ, point);
   }
 
-  private getSnowHeightLocal(t: number, s: number, point: PathPoint): number {
+  getSnowHeightLocal(t: number, s: number, point: PathPoint): number {
+    return this.sampleTerrainLocal(t, s, point).height;
+  }
+
+  private sampleTerrainLocal(t: number, s: number, point: PathPoint): TerrainSample {
     const bankingOffset = t * point.banking;
     const moguls =
       this.noise2D(t * TERRAIN_CONFIG.MOGUL_SCALE, s * TERRAIN_CONFIG.MOGUL_SCALE) *
       TERRAIN_CONFIG.MOGUL_HEIGHT;
-    let height = point.y + bankingOffset + moguls;
-
     const trackWidth = point.width;
-    const canyonFloorWidth = trackWidth / 2 + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+    const halfTrack = trackWidth / 2;
+    const canyonFloorWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
     const distFromTrackEdge = Math.abs(t) - canyonFloorWidth;
+    let extraHeight = 0;
+    let kind: SurfaceKind;
 
-    if (distFromTrackEdge > 0) {
+    if (distFromTrackEdge <= 0) {
+      const onTrack = Math.abs(t) <= halfTrack;
+      const onBank = !onTrack && distFromTrackEdge <= 0;
+      kind = onTrack ? SurfaceKind.Track : onBank ? SurfaceKind.Bank : SurfaceKind.CanyonFloor;
+    } else {
       const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
 
       if (progress < 1.0) {
@@ -62,15 +75,30 @@ export class TerrainGenerator {
 
         const terraceDisplacement = this.noise2D(wallSpaceX, wallSpaceY) * terraceStepSize * 0.6;
         const detailNoise = this.noise2D(wallSpaceX * 2, wallSpaceY * 2) * 2.0;
-        const cliffHeight = baseTerraceHeight + terraceDisplacement + detailNoise;
-        height += cliffHeight;
+        extraHeight = baseTerraceHeight + terraceDisplacement + detailNoise;
+
+        const progressInStep = (progress * terraceSteps) % 1.0;
+        const isOnLedge = progressInStep < 0.15 || progressInStep > 0.85;
+        kind = isOnLedge ? SurfaceKind.WallLedge : SurfaceKind.WallVertical;
       } else {
         const plateauNoise = this.noise2D(t * 0.05, s * 0.05) * 3.0;
-        height += TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
+        extraHeight = TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
+        kind = SurfaceKind.Plateau;
       }
     }
 
-    return height;
+    const baseHeight = point.y + bankingOffset;
+    const height = baseHeight + moguls + extraHeight;
+    const isWall = kind === SurfaceKind.WallVertical;
+
+    return {
+      height,
+      kind,
+      isWall,
+      localT: t,
+      localS: s,
+      distFromTrackEdge,
+    };
   }
 
   generatePathSegment(
