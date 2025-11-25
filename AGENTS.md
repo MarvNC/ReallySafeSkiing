@@ -1,8 +1,10 @@
+Our package manager and runtime is bun.
+
 Please run the following commands after completing your work to ensure code quality:
 
 - `bun run lint:fix`
 - `bun run format`
-- `bun run typecheck`
+- `bun run typecheck` (run this instead of building)
 
 Always use context7 when I need code generation, setup or configuration steps, or
 library/API documentation. This means you should automatically use the Context7 MCP
