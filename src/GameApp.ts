@@ -170,17 +170,17 @@ export class GameApp {
   private setupMouseLook(): void {
     const onMouseMove = (event: MouseEvent): void => {
       if (!this.useDebugCamera || !this.debugCamera || !this.isPointerLocked) return;
-      
+
       const movementX = event.movementX || 0;
       const movementY = event.movementY || 0;
-      
+
       this.euler.setFromQuaternion(this.debugCamera.quaternion);
       this.euler.y -= movementX * 0.002;
       this.euler.x -= movementY * 0.002;
-      
+
       // Clamp vertical rotation
       this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
-      
+
       this.debugCamera.quaternion.setFromEuler(this.euler);
     };
 

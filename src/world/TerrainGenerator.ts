@@ -7,7 +7,7 @@ const { CHUNK_LENGTH, CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
 
 /**
  * Pure terrain-generation logic: heightfields, path spine, and noise sampling.
- * Contains no Three.js or Rapier dependencies so it can be moved to a worker later.
+ * Contains no Three.js dependencies so it can be moved to a worker later.
  */
 export class TerrainGenerator {
   private readonly noise2D: NoiseFunction2D;
