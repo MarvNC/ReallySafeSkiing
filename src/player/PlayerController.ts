@@ -25,6 +25,12 @@ export class PlayerController {
   private currentLeftHandX: number = PLAYER_CONFIG.hands.leftOffset.x;
   private currentRightHandX: number = PLAYER_CONFIG.hands.rightOffset.x;
 
+  // Hand rotation state for smooth rotation animation
+  private currentLeftHandRotationZ: number = -PLAYER_CONFIG.hands.poleAngleRadians;
+  private currentRightHandRotationZ: number = PLAYER_CONFIG.hands.poleAngleRadians;
+  private currentLeftHandRotationX: number = 0;
+  private currentRightHandRotationX: number = 0;
+
   private physics: PlayerPhysics;
 
   constructor(scene: THREE.Scene, input: InputManager, options: PlayerOptions) {
@@ -164,6 +170,55 @@ export class PlayerController {
       leftSki.rotation.y = 0;
       rightSki.rotation.y = 0;
     }
+
+    // 2. Hand Rotation (Braking)
+    // Calculate target rotations based on braking state
+    let targetLeftHandRotationZ = -PLAYER_CONFIG.hands.poleAngleRadians;
+    let targetRightHandRotationZ = PLAYER_CONFIG.hands.poleAngleRadians;
+    let targetLeftHandRotationX = 0;
+    let targetRightHandRotationX = 0;
+
+    if (isBraking) {
+      // When braking, rotate hands inward and forward
+      // Left hand: rotate Z more positive (toward center), X forward (positive)
+      targetLeftHandRotationZ =
+        -PLAYER_CONFIG.hands.poleAngleRadians + PLAYER_CONFIG.hands.brakeRotationInward;
+      targetLeftHandRotationX = PLAYER_CONFIG.hands.brakeRotationForward;
+
+      // Right hand: rotate Z more negative (toward center), X forward (positive)
+      targetRightHandRotationZ =
+        PLAYER_CONFIG.hands.poleAngleRadians - PLAYER_CONFIG.hands.brakeRotationInward;
+      targetRightHandRotationX = PLAYER_CONFIG.hands.brakeRotationForward;
+    }
+
+    // Smoothly interpolate current rotations toward target
+    const rotationLerp = 1 - Math.exp(-PLAYER_CONFIG.hands.rotationAnimationSpeed * deltaTime);
+    this.currentLeftHandRotationZ = THREE.MathUtils.lerp(
+      this.currentLeftHandRotationZ,
+      targetLeftHandRotationZ,
+      rotationLerp
+    );
+    this.currentRightHandRotationZ = THREE.MathUtils.lerp(
+      this.currentRightHandRotationZ,
+      targetRightHandRotationZ,
+      rotationLerp
+    );
+    this.currentLeftHandRotationX = THREE.MathUtils.lerp(
+      this.currentLeftHandRotationX,
+      targetLeftHandRotationX,
+      rotationLerp
+    );
+    this.currentRightHandRotationX = THREE.MathUtils.lerp(
+      this.currentRightHandRotationX,
+      targetRightHandRotationX,
+      rotationLerp
+    );
+
+    // Apply rotations to hands
+    this.leftHand.rotation.z = this.currentLeftHandRotationZ;
+    this.leftHand.rotation.x = this.currentLeftHandRotationX;
+    this.rightHand.rotation.z = this.currentRightHandRotationZ;
+    this.rightHand.rotation.x = this.currentRightHandRotationX;
 
     // 3. Hand Animation (Poling or Bobbing)
     if (isPoling) {

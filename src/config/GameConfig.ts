@@ -50,6 +50,9 @@ export const PLAYER_CONFIG = {
     poleAngleRadians: Math.PI / 12,
     lateralMovementAmount: 0.15, // How far hands move left/right when steering
     lateralAnimationSpeed: 8.0, // Speed of lateral animation interpolation
+    brakeRotationInward: Math.PI / 6, // How much hands rotate inward when braking (30 degrees)
+    brakeRotationForward: Math.PI / 8, // How much hands rotate forward when braking (22.5 degrees)
+    rotationAnimationSpeed: 10.0, // Speed of rotation animation interpolation
   },
   skis: {
     offset: new THREE.Vector3(0, -1.5, 0.3),
