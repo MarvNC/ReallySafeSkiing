@@ -14,14 +14,14 @@ export const PLAYER_CONFIG = {
     capsuleRadius: 0.5,
     capsuleHalfHeight: 1.0,
     mass: 200,
-    linearDamping: 0.6,
+    linearDamping: 0.2,
     angularDamping: 2.5,
     moveForce: 10000,
-    maxSpeed: 40,
+    maxSpeed: 1000,
     brakeDamping: 4.0,
     steerTurnSpeed: 2.5,
     jumpImpulse: 12,
-    friction: 0.01,
+    friction: 0.1,
   },
   camera: {
     fov: 75,
@@ -50,7 +50,7 @@ export const PLAYER_CONFIG = {
 
 export const MOUNTAIN_CONFIG = {
   TOTAL_LENGTH: 3000, // Total Z distance of the run
-  START_ALTITUDE: 1200, // Y height at start
+  START_ALTITUDE: 1000, // Y height at start
   END_ALTITUDE: 0, // Y height at finish
 } as const;
 
