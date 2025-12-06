@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PlayerController } from './player/PlayerController';
 import { TerrainManager } from './world/TerrainManager';
+import { BackgroundEnvironment } from './world/BackgroundEnvironment';
 import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
 import { PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
@@ -28,12 +29,11 @@ export class GameApp {
   private isPointerLocked = false;
   private euler = new THREE.Euler(0, 0, 0, 'YXZ');
   private debugCameraSpeed = 50;
+  private backgroundEnv?: BackgroundEnvironment;
 
   constructor(container: HTMLElement) {
     this.container = container;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#8bd1ff');
-    this.scene.fog = new THREE.Fog(this.scene.background, 120, 8000);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.shadowMap.enabled = true;
@@ -62,6 +62,14 @@ export class GameApp {
 
     this.setupLights();
     this.addHelpers();
+
+    // Update Fog to match the new sky horizon
+    const horizonColor = new THREE.Color('#dceeff');
+    this.scene.background = horizonColor;
+    this.scene.fog = new THREE.Fog(horizonColor, 200, 2500); // Push fog back
+
+    // Initialize Background
+    this.backgroundEnv = new BackgroundEnvironment(this.scene);
 
     this.physics = new PhysicsWorld();
     await this.physics.init();
@@ -330,7 +338,15 @@ export class GameApp {
       this.debugHelpers.update(this.player.mesh.position, rotation, velocity);
     }
 
+    // Update background environment
     const camera = this.activeCamera ?? this.player.camera;
+    if (this.backgroundEnv) {
+      // Get world position of camera (player camera is a child of mesh, so we need world position)
+      const cameraWorldPos = new THREE.Vector3();
+      camera.getWorldPosition(cameraWorldPos);
+      this.backgroundEnv.update(cameraWorldPos);
+    }
+
     this.renderer.render(this.scene, camera);
     requestAnimationFrame(this.animate);
   };
