@@ -102,7 +102,7 @@ export const TERRAIN_CONFIG = {
 export const LIGHTING_CONFIG = {
   keyLight: {
     color: '#ffffff',
-    intensity: 1.2,
+    intensity: 2.0,
     position: new THREE.Vector3(60, 200, 120),
     castShadow: true,
     shadow: {

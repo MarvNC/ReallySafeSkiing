@@ -66,7 +66,7 @@ export class GameApp {
     // Update Fog to match the new sky horizon
     const horizonColor = new THREE.Color('#87CEEB'); // Sky blue
     this.scene.background = horizonColor;
-    this.scene.fog = new THREE.Fog(horizonColor, 200, 2500); // Push fog back
+    this.scene.fog = new THREE.Fog(horizonColor, 500, 4000);
 
     // Initialize Background
     this.backgroundEnv = new BackgroundEnvironment(this.scene);

@@ -1,4 +1,9 @@
 export const COLOR_PALETTE = {
+  background: {
+    sky: '#4a90e2', // Deep Azure
+    fog: '#87CEEB', // Lighter horizon
+    mountainShadow: '#3e4452', // Dark blue-grey for rock
+  },
   primaryEnvironment: {
     snowWhite: '#F3F7FA',
     iceBlue: '#BFE3F5',
