@@ -28,7 +28,7 @@ export const PLAYER_CONFIG = {
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
 
     // Poling mechanics
-    poleForce: 30.0, // Strong initial push
+    poleForce: 10.0, // Strong initial push
     maxPoleSpeed: 15.0, // You can't pole effectively above this speed
 
     // Steering
