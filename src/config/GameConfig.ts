@@ -13,15 +13,28 @@ export const PLAYER_CONFIG = {
   physics: {
     capsuleRadius: 0.5,
     capsuleHalfHeight: 1.0,
-    mass: 200,
+    mass: 100, // Reduced mass slightly to make forces feel snappier
+
+    // CHANGE 1: Remove general air resistance. We will calculate drag manually.
     linearDamping: 0.2,
-    angularDamping: 2.5,
-    moveForce: 10000,
-    maxSpeed: 1000,
-    brakeDamping: 4.0,
-    steerTurnSpeed: 2.5,
+    angularDamping: 4.0, // High damping to stop spinning instantly when key is released
+
+    // CHANGE 2: Ski properties
+    lateralFriction: 3.0, // "Edge Grip": How hard it stops you sliding sideways
+    forwardFriction: 0.05, // "Wax": Very low friction sliding forward
+
+    // CHANGE 3: Poling mechanics
+    poleForce: 80.0, // Strong initial push
+    maxPoleSpeed: 15.0, // You can't pole effectively above this speed
+
+    // CHANGE 4: Steering
+    steerTurnSpeed: 3.5, // Rotation speed
+
+    // CHANGE 5: Physics limits
+    maxSpeed: 120.0, // Effectively uncapped, let gravity decide
+    brakeDamping: 2.0, // Drag applied when "snowplowing"
     jumpImpulse: 12,
-    friction: 0.1,
+    friction: 0.0, // Wall friction (keep 0)
   },
   camera: {
     fov: 75,

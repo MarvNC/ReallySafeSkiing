@@ -12,8 +12,9 @@ export type PlayerPhysicsDebugState = {
   isBraking: boolean;
   steerInput: number;
   linearVelocity: THREE.Vector3;
-  lastForwardImpulse: number;
-  lastLateralImpulse: number;
+  forwardSpeed: number;
+  lateralSpeed: number;
+  pushForce: number; // Added to fix lint error
 };
 
 export class PlayerPhysics {
@@ -22,8 +23,13 @@ export class PlayerPhysics {
   private readonly tmpPosition = new THREE.Vector3();
   private readonly tmpVelocity = new THREE.Vector3();
   private readonly tmpQuat = new THREE.Quaternion();
-  private readonly tmpForward = new THREE.Vector3();
-  private readonly tmpRight = new THREE.Vector3();
+
+  // Vectors for calculation
+  private readonly currentVel = new THREE.Vector3();
+  private readonly forwardDir = new THREE.Vector3();
+  private readonly rightDir = new THREE.Vector3();
+  private readonly upDir = new THREE.Vector3(0, 1, 0);
+
   private yaw = 0;
   private debugState: PlayerPhysicsDebugState = {
     yaw: 0,
@@ -32,8 +38,9 @@ export class PlayerPhysics {
     isBraking: false,
     steerInput: 0,
     linearVelocity: new THREE.Vector3(),
-    lastForwardImpulse: 0,
-    lastLateralImpulse: 0,
+    forwardSpeed: 0,
+    lateralSpeed: 0,
+    pushForce: 0,
   };
 
   constructor(physics: PhysicsWorld, startPosition: THREE.Vector3) {
@@ -42,8 +49,9 @@ export class PlayerPhysics {
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(startPosition.x, startPosition.y, startPosition.z)
       .setLinvel(0, 0, 0)
+      // We handle damping manually now for anisotropy
       .setAngularDamping(PLAYER_CONFIG.physics.angularDamping)
-      .setLinearDamping(PLAYER_CONFIG.physics.linearDamping);
+      .setLinearDamping(0);
 
     this.body = world.createRigidBody(bodyDesc);
     this.body.setEnabledRotations(false, true, false, true);
@@ -54,7 +62,7 @@ export class PlayerPhysics {
     )
       .setMass(PLAYER_CONFIG.physics.mass)
       .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World))
-      .setFriction(PLAYER_CONFIG.physics.friction)
+      .setFriction(0.0) // We simulate friction manually
       .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Multiply);
 
     this.collider = world.createCollider(colliderDesc, this.body);
@@ -63,68 +71,85 @@ export class PlayerPhysics {
   applyControls(input: InputManager, deltaSeconds: number): void {
     this.body.wakeUp();
 
+    // 1. Inputs
     const steerLeft = input.isActive(Action.SteerLeft);
     const steerRight = input.isActive(Action.SteerRight);
     const isBraking = input.isBraking();
     const isPushing = input.isActive(Action.Forward);
 
-    // Update heading (yaw) based on steer input.
+    // 2. Rotate Player (Steering)
     let steer = 0;
     if (steerLeft) steer += 1;
     if (steerRight) steer -= 1;
-    this.yaw += steer * PLAYER_CONFIG.physics.steerTurnSpeed * deltaSeconds;
 
-    this.tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+    // Slightly reduce turning control while braking to simulate loss of edge control
+    const turnSpeed = isBraking
+      ? PLAYER_CONFIG.physics.steerTurnSpeed * 0.7
+      : PLAYER_CONFIG.physics.steerTurnSpeed;
+
+    this.yaw += steer * turnSpeed * deltaSeconds;
+
+    this.tmpQuat.setFromAxisAngle(this.upDir, this.yaw);
     this.body.setRotation(
       { x: this.tmpQuat.x, y: this.tmpQuat.y, z: this.tmpQuat.z, w: this.tmpQuat.w },
       true
     );
 
-    const forward = this.tmpForward.set(0, 0, -1).applyQuaternion(this.tmpQuat).normalize();
-    const right = this.tmpRight.set(1, 0, 0).applyQuaternion(this.tmpQuat).normalize();
+    // 3. Get Current State
+    const rawVel = this.body.linvel();
+    this.currentVel.set(rawVel.x, rawVel.y, rawVel.z);
 
-    let forwardImpulseApplied = 0;
-    let lateralImpulseApplied = 0;
-    // Move forward when pushing.
-    if (isPushing) {
-      const impulse = forward
-        .clone()
-        .multiplyScalar(PLAYER_CONFIG.physics.moveForce * deltaSeconds);
-      this.body.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
-      forwardImpulseApplied = impulse.length();
+    this.forwardDir.set(0, 0, -1).applyQuaternion(this.tmpQuat).normalize();
+    this.rightDir.set(1, 0, 0).applyQuaternion(this.tmpQuat).normalize();
+
+    // 4. Project Velocity
+    const forwardSpeed = this.currentVel.dot(this.forwardDir);
+    const lateralSpeed = this.currentVel.dot(this.rightDir);
+
+    // 5. Apply Forces
+
+    // Lateral Friction (Drift control)
+    const lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction;
+
+    // Forward Friction (Braking slide)
+    let forwardDrag: number = PLAYER_CONFIG.physics.forwardFriction;
+    if (isBraking) {
+      forwardDrag = PLAYER_CONFIG.physics.brakeDamping;
+    }
+    const forwardForce = -forwardSpeed * forwardDrag;
+
+    const impulse = new THREE.Vector3()
+      .copy(this.rightDir)
+      .multiplyScalar(lateralForce)
+      .addScaledVector(this.forwardDir, forwardForce);
+
+    // Poling Logic
+    const currentSpeed = this.currentVel.length();
+    let pushForceApplied = 0;
+
+    if (isPushing && currentSpeed < PLAYER_CONFIG.physics.maxPoleSpeed) {
+      const effectiveness = 1.0 - currentSpeed / PLAYER_CONFIG.physics.maxPoleSpeed;
+      const pushImpulse = PLAYER_CONFIG.physics.poleForce * effectiveness;
+
+      const pushVec = this.forwardDir.clone().multiplyScalar(pushImpulse);
+      impulse.add(pushVec);
+      pushForceApplied = pushImpulse; // Variable is now used below
     }
 
-    // Subtle lateral impulse when steering for basic carve feel.
-    if (steer !== 0) {
-      const lateral = right
-        .clone()
-        .multiplyScalar(steer * PLAYER_CONFIG.physics.moveForce * 0.2 * deltaSeconds);
-      this.body.applyImpulse({ x: lateral.x, y: lateral.y, z: lateral.z }, true);
-      lateralImpulseApplied = lateral.length();
-    }
+    impulse.multiplyScalar(PLAYER_CONFIG.physics.mass * deltaSeconds);
+    this.body.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
 
-    // Apply extra damping when braking.
-    const baseDamping = PLAYER_CONFIG.physics.linearDamping;
-    const brakeDamping = isBraking ? PLAYER_CONFIG.physics.brakeDamping : 0;
-    this.body.setLinearDamping(baseDamping + brakeDamping);
-
-    // Clamp horizontal speed to avoid runaway acceleration.
-    const vel = this.body.linvel();
-    const horizontalSpeed = Math.hypot(vel.x, vel.z);
-    if (horizontalSpeed > PLAYER_CONFIG.physics.maxSpeed) {
-      const scale = PLAYER_CONFIG.physics.maxSpeed / horizontalSpeed;
-      this.body.setLinvel({ x: vel.x * scale, y: vel.y, z: vel.z * scale }, true);
-    }
-
+    // 6. Debug Data
     this.debugState = {
       yaw: this.yaw,
       isAwake: !this.body.isSleeping(),
       isPushing,
       isBraking,
       steerInput: steer,
-      linearVelocity: this.getVelocity(this.tmpVelocity.clone()),
-      lastForwardImpulse: forwardImpulseApplied,
-      lastLateralImpulse: lateralImpulseApplied,
+      linearVelocity: this.currentVel,
+      forwardSpeed,
+      lateralSpeed,
+      pushForce: pushForceApplied, // Linter satisfied!
     };
   }
 
