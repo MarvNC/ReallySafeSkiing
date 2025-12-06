@@ -7,6 +7,11 @@ export const PHYSICS_CONFIG = {
   maxDeltaTime: 1 / 20,
 } as const;
 
+export const GAME_CONFIG = {
+  // Game timer duration in seconds
+  timerDuration: 60.0,
+} as const;
+
 export const PLAYER_CONFIG = {
   radius: 1.6,
   startPosition: new THREE.Vector3(0, 15, -5),
@@ -24,17 +29,17 @@ export const PLAYER_CONFIG = {
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
 
     // CHANGE 3: Poling mechanics
-    poleForce: 80.0, // Strong initial push
+    poleForce: 40.0, // Strong initial push
     maxPoleSpeed: 15.0, // You can't pole effectively above this speed
 
     // CHANGE 4: Steering
-    steerTurnSpeed: 3.5, // Rotation speed
+    steerTurnSpeed: 1, // Rotation speed
 
     // CHANGE 5: Physics limits
     maxSpeed: 120.0, // Effectively uncapped, let gravity decide
     brakeDamping: 5.0, // Drag applied when "snowplowing"
     jumpImpulse: 12,
-    friction: 0.0, // Wall friction (keep 0)
+    friction: 0.1, // Wall friction (keep 0)
   },
   camera: {
     fov: 75,

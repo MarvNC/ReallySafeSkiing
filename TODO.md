@@ -1,4 +1,3 @@
-- Distant mountains/background
 - Sun
 - Proper player character rotation
 - Animations
@@ -15,3 +14,4 @@
 - Speed lines/wind effect
 - Punishment for crashing into trees/rocks
 - Slalom gates
+- MORE OBSTACLES

@@ -4,7 +4,7 @@ import { TerrainManager } from './world/TerrainManager';
 import { BackgroundEnvironment } from './world/BackgroundEnvironment';
 import { DebugUI } from './debug/DebugUI';
 import { DebugHelpers } from './debug/DebugHelpers';
-import { PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
+import { PLAYER_CONFIG, LIGHTING_CONFIG, GAME_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 import { PhysicsWorld } from './physics/PhysicsWorld';
 import { PlayerPhysics } from './player/PlayerPhysics';
@@ -43,7 +43,7 @@ export class GameApp {
 
   // 2. Game Logic Variables
   private gameState: GameState = GameState.MENU;
-  private timeRemaining = 120.0; // 2 minutes in seconds
+  private timeRemaining: number = GAME_CONFIG.timerDuration;
   private startPosition: THREE.Vector3 = new THREE.Vector3();
 
   // UI Elements
@@ -242,7 +242,7 @@ export class GameApp {
   // 4. Game Logic Methods
   private startGame() {
     this.gameState = GameState.PLAYING;
-    this.timeRemaining = 120.0; // 2 minutes
+    this.timeRemaining = GAME_CONFIG.timerDuration;
 
     // Reset player position
     this.playerPhysics.resetPosition(this.startPosition);
