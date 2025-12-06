@@ -53,7 +53,9 @@ export class PlayerPhysics {
       PLAYER_CONFIG.physics.capsuleRadius
     )
       .setMass(PLAYER_CONFIG.physics.mass)
-      .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World));
+      .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World))
+      .setFriction(PLAYER_CONFIG.physics.friction)
+      .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Multiply);
 
     this.collider = world.createCollider(colliderDesc, this.body);
   }

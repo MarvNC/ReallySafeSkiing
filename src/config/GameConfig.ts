@@ -34,6 +34,7 @@ export const PLAYER_CONFIG = {
     brakeDamping: 4.0,
     steerTurnSpeed: 2.5,
     jumpImpulse: 12,
+    friction: 0.01,
   },
   camera: {
     fov: 75,
