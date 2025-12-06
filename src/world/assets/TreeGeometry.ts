@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { mergeGeometries } from '../utils/mergeGeometries';
+
 import { COLOR_PALETTE } from '../../constants/colors';
+import { mergeGeometries } from '../utils/mergeGeometries';
 
 /**
  * Creates a low-poly pine tree geometry with variable layer count.

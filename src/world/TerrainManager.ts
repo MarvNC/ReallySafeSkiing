@@ -1,9 +1,10 @@
 import * as THREE from 'three';
-import { TerrainChunk } from './TerrainChunk';
-import type { PathPoint } from './WorldState';
-import { TerrainGenerator } from './TerrainGenerator';
-import { TERRAIN_DIMENSIONS, MOUNTAIN_CONFIG } from '../config/GameConfig';
+
+import { MOUNTAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { TerrainChunk } from './TerrainChunk';
+import { TerrainGenerator } from './TerrainGenerator';
+import type { PathPoint } from './WorldState';
 
 export class TerrainManager {
   private readonly chunks: TerrainChunk[] = [];

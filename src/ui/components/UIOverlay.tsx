@@ -1,7 +1,7 @@
-import { useGameStore, UIState } from '../store';
+import { UIState, useGameStore } from '../store';
+import { About } from './About';
 import { HUD } from './HUD';
 import { Menus } from './Menus';
-import { About } from './About';
 
 export const UIOverlay = () => {
   const { uiState } = useGameStore();

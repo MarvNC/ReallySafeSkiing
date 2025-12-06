@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+
 import { PHYSICS_CONFIG } from '../config/GameConfig';
 
 /**

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { createPeakGeometry } from './assets/MountainGeometry';
+
 import { COLOR_PALETTE } from '../constants/colors';
+import { createPeakGeometry } from './assets/MountainGeometry';
 
 // ============================================================================
 // MOUNTAIN CONFIGURATION

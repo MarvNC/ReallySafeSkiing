@@ -8,7 +8,7 @@
  * - assets/RockGeometry.ts
  */
 
-export { getTreeGeometry, createTreeGeometry, TREE_ARCHETYPES } from './assets/TreeGeometry';
-export type { TreeArchetype } from './assets/TreeGeometry';
 export { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
 export { getRockGeometry } from './assets/RockGeometry';
+export type { TreeArchetype } from './assets/TreeGeometry';
+export { createTreeGeometry, getTreeGeometry, TREE_ARCHETYPES } from './assets/TreeGeometry';

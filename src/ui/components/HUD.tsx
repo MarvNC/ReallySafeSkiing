@@ -9,7 +9,7 @@ export const HUD = () => {
   const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
 
   return (
-    <div className="absolute inset-0 pointer-events-none font-russo text-white uppercase select-none">
+    <div className="font-russo pointer-events-none absolute inset-0 text-white uppercase select-none">
       {/* Timer */}
       <div className="absolute top-5 left-1/2 -translate-x-1/2 text-center drop-shadow-md">
         <div className="text-5xl font-bold tabular-nums">{timeStr}</div>
@@ -18,16 +18,16 @@ export const HUD = () => {
 
       {/* Speed */}
       <div className="absolute bottom-5 left-8 drop-shadow-md">
-        <div className="text-6xl font-black italic text-accent-orange">
+        <div className="text-accent-orange text-6xl font-black italic">
           {Math.floor(speed * 3.6)}{' '}
-          <span className="text-2xl font-normal not-italic text-white opacity-80">km/h</span>
+          <span className="text-2xl font-normal text-white not-italic opacity-80">km/h</span>
         </div>
       </div>
 
       {/* Distance */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-center drop-shadow-md">
         <div className="text-4xl font-bold">
-          {Math.floor(distance)} <span className="text-lg opacity-80 font-normal">m</span>
+          {Math.floor(distance)} <span className="text-lg font-normal opacity-80">m</span>
         </div>
         <div className="text-xs tracking-widest opacity-80">Distance</div>
       </div>

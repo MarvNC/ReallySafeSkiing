@@ -1,9 +1,10 @@
-import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { PhysicsWorld } from '../physics/PhysicsWorld';
-import { Action, InputManager } from '../core/InputManager';
+import * as THREE from 'three';
+
 import { PLAYER_CONFIG } from '../config/GameConfig';
-import { PhysicsLayer, makeCollisionGroups } from '../physics/PhysicsLayers';
+import { Action, InputManager } from '../core/InputManager';
+import { makeCollisionGroups, PhysicsLayer } from '../physics/PhysicsLayers';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
 
 export type PlayerPhysicsDebugState = {
   yaw: number;

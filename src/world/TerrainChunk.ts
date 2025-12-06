@@ -1,16 +1,17 @@
-import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
+import * as THREE from 'three';
+
+import { OBSTACLE_CONFIG, TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import { COLOR_PALETTE } from '../constants/colors';
+import { makeCollisionGroups, PhysicsLayer } from '../physics/PhysicsLayers';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { getRockGeometry } from './AssetFactory';
+import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
+import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
+import { TerrainGenerator } from './TerrainGenerator';
+import { getTerrainMaterials } from './TerrainMaterials';
 import type { PathPoint } from './WorldState';
 import { SurfaceKind } from './WorldState';
-import { getRockGeometry } from './AssetFactory';
-import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
-import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
-import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS, OBSTACLE_CONFIG } from '../config/GameConfig';
-import { getTerrainMaterials } from './TerrainMaterials';
-import { TerrainGenerator } from './TerrainGenerator';
-import { COLOR_PALETTE } from '../constants/colors';
-import { PhysicsWorld } from '../physics/PhysicsWorld';
-import { PhysicsLayer, makeCollisionGroups } from '../physics/PhysicsLayers';
 
 const SURFACE_KIND_TO_INDEX: Record<SurfaceKind, number> = {
   [SurfaceKind.Track]: 0,

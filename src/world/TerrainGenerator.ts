@@ -1,7 +1,8 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
+
+import { MOUNTAIN_CONFIG, TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
 import type { ChunkState, PathPoint, TerrainSample } from './WorldState';
 import { SurfaceKind } from './WorldState';
-import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS, MOUNTAIN_CONFIG } from '../config/GameConfig';
 
 const { CHUNK_LENGTH, CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
 

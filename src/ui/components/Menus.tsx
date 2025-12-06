@@ -1,5 +1,6 @@
-import { useGameStore, UIState } from '../store';
 import clsx from 'clsx';
+
+import { UIState, useGameStore } from '../store';
 
 export const Menus = () => {
   const { uiState, menuIndex, distance, topSpeed } = useGameStore();
@@ -7,11 +8,11 @@ export const Menus = () => {
   if (uiState === UIState.PLAYING) return null;
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-sky-dark/40 backdrop-blur-sm font-russo text-white z-50">
+    <div className="bg-sky-dark/40 font-russo absolute inset-0 z-50 flex flex-col items-center justify-center text-white backdrop-blur-sm">
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
         <>
-          <h1 className="text-7xl italic mb-5 drop-shadow-lg text-center">REALLY SAFE SKIING</h1>
+          <h1 className="mb-5 text-center text-7xl italic drop-shadow-lg">REALLY SAFE SKIING</h1>
           <div className="animate-blink text-2xl">W TO PROPEL, A / D TO STEER</div>
         </>
       )}
@@ -19,24 +20,24 @@ export const Menus = () => {
       {/* PAUSE MENU */}
       {uiState === UIState.PAUSED && (
         <>
-          <h1 className="text-7xl italic mb-8 drop-shadow-lg">PAUSED</h1>
-          <div className="flex flex-col gap-4 min-w-[300px] text-center">
+          <h1 className="mb-8 text-7xl italic drop-shadow-lg">PAUSED</h1>
+          <div className="flex min-w-[300px] flex-col gap-4 text-center">
             {['RESUME', 'RESTART', 'ABOUT'].map((item, idx) => (
               <div
                 key={item}
                 className={clsx(
-                  'text-3xl cursor-pointer transition-all flex items-center justify-center gap-4',
+                  'flex cursor-pointer items-center justify-center gap-4 text-3xl transition-all',
                   menuIndex === idx
-                    ? 'text-white font-bold scale-110 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]'
+                    ? 'scale-110 font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]'
                     : 'text-sky-300'
                 )}
               >
                 {menuIndex === idx && (
-                  <div className="w-0 h-0 border-y-[10px] border-y-transparent border-l-[15px] border-l-accent-orange" />
+                  <div className="border-l-accent-orange h-0 w-0 border-y-[10px] border-l-[15px] border-y-transparent" />
                 )}
                 {item}
                 {menuIndex === idx && (
-                  <div className="w-0 h-0 border-y-[10px] border-y-transparent border-r-[15px] border-r-accent-orange" />
+                  <div className="border-r-accent-orange h-0 w-0 border-y-[10px] border-r-[15px] border-y-transparent" />
                 )}
               </div>
             ))}
@@ -47,12 +48,12 @@ export const Menus = () => {
       {/* GAME OVER */}
       {uiState === UIState.GAME_OVER && (
         <>
-          <h1 className="text-7xl italic mb-5 drop-shadow-lg">TIME&apos;S UP!</h1>
-          <div className="flex flex-col items-center gap-5 mb-10">
+          <h1 className="mb-5 text-7xl italic drop-shadow-lg">TIME&apos;S UP!</h1>
+          <div className="mb-10 flex flex-col items-center gap-5">
             <div className="text-4xl text-sky-300 drop-shadow-md">
               DISTANCE: {Math.floor(distance)}m
             </div>
-            <div className="text-3xl text-accent-orange italic animate-pulse">
+            <div className="text-accent-orange animate-pulse text-3xl italic">
               TOP SPEED: {topSpeed} km/h
             </div>
           </div>

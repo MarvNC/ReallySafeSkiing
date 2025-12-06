@@ -1,15 +1,16 @@
 import * as THREE from 'three';
-import { PlayerController } from './player/PlayerController';
-import { TerrainManager } from './world/TerrainManager';
-import { BackgroundEnvironment } from './world/BackgroundEnvironment';
-import { DebugUI } from './debug/DebugUI';
-import { DebugHelpers } from './debug/DebugHelpers';
-import { PLAYER_CONFIG, LIGHTING_CONFIG, GAME_CONFIG } from './config/GameConfig';
-import { Action, InputManager } from './core/InputManager';
-import { PhysicsWorld } from './physics/PhysicsWorld';
-import { PlayerPhysics } from './player/PlayerPhysics';
+
+import { GAME_CONFIG, LIGHTING_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
 import { COLOR_PALETTE } from './constants/colors';
-import { useGameStore, UIState } from './ui/store';
+import { Action, InputManager } from './core/InputManager';
+import { DebugHelpers } from './debug/DebugHelpers';
+import { DebugUI } from './debug/DebugUI';
+import { PhysicsWorld } from './physics/PhysicsWorld';
+import { PlayerController } from './player/PlayerController';
+import { PlayerPhysics } from './player/PlayerPhysics';
+import { UIState, useGameStore } from './ui/store';
+import { BackgroundEnvironment } from './world/BackgroundEnvironment';
+import { TerrainManager } from './world/TerrainManager';
 
 // 1. Define Game States
 const GameState = {

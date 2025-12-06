@@ -1,7 +1,9 @@
 import './style.css';
+
 import { createRoot } from 'react-dom/client';
-import { UIOverlay } from './ui/components/UIOverlay';
+
 import { GameApp } from './GameApp';
+import { UIOverlay } from './ui/components/UIOverlay';
 
 // 1. Setup DOM
 const appElement = document.querySelector<HTMLDivElement>('#app');

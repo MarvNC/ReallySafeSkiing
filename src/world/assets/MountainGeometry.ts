@@ -1,5 +1,5 @@
-import * as THREE from 'three';
 import { createNoise2D } from 'simplex-noise';
+import * as THREE from 'three';
 
 // Resolution - Lower than before for performance since we will have more mountains
 const SEGMENTS = 32;

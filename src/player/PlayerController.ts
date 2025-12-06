@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { createSkiPair, createHandWithPole } from './SkierAssets';
+
 import { PLAYER_CONFIG } from '../config/GameConfig';
 import { Action, InputManager } from '../core/InputManager';
 import { PlayerPhysics } from './PlayerPhysics';
+import { createHandWithPole, createSkiPair } from './SkierAssets';
 
 type PlayerOptions = {
   startPosition?: THREE.Vector3;
