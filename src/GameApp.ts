@@ -45,6 +45,7 @@ export class GameApp {
   private gameState: GameState = GameState.MENU;
   private timeRemaining: number = GAME_CONFIG.timerDuration;
   private startPosition: THREE.Vector3 = new THREE.Vector3();
+  private topSpeed: number = 0; // Track top speed in km/h
 
   // UI Elements
   private uiTimer = document.getElementById('timer-display');
@@ -53,7 +54,8 @@ export class GameApp {
   private uiMenu = document.getElementById('main-menu');
   private uiHud = document.getElementById('hud');
   private uiGameOver = document.getElementById('game-over');
-  private uiFinalScore = document.getElementById('final-score');
+  private uiFinalDistance = document.getElementById('final-distance');
+  private uiFinalTopSpeed = document.getElementById('final-top-speed');
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -243,6 +245,7 @@ export class GameApp {
   private startGame() {
     this.gameState = GameState.PLAYING;
     this.timeRemaining = GAME_CONFIG.timerDuration;
+    this.topSpeed = 0; // Reset top speed
 
     // Reset player position
     this.playerPhysics.resetPosition(this.startPosition);
@@ -268,8 +271,12 @@ export class GameApp {
     const currentPos = this.playerPhysics.getPosition();
     const distance = Math.floor(Math.abs(currentPos.z - this.startPosition.z));
 
-    if (this.uiFinalScore) {
-      this.uiFinalScore.innerText = `DISTANCE: ${distance}m`;
+    if (this.uiFinalDistance) {
+      this.uiFinalDistance.innerText = `DISTANCE: ${distance}m`;
+    }
+
+    if (this.uiFinalTopSpeed) {
+      this.uiFinalTopSpeed.innerText = `TOP SPEED: ${this.topSpeed} km/h`;
     }
   }
 
@@ -288,6 +295,11 @@ export class GameApp {
     const speedKmh = Math.floor(vel.length() * 3.6);
     if (this.uiSpeed) {
       this.uiSpeed.innerHTML = `${speedKmh} <span class="unit">km/h</span>`;
+    }
+
+    // Track top speed
+    if (speedKmh > this.topSpeed) {
+      this.topSpeed = speedKmh;
     }
 
     // 3. Distance
