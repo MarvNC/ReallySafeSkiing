@@ -168,6 +168,23 @@ export class GameApp {
       }
     });
 
+    // Start game on any movement input
+    this.input.on(Action.Forward, (_action, phase) => {
+      if (phase === 'pressed' && this.gameState === GameState.MENU) {
+        this.startGame();
+      }
+    });
+    this.input.on(Action.SteerLeft, (_action, phase) => {
+      if (phase === 'pressed' && this.gameState === GameState.MENU) {
+        this.startGame();
+      }
+    });
+    this.input.on(Action.SteerRight, (_action, phase) => {
+      if (phase === 'pressed' && this.gameState === GameState.MENU) {
+        this.startGame();
+      }
+    });
+
     // Camera toggle
     this.input.on(Action.ToggleCamera, (_action, phase) => {
       if (phase !== 'pressed' || !this.player) return;
@@ -357,11 +374,11 @@ export class GameApp {
 
     const delta = this.clock.getDelta();
 
-    // Physics always runs (so you can crash after time runs out)
-    this.physics.step(delta);
-
     // Game Logic
     if (this.gameState === GameState.PLAYING) {
+      // Only run physics when playing
+      this.physics.step(delta);
+
       this.timeRemaining -= delta;
 
       // Update Player Controls
@@ -380,12 +397,14 @@ export class GameApp {
         this.timeRemaining = 0;
         this.endGame();
       }
-    } else {
-      // In MENU or GAME_OVER, we sync visuals but don't apply control inputs
-      this.player.syncFromPhysics();
-    }
 
-    this.terrainManager.update(this.playerPhysics.getPosition());
+      this.terrainManager.update(this.playerPhysics.getPosition());
+    } else {
+      // In MENU or GAME_OVER, pause physics and just sync visuals
+      this.player.syncFromPhysics();
+      // Still update terrain manager to keep visuals in sync
+      this.terrainManager.update(this.playerPhysics.getPosition());
+    }
 
     // Update debug camera movement
     if (this.useDebugCamera && this.debugCamera && this.input) {
