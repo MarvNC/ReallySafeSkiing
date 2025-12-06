@@ -104,6 +104,79 @@ export const TERRAIN_CONFIG = {
   OBSTACLE_COUNT: 200, // Number of obstacles per chunk
 } as const;
 
+export const OBSTACLE_CONFIG = {
+  // Grid spacing for obstacle placement
+  gridSize: 5,
+  // Noise scale for variety in placement
+  noiseScale: 0.1,
+  // Obstacle generation settings per surface type
+  // Proportions are relative - code will normalize them to percentages
+  surfaces: {
+    track: {
+      rarity: 5, // Overall rarity (relative - lower = rarer)
+      treeProportion: 1, // Tree proportion when obstacle appears
+      rockProportion: 4, // Rock proportion when obstacle appears
+      treeSizes: {
+        small: 1, // Small tree proportion
+        medium: 0, // Medium tree proportion
+        large: 0, // Large tree proportion
+      },
+    },
+    bank: {
+      rarity: 10, // Overall rarity
+      treeProportion: 3, // Tree proportion
+      rockProportion: 1, // Rock proportion
+      treeSizes: {
+        small: 1, // Small tree proportion
+        medium: 2, // Medium tree proportion
+        large: 1, // Large tree proportion
+      },
+      // Noise thresholds for tree size variety (0-1 range) with probabilities
+      noiseThresholds: {
+        small: { min: 0.3, max: 0.5, probability: 0.25 },
+        medium: { min: 0.5, max: 0.7, probability: 0.3 },
+        large: { min: 0.7, max: 1.0, probability: 0.2 },
+      },
+      rockProbability: 0.15, // Probability for rocks when no tree is placed
+    },
+    cliff: {
+      rarity: 5, // Overall rarity
+      treeProportion: 1, // Tree proportion
+      rockProportion: 1, // Rock proportion
+      treeSizes: {
+        small: 1, // Small tree proportion
+        medium: 1, // Medium tree proportion
+        large: 0, // Large tree proportion
+      },
+      // Noise thresholds for tree size variety with probabilities
+      noiseThresholds: {
+        small: { min: 0.4, max: 0.6, probability: 0.1 },
+        medium: { min: 0.6, max: 1.0, probability: 0.08 },
+        large: { min: 0, max: 0, probability: 0 }, // Not used
+      },
+      rockProbability: 0.08, // Probability for rocks
+    },
+    plateau: {
+      rarity: 15, // Overall rarity
+      treeProportion: 3, // Tree proportion
+      rockProportion: 0, // Rock proportion (no rocks on plateau)
+      deadTreeProportion: 1, // Dead tree proportion
+      treeSizes: {
+        small: 1, // Small tree proportion
+        medium: 2, // Medium tree proportion
+        large: 3, // Large tree proportion
+      },
+      // Noise thresholds for variety with probabilities
+      noiseThresholds: {
+        deadTree: { min: 0, max: 0.4, probability: 0.1 },
+        small: { min: 0.4, max: 0.6, probability: 0.6 },
+        medium: { min: 0.6, max: 0.8, probability: 0.7 },
+        large: { min: 0.8, max: 1.0, probability: 0.8 },
+      },
+    },
+  },
+} as const;
+
 export const LIGHTING_CONFIG = {
   keyLight: {
     color: '#ffffff',

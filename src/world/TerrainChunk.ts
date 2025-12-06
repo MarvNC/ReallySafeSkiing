@@ -5,7 +5,7 @@ import { SurfaceKind } from './WorldState';
 import { getRockGeometry } from './AssetFactory';
 import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
-import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import { TERRAIN_CONFIG, TERRAIN_DIMENSIONS, OBSTACLE_CONFIG } from '../config/GameConfig';
 import { getTerrainMaterials } from './TerrainMaterials';
 import { TerrainGenerator } from './TerrainGenerator';
 import { COLOR_PALETTE } from '../constants/colors';
@@ -244,6 +244,84 @@ export class TerrainChunk {
     }
   }
 
+  /**
+   * Normalize proportions to percentages (0-1 range)
+   */
+  private normalizeProportions(proportions: Record<string, number>): Record<string, number> {
+    const sum = Object.values(proportions).reduce((a, b) => a + b, 0);
+    if (sum === 0) return proportions;
+    const normalized: Record<string, number> = {};
+    for (const [key, value] of Object.entries(proportions)) {
+      normalized[key] = value / sum;
+    }
+    return normalized;
+  }
+
+  /**
+   * Calculate obstacle probabilities from config
+   */
+  private calculateObstacleProbabilities(surfaceType: 'track' | 'bank' | 'cliff' | 'plateau') {
+    const config = OBSTACLE_CONFIG.surfaces[surfaceType];
+
+    // Normalize tree/rock/deadTree proportions (for track which doesn't use noise)
+    const obstacleTypeProportions = this.normalizeProportions({
+      tree: config.treeProportion,
+      rock: config.rockProportion,
+      deadTree: 'deadTreeProportion' in config ? config.deadTreeProportion : 0,
+    });
+
+    // Normalize tree size proportions (for track)
+    const treeSizeProportions = this.normalizeProportions(config.treeSizes);
+
+    // Calculate base rarity (convert to a reasonable probability per grid point)
+    // Higher rarity = more likely to spawn obstacles
+    const baseRarity = config.rarity / 100; // Scale down for reasonable probabilities
+
+    return {
+      baseRarity,
+      obstacleTypeProportions,
+      treeSizeProportions,
+      noiseThresholds: 'noiseThresholds' in config ? config.noiseThresholds : undefined,
+      rockProbability: 'rockProbability' in config ? config.rockProbability : undefined,
+    };
+  }
+
+  /**
+   * Select tree size based on proportions and noise value
+   */
+  private selectTreeSize(
+    treeSizeProportions: Record<string, number>,
+    noiseThresholds: Record<string, { min: number; max: number; probability?: number }> | undefined,
+    normalizedNoise: number
+  ): TreeArchetype | null {
+    if (!noiseThresholds) {
+      // Simple proportional selection without noise (for track)
+      const roll = Math.random();
+      let cumulative = 0;
+      for (const [size, prob] of Object.entries(treeSizeProportions)) {
+        cumulative += prob;
+        if (roll < cumulative) {
+          return size as TreeArchetype;
+        }
+      }
+      return null;
+    }
+
+    // Noise-based selection with probabilities
+    for (const [size, threshold] of Object.entries(noiseThresholds)) {
+      if (normalizedNoise >= threshold.min && normalizedNoise < threshold.max) {
+        // Check if this size has a proportion > 0 and a probability
+        if (treeSizeProportions[size] > 0 && threshold.probability !== undefined) {
+          // Apply the probability from config
+          if (Math.random() < threshold.probability) {
+            return size as TreeArchetype;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private scatterObstacles(points: PathPoint[], startZ: number, physics?: PhysicsWorld): void {
     const matrix = new THREE.Matrix4();
     const dummy = new THREE.Object3D(); // Helper for matrix calculations
@@ -273,10 +351,16 @@ export class TerrainChunk {
     this.rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
     // Grid-based placement with noise sampling
-    const gridSize = 5; // Spacing between potential tree positions
-    const noiseScale = 0.1; // Frequency of noise sampling
+    const gridSize = OBSTACLE_CONFIG.gridSize;
+    const noiseScale = OBSTACLE_CONFIG.noiseScale;
 
     const lateralMax = CHUNK_WIDTH / 2;
+
+    // Pre-calculate probabilities for each surface type
+    const trackProbs = this.calculateObstacleProbabilities('track');
+    const bankProbs = this.calculateObstacleProbabilities('bank');
+    const cliffProbs = this.calculateObstacleProbabilities('cliff');
+    const plateauProbs = this.calculateObstacleProbabilities('plateau');
 
     for (let row = 0; row < CHUNK_LENGTH; row += gridSize) {
       const zFraction = row / CHUNK_LENGTH;
@@ -289,14 +373,11 @@ export class TerrainChunk {
         const worldZ = pathPoint.z + pathPoint.rightZ * t;
         const sample = this.generator.sampleTerrainAt(worldX, worldZ, pathPoint);
 
-        if (sample.kind === SurfaceKind.Track) {
-          continue;
-        }
-
         const isOnBank = sample.kind === SurfaceKind.Bank;
         const isOnCliff =
           sample.kind === SurfaceKind.WallVertical || sample.kind === SurfaceKind.WallLedge;
         const isOnPlateau = sample.kind === SurfaceKind.Plateau;
+        const isOnTrack = sample.kind === SurfaceKind.Track;
 
         const noiseValue = this.generator.sampleNoise(
           worldX * noiseScale,
@@ -309,47 +390,86 @@ export class TerrainChunk {
         let placeDeadTree = false;
         let placeRock = false;
 
-        if (isOnBank) {
-          // Bank: Medium chance of tree, some rocks
-          if (normalizedNoise > 0.3 && normalizedNoise < 0.5 && Math.random() < 0.25) {
-            placeTree = 'small';
-          } else if (normalizedNoise >= 0.5 && normalizedNoise < 0.7 && Math.random() < 0.3) {
-            placeTree = 'medium';
-          } else if (normalizedNoise >= 0.7 && Math.random() < 0.2) {
-            placeTree = 'large';
-          } else if (Math.random() < 0.15) {
+        if (isOnTrack) {
+          // Track: Simple proportional approach
+          const probs = trackProbs;
+          if (Math.random() < probs.baseRarity) {
+            // Determine obstacle type based on proportions
+            const typeRoll = Math.random();
+            let cumulative = 0;
+            let selectedType: 'tree' | 'rock' | 'deadTree' | null = null;
+
+            for (const [type, prob] of Object.entries(probs.obstacleTypeProportions)) {
+              cumulative += prob;
+              if (typeRoll < cumulative) {
+                selectedType = type as 'tree' | 'rock' | 'deadTree';
+                break;
+              }
+            }
+
+            if (selectedType === 'tree') {
+              // Track trees are always small
+              placeTree = this.selectTreeSize(
+                probs.treeSizeProportions,
+                undefined,
+                normalizedNoise
+              );
+            } else if (selectedType === 'rock') {
+              placeRock = true;
+            }
+          }
+        } else if (isOnBank) {
+          // Bank: Noise-based tree selection, then rock fallback
+          const probs = bankProbs;
+          placeTree = this.selectTreeSize(
+            probs.treeSizeProportions,
+            probs.noiseThresholds,
+            normalizedNoise
+          );
+          if (
+            !placeTree &&
+            probs.rockProbability !== undefined &&
+            Math.random() < probs.rockProbability
+          ) {
             placeRock = true;
           }
         } else if (isOnCliff) {
-          // Cliff: Sparse trees and rocks
-          if (normalizedNoise > 0.4 && normalizedNoise < 0.6 && Math.random() < 0.1) {
-            placeTree = 'small';
-          } else if (normalizedNoise >= 0.6 && Math.random() < 0.08) {
-            placeTree = 'medium';
-          } else if (Math.random() < 0.08) {
+          // Cliff: Noise-based tree selection, then rock fallback
+          const probs = cliffProbs;
+          placeTree = this.selectTreeSize(
+            probs.treeSizeProportions,
+            probs.noiseThresholds,
+            normalizedNoise
+          );
+          if (
+            !placeTree &&
+            probs.rockProbability !== undefined &&
+            Math.random() < probs.rockProbability
+          ) {
             placeRock = true;
           }
         } else if (isOnPlateau) {
-          // Plateau: High density forest with noise-based variety
-          if (normalizedNoise < 0.4) {
-            // Low noise = clearing, maybe dead tree
-            if (Math.random() < 0.1) {
+          // Plateau: Noise-based selection for dead trees and tree sizes
+          const probs = plateauProbs;
+          if (probs.noiseThresholds) {
+            // Check dead tree first (low noise range)
+            const deadTreeThreshold =
+              'deadTree' in probs.noiseThresholds ? probs.noiseThresholds.deadTree : undefined;
+            if (
+              deadTreeThreshold &&
+              normalizedNoise >= deadTreeThreshold.min &&
+              normalizedNoise < deadTreeThreshold.max &&
+              deadTreeThreshold.probability !== undefined &&
+              Math.random() < deadTreeThreshold.probability
+            ) {
               placeDeadTree = true;
-            }
-          } else if (normalizedNoise >= 0.4 && normalizedNoise < 0.6) {
-            // Medium noise = small trees
-            if (Math.random() < 0.6) {
-              placeTree = 'small';
-            }
-          } else if (normalizedNoise >= 0.6 && normalizedNoise < 0.8) {
-            // Higher noise = medium trees
-            if (Math.random() < 0.7) {
-              placeTree = 'medium';
-            }
-          } else {
-            // Highest noise = large trees
-            if (Math.random() < 0.8) {
-              placeTree = 'large';
+            } else {
+              // Check tree sizes
+              placeTree = this.selectTreeSize(
+                probs.treeSizeProportions,
+                probs.noiseThresholds,
+                normalizedNoise
+              );
             }
           }
         }
