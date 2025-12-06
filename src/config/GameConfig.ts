@@ -9,7 +9,7 @@ export const PHYSICS_CONFIG = {
 
 export const GAME_CONFIG = {
   // Game timer duration in seconds
-  timerDuration: 1.0,
+  timerDuration: 60.0,
 } as const;
 
 export const PLAYER_CONFIG = {
