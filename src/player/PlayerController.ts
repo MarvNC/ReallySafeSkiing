@@ -155,24 +155,33 @@ export class PlayerController {
       lateralLerp
     );
 
-    // 1. Ski Rotation
+    // 1. Ski Rotation and Position
     const leftSki = this.skis.children[0];
     const rightSki = this.skis.children[1];
 
     if (isBraking) {
       // Snowplow: V-Shape
-      // Left ski -25 degrees, Right ski +25 degrees
-      leftSki.rotation.y = THREE.MathUtils.degToRad(-25);
-      rightSki.rotation.y = THREE.MathUtils.degToRad(25);
+      // Reduced rotation to prevent crossing: Left ski -18 degrees, Right ski +18 degrees
+      leftSki.rotation.y = THREE.MathUtils.degToRad(-18);
+      rightSki.rotation.y = THREE.MathUtils.degToRad(18);
+      // Spread skis wider when braking (from -0.3/0.3 to -0.45/0.45)
+      leftSki.position.x = -0.45;
+      rightSki.position.x = 0.45;
     } else if (steerLeft || steerRight) {
       // Banking into turn?
       // Skis remain parallel usually during carving, but maybe slight offset
       leftSki.rotation.y = 0;
       rightSki.rotation.y = 0;
+      // Reset to default spacing
+      leftSki.position.x = -0.3;
+      rightSki.position.x = 0.3;
     } else {
       // Gliding parallel
       leftSki.rotation.y = 0;
       rightSki.rotation.y = 0;
+      // Reset to default spacing
+      leftSki.position.x = -0.3;
+      rightSki.position.x = 0.3;
     }
 
     // 2. Hand Rotation (Braking)
