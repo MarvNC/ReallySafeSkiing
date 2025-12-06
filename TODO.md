@@ -16,3 +16,5 @@
 - Slalom gates
 - MORE OBSTACLES
 - Pause menu
+- Particles in snow?
+- Camera tilt when turning

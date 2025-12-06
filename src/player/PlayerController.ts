@@ -32,6 +32,12 @@ export class PlayerController {
   private currentLeftHandRotationX: number = 0;
   private currentRightHandRotationX: number = 0;
 
+  // Add state trackers for smooth ski animation
+  private currentSkiLeftRot = new THREE.Euler();
+  private currentSkiRightRot = new THREE.Euler();
+  private currentSkiLeftPos = new THREE.Vector3(-0.3, 0, 0); // Local to ski group
+  private currentSkiRightPos = new THREE.Vector3(0.3, 0, 0); // Local to ski group
+
   private physics: PlayerPhysics;
 
   // Animation State
@@ -138,7 +144,131 @@ export class PlayerController {
     const isPoling = this.input.isActive(Action.Forward);
 
     const time = performance.now() / 1000;
+    const speed = this.physics.getSpeed(); // Requires getting speed from physics
+    const speedRatio = Math.min(1.0, speed / 30.0); // 0 to 1 based on speed (max 30m/s)
 
+    // --- SKI ANIMATION (New Logic) ---
+    const leftSki = this.skis.children[0];
+    const rightSki = this.skis.children[1];
+
+    // 1. Calculate Targets
+    const targets = {
+      left: { rot: new THREE.Euler(), pos: new THREE.Vector3(-PLAYER_CONFIG.skis.baseWidth, 0, 0) },
+      right: { rot: new THREE.Euler(), pos: new THREE.Vector3(PLAYER_CONFIG.skis.baseWidth, 0, 0) },
+    };
+
+    if (isBraking) {
+      // --- BRAKING STATE ---
+      // Rotation Y: V-Shape (Pigeon toed)
+      targets.left.rot.y = -PLAYER_CONFIG.skis.brakeOpenAngle;
+      targets.right.rot.y = PLAYER_CONFIG.skis.brakeOpenAngle;
+
+      // Rotation Z: Edging (Roll inward to dig into snow)
+      // Left ski rolls right (negative Z), Right ski rolls left (positive Z)
+      targets.left.rot.z = -PLAYER_CONFIG.skis.brakeEdgeRoll;
+      targets.right.rot.z = PLAYER_CONFIG.skis.brakeEdgeRoll;
+
+      // Position X: Widen stance
+      targets.left.pos.x = -PLAYER_CONFIG.skis.brakeWidth;
+      targets.right.pos.x = PLAYER_CONFIG.skis.brakeWidth;
+
+      // Add High Frequency Vibration (Chatter)
+      const chatter = Math.sin(time * 50) * 0.02 * speedRatio;
+      targets.left.rot.x += chatter;
+      targets.right.rot.x -= chatter;
+    } else {
+      // --- GLIDING / TURNING STATE ---
+
+      // Determine Turn Input (-1 Right, 0 Center, 1 Left)
+      let turnInput = 0;
+      if (steerLeft) turnInput = 1;
+      if (steerRight) turnInput = -1;
+
+      // Rotation Z: Banking (Carving)
+      // If turning Left (+1), we roll Left (+Z rotation)
+      const bankAngle = turnInput * PLAYER_CONFIG.skis.maxTurnRoll;
+      targets.left.rot.z = bankAngle;
+      targets.right.rot.z = bankAngle;
+
+      // Rotation Y: Steering (Pointing into turn)
+      const steerAngle = turnInput * PLAYER_CONFIG.skis.maxTurnYaw;
+      targets.left.rot.y = steerAngle;
+      targets.right.rot.y = steerAngle;
+
+      // Position Z: Parallel Offset (Inside ski moves back)
+      if (turnInput !== 0) {
+        // Turning Left: Left ski is inside (moves back), Right ski outside (moves forward)
+        targets.left.pos.z = -turnInput * PLAYER_CONFIG.skis.carveOffsetZ;
+        targets.right.pos.z = turnInput * PLAYER_CONFIG.skis.carveOffsetZ;
+      }
+
+      // --- SPEED SHAKE (Visual Instability) ---
+      if (speedRatio > 0.5) {
+        const shake = (speedRatio - 0.5) * PLAYER_CONFIG.skis.vibrationIntensity;
+        // Independent noise for each ski
+        targets.left.pos.y += (Math.random() - 0.5) * shake;
+        targets.right.pos.y += (Math.random() - 0.5) * shake;
+        targets.left.rot.z += (Math.random() - 0.5) * shake;
+        targets.right.rot.z += (Math.random() - 0.5) * shake;
+      }
+    }
+
+    // 2. Apply Smooth Interpolation (Lerp)
+    const lerpFactor = 1.0 - Math.exp(-PLAYER_CONFIG.skis.animationSpeed * deltaTime);
+
+    // Apply Left Ski
+    this.currentSkiLeftRot.x = THREE.MathUtils.lerp(
+      this.currentSkiLeftRot.x,
+      targets.left.rot.x,
+      lerpFactor
+    );
+    this.currentSkiLeftRot.y = THREE.MathUtils.lerp(
+      this.currentSkiLeftRot.y,
+      targets.left.rot.y,
+      lerpFactor
+    );
+    this.currentSkiLeftRot.z = THREE.MathUtils.lerp(
+      this.currentSkiLeftRot.z,
+      targets.left.rot.z,
+      lerpFactor
+    );
+    this.currentSkiLeftPos.lerp(targets.left.pos, lerpFactor);
+    leftSki.rotation.copy(this.currentSkiLeftRot);
+    leftSki.position.copy(this.currentSkiLeftPos);
+
+    // Apply Right Ski
+    this.currentSkiRightRot.x = THREE.MathUtils.lerp(
+      this.currentSkiRightRot.x,
+      targets.right.rot.x,
+      lerpFactor
+    );
+    this.currentSkiRightRot.y = THREE.MathUtils.lerp(
+      this.currentSkiRightRot.y,
+      targets.right.rot.y,
+      lerpFactor
+    );
+    this.currentSkiRightRot.z = THREE.MathUtils.lerp(
+      this.currentSkiRightRot.z,
+      targets.right.rot.z,
+      lerpFactor
+    );
+    this.currentSkiRightPos.lerp(targets.right.pos, lerpFactor);
+    rightSki.rotation.copy(this.currentSkiRightRot);
+    rightSki.position.copy(this.currentSkiRightPos);
+
+    // Update Hands (using the existing logic or the refined version below)
+    this.updateHands(deltaTime, steerLeft, steerRight, isBraking, isPoling, time);
+  }
+
+  // Refactored Hand logic into its own method for cleanliness
+  private updateHands(
+    deltaTime: number,
+    steerLeft: boolean,
+    steerRight: boolean,
+    isBraking: boolean,
+    isPoling: boolean,
+    time: number
+  ): void {
     // Calculate target X positions for hands based on steering input
     let targetLeftHandX = PLAYER_CONFIG.hands.leftOffset.x;
     let targetRightHandX = PLAYER_CONFIG.hands.rightOffset.x;
@@ -173,36 +303,7 @@ export class PlayerController {
       lateralLerp
     );
 
-    // 1. Ski Rotation and Position
-    const leftSki = this.skis.children[0];
-    const rightSki = this.skis.children[1];
-
-    if (isBraking) {
-      // Snowplow: V-Shape
-      // Reduced rotation to prevent crossing: Left ski -18 degrees, Right ski +18 degrees
-      leftSki.rotation.y = THREE.MathUtils.degToRad(-18);
-      rightSki.rotation.y = THREE.MathUtils.degToRad(18);
-      // Spread skis wider when braking (from -0.3/0.3 to -0.45/0.45)
-      leftSki.position.x = -0.45;
-      rightSki.position.x = 0.45;
-    } else if (steerLeft || steerRight) {
-      // Banking into turn?
-      // Skis remain parallel usually during carving, but maybe slight offset
-      leftSki.rotation.y = 0;
-      rightSki.rotation.y = 0;
-      // Reset to default spacing
-      leftSki.position.x = -0.3;
-      rightSki.position.x = 0.3;
-    } else {
-      // Gliding parallel
-      leftSki.rotation.y = 0;
-      rightSki.rotation.y = 0;
-      // Reset to default spacing
-      leftSki.position.x = -0.3;
-      rightSki.position.x = 0.3;
-    }
-
-    // 2. Hand Rotation (Braking)
+    // Hand Rotation (Braking)
     // Calculate target rotations based on braking state
     let targetLeftHandRotationZ = -PLAYER_CONFIG.hands.poleAngleRadians;
     let targetRightHandRotationZ = PLAYER_CONFIG.hands.poleAngleRadians;
@@ -251,7 +352,7 @@ export class PlayerController {
     this.rightHand.rotation.z = this.currentRightHandRotationZ;
     this.rightHand.rotation.x = this.currentRightHandRotationX;
 
-    // 3. Hand Animation (Poling or Bobbing)
+    // Hand Animation (Poling or Bobbing)
     if (isPoling) {
       // Poling animation: hands move forward and backward (alternating)
       const poleFrequency = 2.5; // Cycles per second for poling motion

@@ -30,7 +30,7 @@ export const PLAYER_CONFIG = {
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
 
     // Poling mechanics
-    poleForce: 10.0, // Strong initial push
+    poleForce: 30.0, // Strong initial push
     maxPoleSpeed: 15.0, // You can't pole effectively above this speed
 
     // Steering
@@ -60,6 +60,16 @@ export const PLAYER_CONFIG = {
   },
   skis: {
     offset: new THREE.Vector3(0, -1.5, 0.3),
+    // Animation config
+    maxTurnRoll: Math.PI / 6, // 30 degrees banking when turning
+    maxTurnYaw: Math.PI / 12, // 15 degrees steering into turn
+    brakeOpenAngle: Math.PI / 8, // 22.5 degrees V-shape
+    brakeEdgeRoll: Math.PI / 6, // 30 degrees inward edging
+    brakeWidth: 0.45, // Distance from center when braking
+    baseWidth: 0.3, // Distance from center when gliding
+    carveOffsetZ: 0.1, // How far the inside ski pulls back during a turn
+    animationSpeed: 10.0, // Lerp speed
+    vibrationIntensity: 0.02, // Shake amount at max speed
   },
   animation: {
     bobSpeedScale: 2,
