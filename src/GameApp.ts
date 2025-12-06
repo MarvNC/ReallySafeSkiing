@@ -9,6 +9,7 @@ import { Action, InputManager } from './core/InputManager';
 import { PhysicsWorld } from './physics/PhysicsWorld';
 import { PlayerPhysics } from './player/PlayerPhysics';
 import { COLOR_PALETTE } from './constants/colors';
+import { useGameStore, UIState } from './ui/store';
 
 // 1. Define Game States
 const GameState = {
@@ -52,19 +53,6 @@ export class GameApp {
   private menuIndex = 0;
   private isAboutOpen = false;
   private readonly menuOptionsCount = 3; // Resume, Restart, About
-
-  // UI Elements
-  private uiTimer = document.getElementById('timer-display');
-  private uiSpeed = document.getElementById('speed-display');
-  private uiDist = document.getElementById('dist-display');
-  private uiMenu = document.getElementById('main-menu');
-  private uiHud = document.getElementById('hud');
-  private uiGameOver = document.getElementById('game-over');
-  private uiFinalDistance = document.getElementById('final-distance');
-  private uiFinalTopSpeed = document.getElementById('final-top-speed');
-  private uiPauseMenu = document.getElementById('pause-menu');
-  private uiAboutScreen = document.getElementById('about-screen');
-  private uiMenuOptions = document.querySelectorAll('.menu-option');
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -305,10 +293,9 @@ export class GameApp {
     this.player.mesh.position.copy(this.startPosition);
     this.player.mesh.quaternion.set(0, 0, 0, 1);
 
-    // Update UI visibility
-    if (this.uiMenu) this.uiMenu.classList.add('hidden');
-    if (this.uiGameOver) this.uiGameOver.classList.add('hidden');
-    if (this.uiHud) this.uiHud.classList.remove('hidden');
+    // Update UI via store
+    useGameStore.getState().setUIState(UIState.PLAYING);
+    useGameStore.getState().setTopSpeed(0);
 
     // Reset clock
     this.clock.start();
@@ -317,30 +304,22 @@ export class GameApp {
   private endGame() {
     this.gameState = GameState.GAME_OVER;
 
-    if (this.uiHud) this.uiHud.classList.add('hidden');
-    if (this.uiGameOver) this.uiGameOver.classList.remove('hidden');
-
-    // Calculate final distance
+    // Calculate final distance and update store
     const currentPos = this.playerPhysics.getPosition();
-    const distance = Math.floor(Math.abs(currentPos.z - this.startPosition.z));
+    const distance = Math.abs(currentPos.z - this.startPosition.z);
 
-    if (this.uiFinalDistance) {
-      this.uiFinalDistance.innerText = `DISTANCE: ${distance}m`;
-    }
-
-    if (this.uiFinalTopSpeed) {
-      this.uiFinalTopSpeed.innerText = `TOP SPEED: ${this.topSpeed} km/h`;
-    }
+    useGameStore.getState().updateStats(0, distance, this.timeRemaining);
+    useGameStore.getState().setTopSpeed(this.topSpeed);
+    useGameStore.getState().setUIState(UIState.GAME_OVER);
   }
 
   private pauseGame(): void {
     this.gameState = GameState.PAUSED;
-    this.uiPauseMenu?.classList.remove('hidden');
-    this.uiHud?.classList.add('hidden'); // Hide HUD while paused
     this.menuIndex = 0; // Reset to "Resume"
-    this.updateMenuVisuals();
+    useGameStore.getState().setUIState(UIState.PAUSED);
+    useGameStore.getState().setMenuIndex(0);
 
-    // NEW: Ensure cursor is free to click the About link
+    // Ensure cursor is free
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
@@ -348,31 +327,23 @@ export class GameApp {
 
   private resumeGame(): void {
     this.gameState = GameState.PLAYING;
-    this.uiPauseMenu?.classList.add('hidden');
-    this.uiHud?.classList.remove('hidden');
+    useGameStore.getState().setUIState(UIState.PLAYING);
     this.clock.getDelta(); // Clear accumulated delta time so we don't jump forward
   }
 
   private openAbout(): void {
     this.isAboutOpen = true;
-    this.uiPauseMenu?.classList.add('hidden');
-    this.uiAboutScreen?.classList.remove('hidden');
+    useGameStore.getState().setUIState(UIState.ABOUT);
   }
 
   private closeAbout(): void {
     this.isAboutOpen = false;
-    this.uiAboutScreen?.classList.add('hidden');
-    this.uiPauseMenu?.classList.remove('hidden');
+    useGameStore.getState().setUIState(UIState.PAUSED);
   }
 
   private updateMenuVisuals(): void {
-    this.uiMenuOptions.forEach((el, index) => {
-      if (index === this.menuIndex) {
-        el.classList.add('selected');
-      } else {
-        el.classList.remove('selected');
-      }
-    });
+    // Menu visuals now handled by React - just update the store
+    useGameStore.getState().setMenuIndex(this.menuIndex);
   }
 
   private executeMenuOption(): void {
@@ -391,33 +362,22 @@ export class GameApp {
   }
 
   private updateHUD() {
-    // 1. Timer
-    const minutes = Math.floor(this.timeRemaining / 60);
-    const seconds = Math.floor(this.timeRemaining % 60);
-    const milliseconds = Math.floor((this.timeRemaining * 100) % 100);
-
-    if (this.uiTimer) {
-      this.uiTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
-    }
-
-    // 2. Speed (m/s * 3.6 = km/h)
+    // Get velocity and calculate speed
     const vel = this.playerPhysics.getVelocity();
-    const speedKmh = Math.floor(vel.length() * 3.6);
-    if (this.uiSpeed) {
-      this.uiSpeed.innerHTML = `${speedKmh} <span class="unit">km/h</span>`;
-    }
+    const speed = vel.length();
+    const speedKmh = Math.floor(speed * 3.6);
 
     // Track top speed
     if (speedKmh > this.topSpeed) {
       this.topSpeed = speedKmh;
     }
 
-    // 3. Distance
+    // Calculate distance
     const currentPos = this.playerPhysics.getPosition();
-    const distance = Math.floor(Math.abs(currentPos.z - this.startPosition.z));
-    if (this.uiDist) {
-      this.uiDist.innerHTML = `${distance} <span class="unit">m</span>`;
-    }
+    const distance = Math.abs(currentPos.z - this.startPosition.z);
+
+    // Update store (React will handle the rendering)
+    useGameStore.getState().updateStats(speed, distance, this.timeRemaining);
   }
 
   private setupMouseLook(): void {
