@@ -137,7 +137,8 @@ export class PlayerController {
     const steerLeft = this.input.isActive(Action.SteerLeft);
     const steerRight = this.input.isActive(Action.SteerRight);
     const isBraking = this.input.isBraking();
-    const isPoling = this.input.isActive(Action.Forward);
+    // Read directly from the Source of Truth in Physics
+    const isPoling = this.physics.isPushing;
 
     const time = performance.now() / 1000;
     const speed = this.physics.getSpeed(); // Requires getting speed from physics

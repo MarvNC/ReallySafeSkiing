@@ -21,7 +21,7 @@ export const Menus = () => {
       {uiState === UIState.MENU && (
         <>
           <h1 className="mb-5 text-center text-7xl italic drop-shadow-lg">REALLY SAFE SKIING</h1>
-          <div className="animate-blink text-2xl">W TO PROPEL, A / D TO STEER</div>
+          <div className="animate-blink text-2xl">A / D TO STEER</div>
         </>
       )}
 

@@ -9,7 +9,6 @@
 - More fun/challenging course, obstacles, coins, avg speed stats, etc
 - SFX
 - Music
-- Track distance
 - FOV warp at speed
 - Speed lines/wind effect
 - Slalom gates
@@ -17,3 +16,9 @@
 - Pause menu
 - Particles in snow?
 - Camera tilt when turning
+- Better ski model
+- Mobile tilt controls
+- Remove w key, have player auto move forward below max pole speed
+- Start menu - choose infinite/timed mode (consult with gemini, arcade/timed/etc?)
+- Player select steepness
+- Local saving high score?

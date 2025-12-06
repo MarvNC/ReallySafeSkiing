@@ -262,9 +262,12 @@ export class GameApp {
         this.renderer.domElement.requestPointerLock();
 
         // Bind space to DebugMoveUp for debug camera
+        // Also bind W/ArrowUp to Forward for debug camera movement
         if (this.input) {
           this.input.unbindKey(' ');
           this.input.bindKey(' ', Action.DebugMoveUp);
+          this.input.bindKey('w', Action.Forward);
+          this.input.bindKey('arrowup', Action.Forward);
         }
       } else {
         // Release pointer lock when switching back
@@ -273,9 +276,12 @@ export class GameApp {
         }
 
         // Bind space back to Start action
+        // Also restore W/ArrowUp bindings based on game state
         if (this.input) {
           this.input.unbindKey(' ');
           this.input.bindKey(' ', Action.Start);
+          // Restore bindings based on current game state
+          this.updateKeyBindingsForGameState();
         }
       }
 
@@ -319,8 +325,7 @@ export class GameApp {
 
     if (this.gameState === GameState.PLAYING) {
       // Playing: bind to movement actions
-      this.input.bindKey('w', Action.Forward);
-      this.input.bindKey('arrowup', Action.Forward);
+      // Note: 'w' and 'arrowup' removed - propulsion is now automatic
       this.input.bindKey('s', Action.DebugMoveBackward);
       this.input.bindKey('arrowdown', Action.MenuDown);
     } else {

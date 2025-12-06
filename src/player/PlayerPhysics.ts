@@ -36,6 +36,8 @@ export class PlayerPhysics {
   private yaw = 0;
   // New crash state
   private isCrashed = false;
+  // Source of truth for pushing state
+  private _isPushing = false;
   private debugState: PlayerPhysicsDebugState = {
     yaw: 0,
     isAwake: false,
@@ -111,6 +113,11 @@ export class PlayerPhysics {
     return this.currentVel.length();
   }
 
+  // Public getter for external consumers (e.g., PlayerController)
+  get isPushing(): boolean {
+    return this._isPushing;
+  }
+
   getColliderHandle(): number {
     return this.collider.handle;
   }
@@ -118,6 +125,8 @@ export class PlayerPhysics {
   applyControls(input: InputManager, deltaSeconds: number): void {
     // If crashed, stop processing inputs but allow physics engine to move the body
     if (this.isCrashed) {
+      // Reset pushing state on crash
+      this._isPushing = false;
       // Just update debug state and return
       // Do NOT force velocity to zero
       return;
@@ -129,7 +138,6 @@ export class PlayerPhysics {
     const steerLeft = input.isActive(Action.SteerLeft);
     const steerRight = input.isActive(Action.SteerRight);
     const isBraking = input.isBraking();
-    const isPushing = input.isActive(Action.Forward);
 
     // 2. Rotate Player (Steering)
     let steer = 0;
@@ -177,14 +185,18 @@ export class PlayerPhysics {
       .multiplyScalar(lateralForce)
       .addScaledVector(this.forwardDir, forwardForce);
 
-    // Poling Logic
+    // Poling Logic - Centralized state calculation
     const currentSpeed = this.currentVel.length();
     let pushForceApplied = 0;
 
     // Convert maxPoleSpeed from km/h to m/s for comparison
     const maxPoleSpeedMs = PLAYER_CONFIG.physics.maxPoleSpeedKmh / 3.6;
 
-    if (isPushing && currentSpeed < maxPoleSpeedMs) {
+    // The single source of truth calculation for pushing state
+    this._isPushing = currentSpeed < maxPoleSpeedMs && !isBraking;
+
+    // Apply forces based on the class property
+    if (this._isPushing) {
       const effectiveness = 1.0 - currentSpeed / maxPoleSpeedMs;
       const pushImpulse = PLAYER_CONFIG.physics.poleForce * effectiveness;
 
@@ -205,7 +217,7 @@ export class PlayerPhysics {
     this.debugState = {
       yaw: this.yaw,
       isAwake: !this.body.isSleeping(),
-      isPushing,
+      isPushing: this._isPushing,
       isBraking,
       steerInput: steer,
       linearVelocity: this.currentVel,

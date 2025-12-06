@@ -2,6 +2,13 @@
 
 ## Keyboard Controls
 
+### Player Movement Controls
+
+- **`A`** / **`←`** (Left Arrow) - Steer left
+- **`D`** / **`→`** (Right Arrow) - Steer right
+- **`S`** / **`↓`** (Down Arrow) - Brake (snowplow)
+- **Auto-Push** - The player automatically uses ski poles to propel forward when speed is below 20 km/h and not braking
+
 ### Camera Controls
 
 - **`C`** - Toggle between debug orbit camera and first-person camera
