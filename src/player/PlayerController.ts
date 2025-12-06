@@ -34,6 +34,11 @@ export class PlayerController {
 
   private physics: PlayerPhysics;
 
+  // Animation State
+  private isCrashed = false;
+  private crashTimer = 0;
+  private readonly CRASH_DURATION = 3.0;
+
   constructor(scene: THREE.Scene, input: InputManager, options: PlayerOptions) {
     const startPosition = options.startPosition ?? PLAYER_CONFIG.startPosition.clone();
 
@@ -104,9 +109,22 @@ export class PlayerController {
    * Update player animations.
    */
   update(deltaTime: number): void {
-    this.physics.applyControls(this.input, deltaTime);
-    this.physics.syncToThree(this.mesh);
-    this.updateVisuals(deltaTime);
+    if (this.isCrashed) {
+      this.updateCrashAnimation(deltaTime);
+    } else {
+      this.physics.applyControls(this.input, deltaTime);
+      this.physics.syncToThree(this.mesh);
+      this.updateVisuals(deltaTime);
+    }
+  }
+
+  triggerCrash(): void {
+    if (this.isCrashed) return;
+    this.isCrashed = true;
+    this.crashTimer = 0;
+
+    // Notify physics
+    this.physics.setCrashed(true);
   }
 
   syncFromPhysics(): void {
@@ -269,6 +287,84 @@ export class PlayerController {
         PLAYER_CONFIG.hands.rightOffset.y,
         PLAYER_CONFIG.hands.rightOffset.z
       );
+    }
+  }
+
+  private updateCrashAnimation(dt: number): void {
+    this.crashTimer += dt;
+
+    // 1. Fall phase (0.0 - 0.5s)
+    if (this.crashTimer < 0.5) {
+      const t = this.crashTimer / 0.5;
+      const ease = (x: number) => x * x; // Quadratic ease in
+
+      // Rotate camera sideways (90 deg Z) and slightly down (pitch)
+      this.camera.rotation.z = THREE.MathUtils.lerp(0, -Math.PI / 2, ease(t));
+      this.camera.rotation.x = THREE.MathUtils.lerp(
+        PLAYER_CONFIG.camera.tiltRadians,
+        -Math.PI / 4,
+        ease(t)
+      );
+
+      // Drop camera to ground level (relative to player mesh)
+      this.camera.position.y = THREE.MathUtils.lerp(
+        PLAYER_CONFIG.camera.eyeHeight,
+        0.5,
+        ease(t)
+      );
+
+      // Flail hands
+      this.leftHand.rotation.z = THREE.MathUtils.lerp(
+        -PLAYER_CONFIG.hands.poleAngleRadians,
+        Math.PI,
+        ease(t)
+      );
+      this.rightHand.rotation.z = THREE.MathUtils.lerp(
+        PLAYER_CONFIG.hands.poleAngleRadians,
+        -Math.PI,
+        ease(t)
+      );
+    }
+    // 2. Lying on ground phase (0.5s - 2.5s) - Stay static
+    else if (this.crashTimer < 2.5) {
+      // Maybe slight jitter/groan movement here if desired
+    }
+    // 3. Recovery phase (2.5s - 3.0s)
+    else if (this.crashTimer < this.CRASH_DURATION) {
+      const t = (this.crashTimer - 2.5) / 0.5;
+      const ease = (x: number) => 1 - Math.pow(1 - x, 3); // Cubic ease out
+
+      // Reset Camera
+      this.camera.rotation.z = THREE.MathUtils.lerp(-Math.PI / 2, 0, ease(t));
+      this.camera.rotation.x = THREE.MathUtils.lerp(
+        -Math.PI / 4,
+        PLAYER_CONFIG.camera.tiltRadians,
+        ease(t)
+      );
+      this.camera.position.y = THREE.MathUtils.lerp(
+        0.5,
+        PLAYER_CONFIG.camera.eyeHeight,
+        ease(t)
+      );
+
+      // Reset Hands
+      this.leftHand.rotation.z = THREE.MathUtils.lerp(
+        Math.PI,
+        -PLAYER_CONFIG.hands.poleAngleRadians,
+        ease(t)
+      );
+      this.rightHand.rotation.z = THREE.MathUtils.lerp(
+        -Math.PI,
+        PLAYER_CONFIG.hands.poleAngleRadians,
+        ease(t)
+      );
+    }
+    // 4. Finish
+    else {
+      this.isCrashed = false;
+      this.physics.setCrashed(false);
+      // Force immediate sync to ensure clean state
+      this.physics.syncToThree(this.mesh);
     }
   }
 }

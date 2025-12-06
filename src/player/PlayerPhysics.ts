@@ -34,6 +34,8 @@ export class PlayerPhysics {
   private readonly upDir = new THREE.Vector3(0, 1, 0);
 
   private yaw = 0;
+  // New crash state
+  private isCrashed = false;
   private debugState: PlayerPhysicsDebugState = {
     yaw: 0,
     isAwake: false,
@@ -66,14 +68,45 @@ export class PlayerPhysics {
       PLAYER_CONFIG.physics.capsuleRadius
     )
       .setMass(PLAYER_CONFIG.physics.mass)
-      .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World))
+      .setCollisionGroups(
+        // Collide with World AND Obstacle
+        makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World | PhysicsLayer.Obstacle)
+      )
+      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS) // Listen for events
       .setFriction(PLAYER_CONFIG.physics.friction)
       .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Multiply);
 
     this.collider = world.createCollider(colliderDesc, this.body);
   }
 
+  // New method to trigger crash physics
+  setCrashed(crashed: boolean): void {
+    this.isCrashed = crashed;
+    if (crashed) {
+      // Immediate stop
+      this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    } else {
+      // Wake up when recovering
+      this.body.wakeUp();
+    }
+  }
+
+  getSpeed(): number {
+    return this.currentVel.length();
+  }
+
+  getColliderHandle(): number {
+    return this.collider.handle;
+  }
+
   applyControls(input: InputManager, deltaSeconds: number): void {
+    // If crashed, freeze physics and return early
+    if (this.isCrashed) {
+      this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      return;
+    }
+
     this.body.wakeUp();
 
     // 1. Inputs

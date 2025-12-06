@@ -511,7 +511,29 @@ export class GameApp {
 
     // ONLY step physics and timers if PLAYING
     if (this.gameState === GameState.PLAYING) {
-      this.physics.step(delta);
+      // Step physics with collision callback
+      this.physics.step(delta, (handle1, handle2) => {
+        // We only care about collisions if we are NOT already crashed
+        if (!this.player || !this.playerPhysics) return;
+
+        const playerHandle = this.playerPhysics.getColliderHandle();
+        const speed = this.playerPhysics.getSpeed();
+
+        // Check if player is involved
+        if (handle1 === playerHandle || handle2 === playerHandle) {
+          const otherHandle = handle1 === playerHandle ? handle2 : handle1;
+
+          // Check if the other object is an obstacle
+          if (this.physics.isObstacle(otherHandle)) {
+            // Check speed (convert km/h to m/s for comparison)
+            const crashThresholdMs = GAME_CONFIG.crashSpeedThresholdKmh / 3.6;
+            if (speed > crashThresholdMs) {
+              console.log('CRASH! Speed:', speed * 3.6, 'km/h');
+              this.player.triggerCrash();
+            }
+          }
+        }
+      });
 
       this.timeRemaining -= delta;
 
