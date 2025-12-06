@@ -57,7 +57,7 @@ export class DebugUI {
     const cameraEuler = new THREE.Euler().setFromQuaternion(camera.quaternion);
 
     // Format numbers
-    const format = (n: number, decimals = 2) => n.toFixed(decimals);
+    const format = (n: number, decimals = 2) => n?.toFixed(decimals);
     const formatVec = (v: THREE.Vector3, decimals = 2) =>
       `(${format(v.x, decimals)}, ${format(v.y, decimals)}, ${format(v.z, decimals)})`;
 

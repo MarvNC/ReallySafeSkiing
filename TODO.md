@@ -6,11 +6,10 @@
   - Player
   - Ski?
   - Snow?
-- Starting guaranteed easy slope to build momentum?
 - animations when carving and braking
+- More fun/challenging course, obstacles, coins, avg speed stats, etc
 
 --- far future
 
-- deploy to cloudflare
 - buy a domain
 - infinite vs highscore mode
