@@ -24,7 +24,7 @@ export class BackgroundEnvironment {
     const colors: number[] = [];
     const positions = geometry.attributes.position;
     const zenithColor = new THREE.Color('#4a90e2'); // Deep blue sky
-    const horizonColor = new THREE.Color('#dceeff'); // Hazy white/blue horizon
+    const horizonColor = new THREE.Color('#87CEEB'); // Sky blue horizon
 
     for (let i = 0; i < count; i++) {
       const y = positions.getY(i);
