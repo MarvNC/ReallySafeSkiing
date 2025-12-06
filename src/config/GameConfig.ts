@@ -2,22 +2,9 @@ import * as THREE from 'three';
 
 export const PHYSICS_CONFIG = {
   // Global gravity for the game world
-  gravity: new THREE.Vector3(0, -20, 0),
+  gravity: new THREE.Vector3(0, -40, 0),
   // Safety clamp for the physics timestep
   maxDeltaTime: 1 / 20,
-} as const;
-
-export const SKI_PHYSICS = {
-  turnTorque: 4.0, // How fast player rotates
-  maxSpeed: 35.0, // Terminal velocity
-  lateralFriction: 6.0, // "Edge Grip" - how hard it is to slide sideways
-  forwardFriction: 0.05, // "Wax" - how easily they glide forward
-  snowplowDrag: 3.0, // Extra drag when A+D are pressed
-  gravityScale: 2.0, // Gravity multiplier for punchy feel
-  poleForce: 200.0, // Force applied when pushing
-  maxPoleSpeed: 8.0, // Max speed where poling works effectively
-  baseDrag: 0.1, // Normal air resistance
-  polingDrag: 1.5, // High air resistance when standing up to pole at speed
 } as const;
 
 export const PLAYER_CONFIG = {
@@ -63,7 +50,7 @@ export const PLAYER_CONFIG = {
 
 export const MOUNTAIN_CONFIG = {
   TOTAL_LENGTH: 3000, // Total Z distance of the run
-  START_ALTITUDE: 1000, // Y height at start
+  START_ALTITUDE: 1200, // Y height at start
   END_ALTITUDE: 0, // Y height at finish
 } as const;
 
