@@ -145,7 +145,9 @@ export class PlayerController {
 
     const time = performance.now() / 1000;
     const speed = this.physics.getSpeed(); // Requires getting speed from physics
-    const speedRatio = Math.min(1.0, speed / 30.0); // 0 to 1 based on speed (max 30m/s)
+    // Convert km/h to m/s (divide by 3.6)
+    const maxSpeedMs = PLAYER_CONFIG.skis.maxSpeedKmh / 3.6;
+    const speedRatio = Math.min(1.0, speed / maxSpeedMs); // 0 to 1 based on speed
 
     // --- SKI ANIMATION (New Logic) ---
     const leftSki = this.skis.children[0];
@@ -191,7 +193,7 @@ export class PlayerController {
       targets.right.rot.z = bankAngle;
 
       // Rotation Y: Steering (Pointing into turn)
-      const steerAngle = turnInput * PLAYER_CONFIG.skis.maxTurnYaw;
+      const steerAngle = turnInput * PLAYER_CONFIG.skis.maxTurnYaw * PLAYER_CONFIG.skis.turnAnimationMultiple;
       targets.left.rot.y = steerAngle;
       targets.right.rot.y = steerAngle;
 
@@ -200,16 +202,6 @@ export class PlayerController {
         // Turning Left: Left ski is inside (moves back), Right ski outside (moves forward)
         targets.left.pos.z = -turnInput * PLAYER_CONFIG.skis.carveOffsetZ;
         targets.right.pos.z = turnInput * PLAYER_CONFIG.skis.carveOffsetZ;
-      }
-
-      // --- SPEED SHAKE (Visual Instability) ---
-      if (speedRatio > 0.5) {
-        const shake = (speedRatio - 0.5) * PLAYER_CONFIG.skis.vibrationIntensity;
-        // Independent noise for each ski
-        targets.left.pos.y += (Math.random() - 0.5) * shake;
-        targets.right.pos.y += (Math.random() - 0.5) * shake;
-        targets.left.rot.z += (Math.random() - 0.5) * shake;
-        targets.right.rot.z += (Math.random() - 0.5) * shake;
       }
     }
 
@@ -278,15 +270,15 @@ export class PlayerController {
       if (steerLeft) {
         // Move both hands left when steering left
         targetLeftHandX =
-          PLAYER_CONFIG.hands.leftOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
+          PLAYER_CONFIG.hands.leftOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
         targetRightHandX =
-          PLAYER_CONFIG.hands.rightOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
+          PLAYER_CONFIG.hands.rightOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
       } else if (steerRight) {
         // Move both hands right when steering right
         targetLeftHandX =
-          PLAYER_CONFIG.hands.leftOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+          PLAYER_CONFIG.hands.leftOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
         targetRightHandX =
-          PLAYER_CONFIG.hands.rightOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+          PLAYER_CONFIG.hands.rightOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
       }
     }
 

@@ -12,7 +12,6 @@
 - Track distance
 - FOV warp at speed
 - Speed lines/wind effect
-- Punishment for crashing into trees/rocks
 - Slalom gates
 - MORE OBSTACLES
 - Pause menu
