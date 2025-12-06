@@ -7,6 +7,10 @@ import { COLOR_PALETTE } from '../constants/colors';
 // ============================================================================
 // Adjust these values to control mountain placement and appearance
 const MOUNTAIN_CONFIG = {
+  // Global Y offset applied to all mountains relative to player position
+  // Negative values move mountains down, positive values move them up
+  globalYOffset: -700,
+
   // BACK LAYER - Far away, large, smooth mountains with bluish tint
   backLayer: {
     count: 18, // Number of mountains in this ring
@@ -195,9 +199,13 @@ export class BackgroundEnvironment {
     // 1. Sky Dome follows camera exactly
     this.skyDome.position.copy(cameraPosition);
 
-    // 2. Mountains follow the camera on X/Z (Infinite feeling)
-    // BUT we preserve their Y height so they don't bob up and down with player jumps
+    // 2. Mountains follow the camera on X/Z/Y (Infinite feeling)
+    // Mountains are positioned relative to the player so they remain visible
+    // no matter how far down the player skis. The yOffset values in the config
+    // define the relative height above/below the player.
+    // The globalYOffset allows fine-tuning the overall vertical position.
     this.group.position.x = cameraPosition.x;
+    this.group.position.y = cameraPosition.y + MOUNTAIN_CONFIG.globalYOffset;
     this.group.position.z = cameraPosition.z;
 
     // 3. Parallax Effect (Optional - purely visual polish)
