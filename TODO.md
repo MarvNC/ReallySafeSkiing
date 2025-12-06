@@ -1,15 +1,17 @@
 - Distant mountains/background
 - Sun
 - Proper player character rotation
-- Fix weird sides of rocks things, and make them wider
 - Animations
   - Player
   - Ski?
   - Snow?
 - animations when carving and braking
+- Snow trails? But they'd be behind the player so idk
 - More fun/challenging course, obstacles, coins, avg speed stats, etc
-
---- far future
-
-- buy a domain
-- infinite vs highscore mode
+- SFX
+- Music
+- Track distance
+- FOV warp at speed
+- Speed lines/wind effect
+- Punishment for crashing into trees/rocks
+- Slalom gates

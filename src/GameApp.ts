@@ -10,6 +10,15 @@ import { PhysicsWorld } from './physics/PhysicsWorld';
 import { PlayerPhysics } from './player/PlayerPhysics';
 import { COLOR_PALETTE } from './constants/colors';
 
+// 1. Define Game States
+const GameState = {
+  MENU: 0,
+  PLAYING: 1,
+  GAME_OVER: 2,
+} as const;
+
+type GameState = (typeof GameState)[keyof typeof GameState];
+
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
@@ -31,6 +40,20 @@ export class GameApp {
   private euler = new THREE.Euler(0, 0, 0, 'YXZ');
   private debugCameraSpeed = 50;
   private backgroundEnv?: BackgroundEnvironment;
+
+  // 2. Game Logic Variables
+  private gameState: GameState = GameState.MENU;
+  private timeRemaining = 120.0; // 2 minutes in seconds
+  private startPosition: THREE.Vector3 = new THREE.Vector3();
+
+  // UI Elements
+  private uiTimer = document.getElementById('timer-display');
+  private uiSpeed = document.getElementById('speed-display');
+  private uiDist = document.getElementById('dist-display');
+  private uiMenu = document.getElementById('main-menu');
+  private uiHud = document.getElementById('hud');
+  private uiGameOver = document.getElementById('game-over');
+  private uiFinalScore = document.getElementById('final-score');
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -87,12 +110,14 @@ export class GameApp {
     const terrainHeight = this.terrainManager.getTerrainHeight(startPoint.x, startPoint.z);
     // Spawn player slightly above terrain (player radius + small buffer)
     const playerHeight = terrainHeight + PLAYER_CONFIG.radius + 0.5;
-    const startPos = new THREE.Vector3(startPoint.x, playerHeight, startPoint.z);
+
+    // Save start pos for resets
+    this.startPosition.set(startPoint.x, playerHeight, startPoint.z);
 
     // 3. Create Player at Start Position
-    this.playerPhysics = new PlayerPhysics(this.physics, startPos);
+    this.playerPhysics = new PlayerPhysics(this.physics, this.startPosition);
     this.player = new PlayerController(this.scene, this.input!, {
-      startPosition: startPos,
+      startPosition: this.startPosition,
       playerPhysics: this.playerPhysics,
     });
 
@@ -130,8 +155,18 @@ export class GameApp {
     // Debug camera controls (additional keys: S, Space, Shift)
     // W/A/D are shared with player controls and checked in debug camera update
     this.input.bindKey('s', Action.DebugMoveBackward);
-    this.input.bindKey(' ', Action.DebugMoveUp);
     this.input.bindKey('shift', Action.DebugMoveDown);
+
+    // 3. NEW BINDINGS FOR GAME FLOW
+    this.input.bindKey(' ', Action.Start); // Spacebar
+    this.input.bindKey('enter', Action.Start);
+    this.input.on(Action.Start, (_action, phase) => {
+      if (phase === 'pressed') {
+        if (this.gameState === GameState.MENU || this.gameState === GameState.GAME_OVER) {
+          this.startGame();
+        }
+      }
+    });
 
     // Camera toggle
     this.input.on(Action.ToggleCamera, (_action, phase) => {
@@ -185,6 +220,65 @@ export class GameApp {
       this.debugHelpers?.setVisible(isVisible);
       console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
     });
+  }
+
+  // 4. Game Logic Methods
+  private startGame() {
+    this.gameState = GameState.PLAYING;
+    this.timeRemaining = 120.0; // 2 minutes
+
+    // Reset player position
+    this.playerPhysics.resetPosition(this.startPosition);
+    this.player.mesh.position.copy(this.startPosition);
+    this.player.mesh.quaternion.set(0, 0, 0, 1);
+
+    // Update UI visibility
+    if (this.uiMenu) this.uiMenu.classList.add('hidden');
+    if (this.uiGameOver) this.uiGameOver.classList.add('hidden');
+    if (this.uiHud) this.uiHud.classList.remove('hidden');
+
+    // Reset clock
+    this.clock.start();
+  }
+
+  private endGame() {
+    this.gameState = GameState.GAME_OVER;
+
+    if (this.uiHud) this.uiHud.classList.add('hidden');
+    if (this.uiGameOver) this.uiGameOver.classList.remove('hidden');
+
+    // Calculate final distance
+    const currentPos = this.playerPhysics.getPosition();
+    const distance = Math.floor(Math.abs(currentPos.z - this.startPosition.z));
+
+    if (this.uiFinalScore) {
+      this.uiFinalScore.innerText = `DISTANCE: ${distance}m`;
+    }
+  }
+
+  private updateHUD() {
+    // 1. Timer
+    const minutes = Math.floor(this.timeRemaining / 60);
+    const seconds = Math.floor(this.timeRemaining % 60);
+    const milliseconds = Math.floor((this.timeRemaining * 100) % 100);
+
+    if (this.uiTimer) {
+      this.uiTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+    }
+
+    // 2. Speed (m/s * 3.6 = km/h)
+    const vel = this.playerPhysics.getVelocity();
+    const speedKmh = Math.floor(vel.length() * 3.6);
+    if (this.uiSpeed) {
+      this.uiSpeed.innerHTML = `${speedKmh} <span class="unit">km/h</span>`;
+    }
+
+    // 3. Distance
+    const currentPos = this.playerPhysics.getPosition();
+    const distance = Math.floor(Math.abs(currentPos.z - this.startPosition.z));
+    if (this.uiDist) {
+      this.uiDist.innerHTML = `${distance} <span class="unit">m</span>`;
+    }
   }
 
   private setupMouseLook(): void {
@@ -263,12 +357,31 @@ export class GameApp {
 
     const delta = this.clock.getDelta();
 
+    // Physics always runs (so you can crash after time runs out)
     this.physics.step(delta);
 
-    if (!this.useDebugCamera) {
-      this.player.update(delta);
+    // Game Logic
+    if (this.gameState === GameState.PLAYING) {
+      this.timeRemaining -= delta;
+
+      // Update Player Controls
+      if (!this.useDebugCamera) {
+        this.player.update(delta);
+      } else {
+        // Keep visuals in sync even when free camera is active
+        this.player.syncFromPhysics();
+      }
+
+      // Update HUD
+      this.updateHUD();
+
+      // Check End Condition
+      if (this.timeRemaining <= 0) {
+        this.timeRemaining = 0;
+        this.endGame();
+      }
     } else {
-      // Keep visuals in sync even when free camera is active
+      // In MENU or GAME_OVER, we sync visuals but don't apply control inputs
       this.player.syncFromPhysics();
     }
 
@@ -299,10 +412,7 @@ export class GameApp {
         moveVector.add(right);
       }
 
-      // Up/down (Space/Shift)
-      if (this.input.isActive(Action.DebugMoveUp)) {
-        moveVector.y += 1;
-      }
+      // Up/down (Shift only, Space is now Start action)
       if (this.input.isActive(Action.DebugMoveDown)) {
         moveVector.y -= 1;
       }

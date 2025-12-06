@@ -190,4 +190,12 @@ export class PlayerPhysics {
   getDebugState(): PlayerPhysicsDebugState {
     return this.debugState;
   }
+
+  resetPosition(position: THREE.Vector3): void {
+    this.body.setTranslation(position, true);
+    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    this.yaw = 0;
+    this.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+  }
 }

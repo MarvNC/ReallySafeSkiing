@@ -8,6 +8,33 @@
   </head>
   <body>
     <div id="app"></div>
+
+    <div id="ui-layer">
+      <div id="hud" class="hidden">
+        <div class="hud-panel top-center">
+          <div id="timer-display">02:00.00</div>
+          <div class="sub-label">TIME REMAINING</div>
+        </div>
+
+        <div class="hud-panel bottom-left">
+          <div id="speed-display">0 <span class="unit">km/h</span></div>
+        </div>
+        <div class="hud-panel bottom-center">
+          <div id="dist-display">0 <span class="unit">m</span></div>
+          <div class="sub-label">DISTANCE</div>
+        </div>
+      </div>
+      <div id="main-menu">
+        <h1 class="title">REALLY SAFE SKIING</h1>
+        <div class="blink">PRESS SPACE TO START</div>
+        <div class="controls-hint">WASD / ARROWS to Steer</div>
+      </div>
+      <div id="game-over" class="hidden">
+        <h1 class="title">TIME'S UP!</h1>
+        <div id="final-score">Distance: 0m</div>
+        <div class="blink">PRESS SPACE TO RESTART</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

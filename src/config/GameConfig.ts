@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export const PHYSICS_CONFIG = {
   // Global gravity for the game world
-  gravity: new THREE.Vector3(0, -40, 0),
+  gravity: new THREE.Vector3(0, -30, 0),
   // Safety clamp for the physics timestep
   maxDeltaTime: 1 / 20,
 } as const;
@@ -16,11 +16,11 @@ export const PLAYER_CONFIG = {
     mass: 100, // Reduced mass slightly to make forces feel snappier
 
     // CHANGE 1: Remove general air resistance. We will calculate drag manually.
-    linearDamping: 0.2,
-    angularDamping: 4.0, // High damping to stop spinning instantly when key is released
+    linearDamping: 0.3,
+    angularDamping: 3.0, // High damping to stop spinning instantly when key is released
 
     // CHANGE 2: Ski properties
-    lateralFriction: 3.0, // "Edge Grip": How hard it stops you sliding sideways
+    lateralFriction: 2.0, // "Edge Grip": How hard it stops you sliding sideways
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
 
     // CHANGE 3: Poling mechanics
@@ -32,7 +32,7 @@ export const PLAYER_CONFIG = {
 
     // CHANGE 5: Physics limits
     maxSpeed: 120.0, // Effectively uncapped, let gravity decide
-    brakeDamping: 2.0, // Drag applied when "snowplowing"
+    brakeDamping: 5.0, // Drag applied when "snowplowing"
     jumpImpulse: 12,
     friction: 0.0, // Wall friction (keep 0)
   },
