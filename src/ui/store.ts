@@ -7,6 +7,7 @@ export enum UIState {
   GAME_OVER,
   PAUSED,
   ABOUT,
+  CRASHED, // Add this new state
 }
 
 interface GameState {

@@ -17,7 +17,8 @@ const GameState = {
   MENU: 0,
   PLAYING: 1,
   GAME_OVER: 2,
-  PAUSED: 3, // New State
+  PAUSED: 3,
+  CRASHED: 4, // Crash sequence state
 } as const;
 
 type GameState = (typeof GameState)[keyof typeof GameState];
@@ -49,6 +50,11 @@ export class GameApp {
   private timeRemaining: number = GAME_CONFIG.timerDuration;
   private startPosition: THREE.Vector3 = new THREE.Vector3();
   private topSpeed: number = 0; // Track top speed in km/h
+
+  // Crash sequence variables
+  private timeScale = 1.0;
+  private crashTimer = 0;
+  private readonly CRASH_DURATION = 3.0; // Real-time seconds
 
   // New Menu State
   private menuIndex = 0;
@@ -433,6 +439,34 @@ export class GameApp {
     useGameStore.getState().updateStats(speed, distance, this.timeRemaining);
   }
 
+  private triggerCrashSequence(): void {
+    // Prevent multiple crash triggers
+    if (this.gameState === GameState.CRASHED) return;
+
+    console.log('WASTED');
+    this.gameState = GameState.CRASHED;
+    useGameStore.getState().setUIState(UIState.CRASHED);
+
+    // Enable Slow Mo
+    this.timeScale = 0.2;
+    this.crashTimer = 0;
+
+    // Notify Physics & Player
+    this.playerPhysics.setCrashed(true);
+    this.player.isCrashed = true;
+  }
+
+  private recoverFromCrash(): void {
+    // Reset State
+    this.gameState = GameState.PLAYING;
+    useGameStore.getState().setUIState(UIState.PLAYING);
+    this.timeScale = 1.0;
+
+    // Reset Player Velocity & Camera (keep current position)
+    this.playerPhysics.resetVelocity();
+    this.player.resetCamera();
+  }
+
   private setupMouseLook(): void {
     const onMouseMove = (event: MouseEvent): void => {
       if (!this.useDebugCamera || !this.debugCamera || !this.isPointerLocked) return;
@@ -507,12 +541,16 @@ export class GameApp {
   private animate = (): void => {
     if (!this.isRunning) return;
 
-    const delta = this.clock.getDelta();
+    // 1. Get Real Delta Time
+    const realDelta = this.clock.getDelta();
+
+    // 2. Calculate Game Delta (Slow-mo)
+    const gameDelta = realDelta * this.timeScale;
 
     // ONLY step physics and timers if PLAYING
     if (this.gameState === GameState.PLAYING) {
       // Step physics with collision callback
-      this.physics.step(delta, (handle1, handle2) => {
+      this.physics.step(gameDelta, (handle1, handle2) => {
         // We only care about collisions if we are NOT already crashed
         if (!this.player || !this.playerPhysics) return;
 
@@ -529,16 +567,16 @@ export class GameApp {
             const crashThresholdMs = GAME_CONFIG.crashSpeedThresholdKmh / 3.6;
             if (speed > crashThresholdMs) {
               console.log('CRASH! Speed:', speed * 3.6, 'km/h');
-              this.player.triggerCrash();
+              this.triggerCrashSequence();
             }
           }
         }
       });
 
-      this.timeRemaining -= delta;
+      this.timeRemaining -= gameDelta;
 
       if (!this.useDebugCamera) {
-        this.player.update(delta);
+        this.player.update(gameDelta);
       } else {
         this.player.syncFromPhysics();
       }
@@ -550,6 +588,40 @@ export class GameApp {
         this.endGame();
       }
 
+      this.terrainManager.update(this.playerPhysics.getPosition());
+    }
+    // STATE: CRASHED (New Logic)
+    else if (this.gameState === GameState.CRASHED) {
+      // 1. Step physics in slow motion so player tumbles slowly
+      this.physics.step(gameDelta, undefined); // No collision callbacks needed
+
+      // 2. Update player visuals (skis/hands) in slow motion
+      if (!this.useDebugCamera) {
+        this.player.update(gameDelta);
+      } else {
+        this.player.syncFromPhysics();
+      }
+
+      // 3. Update Crash Timer in REAL time
+      this.crashTimer += realDelta;
+
+      // 4. Animate Camera (Zoom out)
+      const progress = Math.min(this.crashTimer / this.CRASH_DURATION, 1.0);
+      // Use easing for smoother camera move
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      this.player.setCrashCameraValues(easeProgress);
+
+      // 5. Keep Timer Running (as requested)
+      this.timeRemaining -= gameDelta; // Slow-mo means game timer slows too
+      this.updateHUD();
+
+      // 6. End Crash Sequence
+      if (this.crashTimer >= this.CRASH_DURATION) {
+        this.recoverFromCrash();
+      }
+
+      // Sync visuals
+      this.player.syncFromPhysics();
       this.terrainManager.update(this.playerPhysics.getPosition());
     } else if (this.gameState === GameState.PAUSED) {
       // If PAUSED, we skip the physics step above, effectively freezing the game logic
@@ -600,7 +672,7 @@ export class GameApp {
       // Normalize and apply speed
       if (moveVector.lengthSq() > 0) {
         moveVector.normalize();
-        moveVector.multiplyScalar(this.debugCameraSpeed * delta);
+        moveVector.multiplyScalar(this.debugCameraSpeed * realDelta);
         this.debugCamera.position.add(moveVector);
       }
     }
@@ -615,7 +687,7 @@ export class GameApp {
         velocity,
         rotation,
         this.activeCamera ?? this.player.camera,
-        delta,
+        realDelta,
         this.renderer.shadowMap.enabled,
         {
           physics: this.playerPhysics.getDebugState(),

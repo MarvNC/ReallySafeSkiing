@@ -8,10 +8,10 @@ export const UIOverlay = () => {
 
   return (
     <>
-      {/* HUD only visible during gameplay */}
-      {uiState === UIState.PLAYING && <HUD />}
+      {/* HUD visible during gameplay AND crash */}
+      {(uiState === UIState.PLAYING || uiState === UIState.CRASHED) && <HUD />}
 
-      {/* Menus handle MENU, PAUSED, and GAME_OVER states */}
+      {/* Menus handle MENU, PAUSED, GAME_OVER, and CRASHED states */}
       <Menus />
 
       {/* About screen */}

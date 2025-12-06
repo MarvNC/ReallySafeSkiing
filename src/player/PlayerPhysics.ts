@@ -82,13 +82,28 @@ export class PlayerPhysics {
   // New method to trigger crash physics
   setCrashed(crashed: boolean): void {
     this.isCrashed = crashed;
+
     if (crashed) {
-      // Immediate stop
-      this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      // 1. Unlock rotation on all axes to simulate ragdoll/tumbling
+      this.body.setEnabledRotations(true, true, true, true);
+
+      // 2. Apply a random tumble impulse
+      this.body.applyTorqueImpulse(
+        {
+          x: (Math.random() - 0.5) * 50,
+          y: (Math.random() - 0.5) * 50,
+          z: (Math.random() - 0.5) * 50,
+        },
+        true
+      );
+
+      // 3. We do NOT zero velocity here anymore, let momentum carry them
     } else {
-      // Wake up when recovering
+      // Reset to upright locked rotation
       this.body.wakeUp();
+      this.body.setEnabledRotations(false, true, false, true);
+      this.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
   }
 
@@ -101,9 +116,10 @@ export class PlayerPhysics {
   }
 
   applyControls(input: InputManager, deltaSeconds: number): void {
-    // If crashed, freeze physics and return early
+    // If crashed, stop processing inputs but allow physics engine to move the body
     if (this.isCrashed) {
-      this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      // Just update debug state and return
+      // Do NOT force velocity to zero
       return;
     }
 
@@ -165,8 +181,11 @@ export class PlayerPhysics {
     const currentSpeed = this.currentVel.length();
     let pushForceApplied = 0;
 
-    if (isPushing && currentSpeed < PLAYER_CONFIG.physics.maxPoleSpeed) {
-      const effectiveness = 1.0 - currentSpeed / PLAYER_CONFIG.physics.maxPoleSpeed;
+    // Convert maxPoleSpeed from km/h to m/s for comparison
+    const maxPoleSpeedMs = PLAYER_CONFIG.physics.maxPoleSpeedKmh / 3.6;
+
+    if (isPushing && currentSpeed < maxPoleSpeedMs) {
+      const effectiveness = 1.0 - currentSpeed / maxPoleSpeedMs;
       const pushImpulse = PLAYER_CONFIG.physics.poleForce * effectiveness;
 
       const pushVec = this.forwardDir.clone().multiplyScalar(pushImpulse);
@@ -231,5 +250,11 @@ export class PlayerPhysics {
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.yaw = 0;
     this.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+  }
+
+  resetVelocity(): void {
+    // Reset velocity while keeping current position
+    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
   }
 }

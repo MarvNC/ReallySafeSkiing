@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export const PHYSICS_CONFIG = {
   // Global gravity for the game world
-  gravity: new THREE.Vector3(0, -20, 0),
+  gravity: new THREE.Vector3(0, -15, 0),
   // Safety clamp for the physics timestep
   maxDeltaTime: 1 / 20,
 } as const;
@@ -11,7 +11,7 @@ export const GAME_CONFIG = {
   // Game timer duration in seconds
   timerDuration: 60.0,
   // Crash speed threshold in km/h (converted to m/s for physics)
-  crashSpeedThresholdKmh: 35,
+  crashSpeedThresholdKmh: 50,
 } as const;
 
 export const PLAYER_CONFIG = {
@@ -20,7 +20,7 @@ export const PLAYER_CONFIG = {
   physics: {
     capsuleRadius: 0.5,
     capsuleHalfHeight: 1.0,
-    mass: 50, // Reduced mass slightly to make forces feel snappier
+    mass: 40,
 
     // Remove general air resistance. We will calculate drag manually.
     angularDamping: 0, // High damping to stop spinning instantly when key is released
@@ -31,7 +31,7 @@ export const PLAYER_CONFIG = {
 
     // Poling mechanics
     poleForce: 30.0, // Strong initial push
-    maxPoleSpeed: 15.0, // You can't pole effectively above this speed
+    maxPoleSpeedKmh: 20.0, // You can't pole effectively above this speed (in km/h)
 
     // Steering
     steerTurnSpeed: 1, // Rotation speed

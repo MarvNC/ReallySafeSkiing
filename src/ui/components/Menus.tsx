@@ -8,7 +8,15 @@ export const Menus = () => {
   if (uiState === UIState.PLAYING) return null;
 
   return (
-    <div className="bg-sky-dark/40 font-russo absolute inset-0 z-50 flex flex-col items-center justify-center text-white backdrop-blur-sm">
+    <div
+      className={clsx(
+        'font-russo absolute inset-0 z-50 flex flex-col items-center justify-center text-white',
+        // Add background blur/tint only for non-crash menus, or a red tint for crash
+        uiState === UIState.CRASHED
+          ? 'bg-red-900/30 transition-colors duration-1000'
+          : 'bg-sky-dark/40 backdrop-blur-sm'
+      )}
+    >
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
         <>
@@ -43,6 +51,18 @@ export const Menus = () => {
             ))}
           </div>
         </>
+      )}
+
+      {/* WASTED OVERLAY */}
+      {uiState === UIState.CRASHED && (
+        <div className="animate-in fade-in zoom-in duration-300">
+          <h1
+            className="text-8xl italic tracking-widest text-accent-red drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
+            style={{ textShadow: '4px 4px 0 #000, -2px -2px 0 #000' }}
+          >
+            WASTED
+          </h1>
+        </div>
       )}
 
       {/* GAME OVER */}
