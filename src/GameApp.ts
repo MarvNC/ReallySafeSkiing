@@ -171,11 +171,8 @@ export class GameApp {
     // Menu / Pause Bindings
     this.input.bindKey('escape', Action.Pause);
     this.input.bindKey('enter', Action.MenuSelect);
-    // Bind W/S and Arrows to Menu navigation too
-    this.input.bindKey('w', Action.MenuUp);
-    this.input.bindKey('arrowup', Action.MenuUp);
-    this.input.bindKey('s', Action.MenuDown);
-    this.input.bindKey('arrowdown', Action.MenuDown);
+    // Note: W/S and Arrows are bound conditionally based on game state
+    // See updateKeyBindingsForGameState() method
 
     // PAUSE TOGGLE LOGIC
     this.input.on(Action.Pause, (_action, phase) => {
@@ -214,6 +211,11 @@ export class GameApp {
 
     // Start game on any movement input
     this.input.on(Action.Forward, (_action, phase) => {
+      if (phase === 'pressed' && this.gameState === GameState.MENU) {
+        this.startGame();
+      }
+    });
+    this.input.on(Action.MenuUp, (_action, phase) => {
       if (phase === 'pressed' && this.gameState === GameState.MENU) {
         this.startGame();
       }
@@ -281,9 +283,35 @@ export class GameApp {
       this.debugHelpers?.setVisible(isVisible);
       console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
     });
+
+    // Set initial key bindings for menu state
+    this.updateKeyBindingsForGameState();
   }
 
   // 4. Game Logic Methods
+  /**
+   * Updates key bindings based on current game state.
+   * When playing: W/ArrowUp bound to Forward (movement)
+   * When menu/paused: W/ArrowUp bound to MenuUp (navigation)
+   */
+  private updateKeyBindingsForGameState(): void {
+    if (!this.input) return;
+
+    if (this.gameState === GameState.PLAYING) {
+      // Playing: bind to movement actions
+      this.input.bindKey('w', Action.Forward);
+      this.input.bindKey('arrowup', Action.Forward);
+      this.input.bindKey('s', Action.DebugMoveBackward);
+      this.input.bindKey('arrowdown', Action.MenuDown);
+    } else {
+      // Menu/Paused: bind to menu navigation
+      this.input.bindKey('w', Action.MenuUp);
+      this.input.bindKey('arrowup', Action.MenuUp);
+      this.input.bindKey('s', Action.MenuDown);
+      this.input.bindKey('arrowdown', Action.MenuDown);
+    }
+  }
+
   private startGame() {
     this.gameState = GameState.PLAYING;
     this.timeRemaining = GAME_CONFIG.timerDuration;
@@ -300,6 +328,9 @@ export class GameApp {
 
     // Reset clock
     this.clock.start();
+
+    // Rebind keys for playing state
+    this.updateKeyBindingsForGameState();
   }
 
   private endGame() {
@@ -311,6 +342,9 @@ export class GameApp {
 
     useGameStore.getState().updateStats(0, distance, this.timeRemaining);
     useGameStore.getState().setTopSpeed(this.topSpeed);
+
+    // Rebind keys for menu state (game over shows menu)
+    this.updateKeyBindingsForGameState();
     useGameStore.getState().setUIState(UIState.GAME_OVER);
   }
 
@@ -318,6 +352,8 @@ export class GameApp {
     this.gameState = GameState.PAUSED;
     this.menuIndex = 0; // Reset to "Resume"
     useGameStore.getState().setUIState(UIState.PAUSED);
+    // Rebind keys for menu/paused state
+    this.updateKeyBindingsForGameState();
     useGameStore.getState().setMenuIndex(0);
 
     // Ensure cursor is free
@@ -330,6 +366,8 @@ export class GameApp {
     this.gameState = GameState.PLAYING;
     useGameStore.getState().setUIState(UIState.PLAYING);
     this.clock.getDelta(); // Clear accumulated delta time so we don't jump forward
+    // Rebind keys for playing state
+    this.updateKeyBindingsForGameState();
   }
 
   private openAbout(): void {
