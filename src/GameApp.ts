@@ -69,7 +69,7 @@ export class GameApp {
     const fogColor = new THREE.Color(COLOR_PALETTE.background.fog);
     this.scene.background = new THREE.Color(COLOR_PALETTE.background.sky);
     // Denser fog starting closer to blend the "floor" disc edge
-    this.scene.fog = new THREE.Fog(fogColor, 200, 3500);
+    this.scene.fog = new THREE.Fog(fogColor, 600, 5000);
 
     // Initialize Background
     this.backgroundEnv = new BackgroundEnvironment(this.scene);

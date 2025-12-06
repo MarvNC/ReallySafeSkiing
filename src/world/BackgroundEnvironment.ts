@@ -2,6 +2,54 @@ import * as THREE from 'three';
 import { createPeakGeometry } from './assets/MountainGeometry';
 import { COLOR_PALETTE } from '../constants/colors';
 
+// ============================================================================
+// MOUNTAIN CONFIGURATION
+// ============================================================================
+// Adjust these values to control mountain placement and appearance
+const MOUNTAIN_CONFIG = {
+  // BACK LAYER - Far away, large, smooth mountains with bluish tint
+  backLayer: {
+    count: 18, // Number of mountains in this ring
+    radiusMin: 3000, // Closest distance from player (units)
+    radiusMax: 5000, // Farthest distance from player (units)
+    scaleMin: 1000, // Minimum mountain height (units)
+    scaleMax: 1400, // Maximum mountain height (units)
+    yOffset: -20, // Vertical position (lower = below track, higher = above track)
+    noiseScale: 0.002, // Noise frequency (lower = smoother)
+    detail: 0.3, // Detail level 0-1 (lower = smoother peaks)
+  },
+
+  // MID LAYER - Medium distance, detailed, white/rocky mountains
+  midLayer: {
+    count: 24,
+    radiusMin: 800,
+    radiusMax: 1500,
+    scaleMin: 500,
+    scaleMax: 800,
+    yOffset: 0, // Adjust this to change mid-layer height
+    noiseScale: 0.005,
+    detail: 1.0, // Full detail for jagged look
+  },
+
+  // FRONT LAYER - Close, small peaks to fill gaps
+  frontLayer: {
+    count: 16,
+    radiusMin: 600,
+    radiusMax: 800,
+    scaleMin: 250,
+    scaleMax: 500,
+    yOffset: 0, // Adjust this to change front-layer height
+    noiseScale: 0.008,
+    detail: 1.5,
+  },
+
+  // FLOOR - Base plane to hide void below mountains
+  floor: {
+    radius: 5000, // Size of the floor disc
+    yPosition: -50, // Vertical position (should be below track)
+  },
+} as const;
+
 export class BackgroundEnvironment {
   private group: THREE.Group;
   private skyDome!: THREE.Mesh;
@@ -38,43 +86,43 @@ export class BackgroundEnvironment {
     // 1. BACK LAYER (The "Blue" Mountains)
     // Huge, far away, simple shapes, bluish tint
     this.scatterRing({
-      count: 12,
-      radiusMin: 3500,
-      radiusMax: 4500,
-      scaleMin: 800,
-      scaleMax: 1200,
-      yOffset: -300,
+      count: MOUNTAIN_CONFIG.backLayer.count,
+      radiusMin: MOUNTAIN_CONFIG.backLayer.radiusMin,
+      radiusMax: MOUNTAIN_CONFIG.backLayer.radiusMax,
+      scaleMin: MOUNTAIN_CONFIG.backLayer.scaleMin,
+      scaleMax: MOUNTAIN_CONFIG.backLayer.scaleMax,
+      yOffset: MOUNTAIN_CONFIG.backLayer.yOffset,
       color: COLOR_PALETTE.primaryEnvironment.farMountain, // Bluish
-      noiseScale: 0.002,
-      detail: 0.3, // Smoother
+      noiseScale: MOUNTAIN_CONFIG.backLayer.noiseScale,
+      detail: MOUNTAIN_CONFIG.backLayer.detail,
     });
 
     // 2. MID LAYER
     // Closer, detailed, white/rocky
     this.scatterRing({
-      count: 15,
-      radiusMin: 1800,
-      radiusMax: 2800,
-      scaleMin: 400,
-      scaleMax: 700,
-      yOffset: -100,
+      count: MOUNTAIN_CONFIG.midLayer.count,
+      radiusMin: MOUNTAIN_CONFIG.midLayer.radiusMin,
+      radiusMax: MOUNTAIN_CONFIG.midLayer.radiusMax,
+      scaleMin: MOUNTAIN_CONFIG.midLayer.scaleMin,
+      scaleMax: MOUNTAIN_CONFIG.midLayer.scaleMax,
+      yOffset: MOUNTAIN_CONFIG.midLayer.yOffset,
       color: COLOR_PALETTE.primaryEnvironment.snowWhite,
-      noiseScale: 0.005,
-      detail: 1.0, // Jagged
+      noiseScale: MOUNTAIN_CONFIG.midLayer.noiseScale,
+      detail: MOUNTAIN_CONFIG.midLayer.detail,
     });
 
     // 3. FRONT/SIDE CLUSTERS
     // Small peaks to fill gaps near the horizon
     this.scatterRing({
-      count: 8,
-      radiusMin: 1200,
-      radiusMax: 1600,
-      scaleMin: 200,
-      scaleMax: 400,
-      yOffset: -50,
+      count: MOUNTAIN_CONFIG.frontLayer.count,
+      radiusMin: MOUNTAIN_CONFIG.frontLayer.radiusMin,
+      radiusMax: MOUNTAIN_CONFIG.frontLayer.radiusMax,
+      scaleMin: MOUNTAIN_CONFIG.frontLayer.scaleMin,
+      scaleMax: MOUNTAIN_CONFIG.frontLayer.scaleMax,
+      yOffset: MOUNTAIN_CONFIG.frontLayer.yOffset,
       color: COLOR_PALETTE.primaryEnvironment.snowWhite,
-      noiseScale: 0.008,
-      detail: 1.2,
+      noiseScale: MOUNTAIN_CONFIG.frontLayer.noiseScale,
+      detail: MOUNTAIN_CONFIG.frontLayer.detail,
     });
   }
 
@@ -129,7 +177,7 @@ export class BackgroundEnvironment {
 
   private createFloor(): void {
     // A giant disc to hide the void below the mountains
-    const geometry = new THREE.CircleGeometry(5000, 32);
+    const geometry = new THREE.CircleGeometry(MOUNTAIN_CONFIG.floor.radius, 32);
     geometry.rotateX(-Math.PI / 2);
 
     const material = new THREE.MeshStandardMaterial({
@@ -138,7 +186,7 @@ export class BackgroundEnvironment {
     });
 
     const floor = new THREE.Mesh(geometry, material);
-    floor.position.y = -50; // Slightly below track
+    floor.position.y = MOUNTAIN_CONFIG.floor.yPosition;
     floor.renderOrder = -2;
     this.group.add(floor);
   }
