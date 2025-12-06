@@ -18,10 +18,10 @@ export const PLAYER_CONFIG = {
   physics: {
     capsuleRadius: 0.5,
     capsuleHalfHeight: 1.0,
-    mass: 100, // Reduced mass slightly to make forces feel snappier
+    mass: 50, // Reduced mass slightly to make forces feel snappier
 
     // Remove general air resistance. We will calculate drag manually.
-    angularDamping: 3.0, // High damping to stop spinning instantly when key is released
+    angularDamping: 0, // High damping to stop spinning instantly when key is released
 
     // Ski properties
     lateralFriction: 2.0, // "Edge Grip": How hard it stops you sliding sideways
@@ -36,6 +36,7 @@ export const PLAYER_CONFIG = {
 
     // Physics limits
     brakeDamping: 7.0, // Drag applied when "snowplowing"
+    friction: 0.12 // Base friction applied to simulate snow contact
   },
   camera: {
     fov: 75,

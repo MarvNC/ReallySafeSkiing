@@ -67,7 +67,7 @@ export class PlayerPhysics {
     )
       .setMass(PLAYER_CONFIG.physics.mass)
       .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World))
-      .setFriction(0.0) // We simulate friction manually
+      .setFriction(PLAYER_CONFIG.physics.friction)
       .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Multiply);
 
     this.collider = world.createCollider(colliderDesc, this.body);
