@@ -1,16 +1,17 @@
 export const COLOR_PALETTE = {
   background: {
-    sky: '#4a90e2', // Deep Azure
-    fog: '#87CEEB', // Lighter horizon
-    mountainShadow: '#3e4452', // Dark blue-grey for rock
+    sky: '#87ceeb', // Matches reference
+    fog: '#b8d8e8', // Matches reference fog
+    mountainShadow: '#3e4452',
   },
   primaryEnvironment: {
-    snowWhite: '#F3F7FA',
+    snowWhite: '#ffffff', // Pure white for mid-ground
+    farMountain: '#e8f4f8', // Bluish tint for back mountains (from reference)
     iceBlue: '#BFE3F5',
     shadowGray: '#9BA4AE',
   },
   terrainAndObjects: {
-    rockGray: '#6D7178',
+    rockGray: '#5a5e66', // Slightly bluer gray
     darkBarkBrown: '#5A3A25',
     lightWoodBrown: '#A06E46',
   },

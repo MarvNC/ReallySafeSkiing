@@ -8,6 +8,7 @@ import { PLAYER_CONFIG, LIGHTING_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 import { PhysicsWorld } from './physics/PhysicsWorld';
 import { PlayerPhysics } from './player/PlayerPhysics';
+import { COLOR_PALETTE } from './constants/colors';
 
 export class GameApp {
   private renderer: THREE.WebGLRenderer;
@@ -63,10 +64,12 @@ export class GameApp {
     this.setupLights();
     this.addHelpers();
 
-    // Update Fog to match the new sky horizon
-    const horizonColor = new THREE.Color('#87CEEB'); // Sky blue
-    this.scene.background = horizonColor;
-    this.scene.fog = new THREE.Fog(horizonColor, 500, 4000);
+    // Update Fog to match the new palette
+    // Use the color from our palette configuration
+    const fogColor = new THREE.Color(COLOR_PALETTE.background.fog);
+    this.scene.background = new THREE.Color(COLOR_PALETTE.background.sky);
+    // Denser fog starting closer to blend the "floor" disc edge
+    this.scene.fog = new THREE.Fog(fogColor, 200, 3500);
 
     // Initialize Background
     this.backgroundEnv = new BackgroundEnvironment(this.scene);
