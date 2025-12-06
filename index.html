@@ -1,45 +1,78 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet" />
-    <title>Really Safe Skiing</title>
-  </head>
-  <body>
-    <div id="app"></div>
 
-    <div id="ui-layer">
-      <div id="hud" class="hidden">
-        <div class="hud-panel top-center">
-          <div id="timer-display">01:00.00</div>
-          <div class="sub-label">TIME REMAINING</div>
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet" />
+  <title>Really Safe Skiing</title>
+</head>
 
-        <div class="hud-panel bottom-left">
-          <div id="speed-display">0 <span class="unit">km/h</span></div>
-        </div>
-        <div class="hud-panel bottom-center">
-          <div id="dist-display">0 <span class="unit">m</span></div>
-          <div class="sub-label">DISTANCE</div>
-        </div>
+<body>
+  <div id="app"></div>
+
+  <div id="ui-layer">
+    <div id="hud" class="hidden">
+      <div class="hud-panel top-center">
+        <div id="timer-display">01:00.00</div>
+        <div class="sub-label">TIME REMAINING</div>
       </div>
-      <div id="main-menu">
-        <h1 class="title">REALLY SAFE SKIING</h1>
-        <div class="blink">W TO PROPEL, A / D TO STEER</div>
+
+      <div class="hud-panel bottom-left">
+        <div id="speed-display">0 <span class="unit">km/h</span></div>
       </div>
-      <div id="game-over" class="hidden">
-        <h1 class="title">TIME'S UP!</h1>
-        <div id="final-score-container">
-          <div id="final-distance" class="score-line">DISTANCE: 0m</div>
-          <div id="final-top-speed" class="score-line">TOP SPEED: 0 km/h</div>
-        </div>
-        <div class="blink">PRESS SPACE TO RESTART</div>
+      <div class="hud-panel bottom-center">
+        <div id="dist-display">0 <span class="unit">m</span></div>
+        <div class="sub-label">DISTANCE</div>
       </div>
     </div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+    <div id="main-menu">
+      <h1 class="title">REALLY SAFE SKIING</h1>
+      <div class="blink">W TO PROPEL, A / D TO STEER</div>
+    </div>
+    <div id="game-over" class="hidden">
+      <h1 class="title">TIME'S UP!</h1>
+      <div id="final-score-container">
+        <div id="final-distance" class="score-line">DISTANCE: 0m</div>
+        <div id="final-top-speed" class="score-line">TOP SPEED: 0 km/h</div>
+      </div>
+      <div class="blink">PRESS SPACE TO RESTART</div>
+    </div>
+    <div id="pause-menu" class="hidden">
+      <h1 class="title">PAUSED</h1>
+      <div class="menu-container">
+        <div class="menu-option selected" data-index="0">RESUME</div>
+        <div class="menu-option" data-index="1">RESTART</div>
+        <div class="spacer"></div>
+        <div class="menu-option" data-index="2">ABOUT</div>
+      </div>
+    </div>
+    <div id="about-screen" class="hidden">
+      <h1 class="title">SYSTEM INFO</h1>
+
+      <div class="about-panel">
+        <div class="about-game-title">Really Safe Skiing</div>
+
+        <span class="tech-stack-label">Powered By</span>
+        <div class="tech-stack-list">
+          <a href="https://bun.sh" target="_blank" class="tech-badge">Bun</a>
+          <a href="https://vitejs.dev" target="_blank" class="tech-badge">Vite</a>
+          <a href="https://threejs.org" target="_blank" class="tech-badge">Three.js</a>
+          <a href="https://rapier.rs" target="_blank" class="tech-badge">Rapier</a>
+          <a href="https://www.typescriptlang.org" target="_blank" class="tech-badge">TypeScript</a>
+        </div>
+        <div class="author-section">
+          CREATED BY
+          <a href="https://github.com/MarvNC" target="_blank" class="author-link">MarvNC</a>
+        </div>
+      </div>
+      <div class="blink return-hint">PRESS ESC TO RETURN</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>

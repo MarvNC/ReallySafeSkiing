@@ -15,6 +15,7 @@ const GameState = {
   MENU: 0,
   PLAYING: 1,
   GAME_OVER: 2,
+  PAUSED: 3, // New State
 } as const;
 
 type GameState = (typeof GameState)[keyof typeof GameState];
@@ -47,6 +48,11 @@ export class GameApp {
   private startPosition: THREE.Vector3 = new THREE.Vector3();
   private topSpeed: number = 0; // Track top speed in km/h
 
+  // New Menu State
+  private menuIndex = 0;
+  private isAboutOpen = false;
+  private readonly menuOptionsCount = 3; // Resume, Restart, About
+
   // UI Elements
   private uiTimer = document.getElementById('timer-display');
   private uiSpeed = document.getElementById('speed-display');
@@ -56,6 +62,9 @@ export class GameApp {
   private uiGameOver = document.getElementById('game-over');
   private uiFinalDistance = document.getElementById('final-distance');
   private uiFinalTopSpeed = document.getElementById('final-top-speed');
+  private uiPauseMenu = document.getElementById('pause-menu');
+  private uiAboutScreen = document.getElementById('about-screen');
+  private uiMenuOptions = document.querySelectorAll('.menu-option');
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -170,6 +179,50 @@ export class GameApp {
       }
     });
 
+    // Menu / Pause Bindings
+    this.input.bindKey('escape', Action.Pause);
+    this.input.bindKey('enter', Action.MenuSelect);
+    // Bind W/S and Arrows to Menu navigation too
+    this.input.bindKey('w', Action.MenuUp);
+    this.input.bindKey('arrowup', Action.MenuUp);
+    this.input.bindKey('s', Action.MenuDown);
+    this.input.bindKey('arrowdown', Action.MenuDown);
+
+    // PAUSE TOGGLE LOGIC
+    this.input.on(Action.Pause, (_action, phase) => {
+      if (phase === 'pressed') {
+        if (this.gameState === GameState.PLAYING) {
+          this.pauseGame();
+        } else if (this.gameState === GameState.PAUSED) {
+          if (this.isAboutOpen) {
+            this.closeAbout();
+          } else {
+            this.resumeGame();
+          }
+        }
+      }
+    });
+
+    // MENU NAVIGATION LOGIC
+    const handleMenuNav = (action: Action) => {
+      if (this.gameState !== GameState.PAUSED || this.isAboutOpen) return;
+
+      if (action === Action.MenuUp) {
+        this.menuIndex = (this.menuIndex - 1 + this.menuOptionsCount) % this.menuOptionsCount;
+        this.updateMenuVisuals();
+      } else if (action === Action.MenuDown) {
+        this.menuIndex = (this.menuIndex + 1) % this.menuOptionsCount;
+        this.updateMenuVisuals();
+      } else if (action === Action.MenuSelect || action === Action.Start) {
+        this.executeMenuOption();
+      }
+    };
+
+    // Attach listeners
+    this.input.on(Action.MenuUp, (a, p) => p === 'pressed' && handleMenuNav(a));
+    this.input.on(Action.MenuDown, (a, p) => p === 'pressed' && handleMenuNav(a));
+    this.input.on(Action.MenuSelect, (a, p) => p === 'pressed' && handleMenuNav(a));
+
     // Start game on any movement input
     this.input.on(Action.Forward, (_action, phase) => {
       if (phase === 'pressed' && this.gameState === GameState.MENU) {
@@ -280,6 +333,63 @@ export class GameApp {
     }
   }
 
+  private pauseGame(): void {
+    this.gameState = GameState.PAUSED;
+    this.uiPauseMenu?.classList.remove('hidden');
+    this.uiHud?.classList.add('hidden'); // Hide HUD while paused
+    this.menuIndex = 0; // Reset to "Resume"
+    this.updateMenuVisuals();
+
+    // NEW: Ensure cursor is free to click the About link
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+  }
+
+  private resumeGame(): void {
+    this.gameState = GameState.PLAYING;
+    this.uiPauseMenu?.classList.add('hidden');
+    this.uiHud?.classList.remove('hidden');
+    this.clock.getDelta(); // Clear accumulated delta time so we don't jump forward
+  }
+
+  private openAbout(): void {
+    this.isAboutOpen = true;
+    this.uiPauseMenu?.classList.add('hidden');
+    this.uiAboutScreen?.classList.remove('hidden');
+  }
+
+  private closeAbout(): void {
+    this.isAboutOpen = false;
+    this.uiAboutScreen?.classList.add('hidden');
+    this.uiPauseMenu?.classList.remove('hidden');
+  }
+
+  private updateMenuVisuals(): void {
+    this.uiMenuOptions.forEach((el, index) => {
+      if (index === this.menuIndex) {
+        el.classList.add('selected');
+      } else {
+        el.classList.remove('selected');
+      }
+    });
+  }
+
+  private executeMenuOption(): void {
+    switch (this.menuIndex) {
+      case 0: // Resume
+        this.resumeGame();
+        break;
+      case 1: // Restart
+        this.resumeGame(); // Set state back to playing
+        this.startGame(); // Reset positions/score
+        break;
+      case 2: // About
+        this.openAbout();
+        break;
+    }
+  }
+
   private updateHUD() {
     // 1. Timer
     const minutes = Math.floor(this.timeRemaining / 60);
@@ -386,30 +496,31 @@ export class GameApp {
 
     const delta = this.clock.getDelta();
 
-    // Game Logic
+    // ONLY step physics and timers if PLAYING
     if (this.gameState === GameState.PLAYING) {
-      // Only run physics when playing
       this.physics.step(delta);
 
       this.timeRemaining -= delta;
 
-      // Update Player Controls
       if (!this.useDebugCamera) {
         this.player.update(delta);
       } else {
-        // Keep visuals in sync even when free camera is active
         this.player.syncFromPhysics();
       }
 
-      // Update HUD
       this.updateHUD();
 
-      // Check End Condition
       if (this.timeRemaining <= 0) {
         this.timeRemaining = 0;
         this.endGame();
       }
 
+      this.terrainManager.update(this.playerPhysics.getPosition());
+    } else if (this.gameState === GameState.PAUSED) {
+      // If PAUSED, we skip the physics step above, effectively freezing the game logic
+      // but we CONTINUE to render below, keeping the 3D scene visible behind the menu.
+      // Just sync visuals without updating physics
+      this.player.syncFromPhysics();
       this.terrainManager.update(this.playerPhysics.getPosition());
     } else {
       // In MENU or GAME_OVER, pause physics and just sync visuals

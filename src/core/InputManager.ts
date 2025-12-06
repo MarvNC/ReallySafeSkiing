@@ -17,6 +17,11 @@ export const Action = {
   DebugMoveRight: 'DebugMoveRight',
   DebugMoveUp: 'DebugMoveUp',
   DebugMoveDown: 'DebugMoveDown',
+  // New Menu Actions
+  Pause: 'Pause',
+  MenuUp: 'MenuUp',
+  MenuDown: 'MenuDown',
+  MenuSelect: 'MenuSelect',
 } as const;
 
 export type Action = (typeof Action)[keyof typeof Action];

@@ -244,3 +244,178 @@ canvas {
     opacity: 0;
   }
 }
+
+/* Pause Menu */
+#pause-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 20, 40, 0.85); /* Darker blue overlay */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+}
+
+/* About Screen */
+#about-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 20, 40, 0.9); /* Slightly darker for readability */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+
+  /* CRITICAL FIX: Allows clicking links inside this container */
+  pointer-events: auto;
+}
+
+.menu-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-width: 300px;
+  text-align: center;
+}
+
+.menu-option {
+  font-size: 32px;
+  color: #87ceeb; /* Sky blue */
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* The Spacer to push About to the bottom */
+.spacer {
+  height: 40px;
+}
+
+/* Triangle Selectors */
+.menu-option.selected {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  font-weight: bold;
+}
+
+/* Left Triangle */
+.menu-option.selected::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 15px solid #ff6b35; /* Orange accent */
+}
+
+/* Right Triangle */
+.menu-option.selected::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 15px solid #ff6b35;
+}
+
+/* About Screen Specifics */
+.about-panel {
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #87ceeb;
+  border-radius: 4px; /* Slight rounded corners */
+  padding: 40px 60px;
+  text-align: center;
+  box-shadow:
+    0 0 20px rgba(135, 206, 235, 0.2),
+    inset 0 0 20px rgba(135, 206, 235, 0.1);
+  max-width: 600px;
+  margin-bottom: 40px;
+  transform: skewX(-5deg); /* Adds a slight sporty/fast look */
+}
+
+/* Undo skew for text so it remains readable */
+.about-panel > * {
+  transform: skewX(5deg);
+}
+
+.about-game-title {
+  font-family: 'Russo One', sans-serif;
+  font-size: 32px;
+  color: #fff;
+  margin: 0 0 20px 0;
+  /* text-transform: uppercase; */
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0px #ff6b35; /* Orange shadow */
+}
+
+.tech-stack-label {
+  display: block;
+  font-size: 12px;
+  color: #ff6b35; /* Orange accent */
+  /* text-transform: uppercase; */
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.tech-stack-list {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.tech-badge {
+  background: rgba(135, 206, 235, 0.1);
+  border: 1px solid #87ceeb;
+  color: #87ceeb;
+  padding: 5px 10px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.author-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 20px;
+  font-family: 'Russo One', sans-serif;
+  color: #fff;
+  font-size: 18px;
+}
+
+.author-link {
+  color: #ff6b35;
+  text-decoration: none;
+  position: relative;
+  transition: all 0.2s;
+  padding: 2px 5px;
+}
+
+.author-link:hover {
+  background: #ff6b35;
+  color: #000;
+  box-shadow: 0 0 15px #ff6b35;
+}
+
+.return-hint {
+  font-size: 16px;
+  color: #87ceeb;
+  margin-top: 20px;
+  font-family: 'Russo One', sans-serif;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
