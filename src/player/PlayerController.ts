@@ -124,18 +124,21 @@ export class PlayerController {
     let targetLeftHandX = PLAYER_CONFIG.hands.leftOffset.x;
     let targetRightHandX = PLAYER_CONFIG.hands.rightOffset.x;
 
-    if (steerLeft) {
-      // Move both hands left when steering left
-      targetLeftHandX =
-        PLAYER_CONFIG.hands.leftOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
-      targetRightHandX =
-        PLAYER_CONFIG.hands.rightOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
-    } else if (steerRight) {
-      // Move both hands right when steering right
-      targetLeftHandX =
-        PLAYER_CONFIG.hands.leftOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
-      targetRightHandX =
-        PLAYER_CONFIG.hands.rightOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+    // Don't apply lateral movement when braking - keep hands in default position
+    if (!isBraking) {
+      if (steerLeft) {
+        // Move both hands left when steering left
+        targetLeftHandX =
+          PLAYER_CONFIG.hands.leftOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
+        targetRightHandX =
+          PLAYER_CONFIG.hands.rightOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount;
+      } else if (steerRight) {
+        // Move both hands right when steering right
+        targetLeftHandX =
+          PLAYER_CONFIG.hands.leftOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+        targetRightHandX =
+          PLAYER_CONFIG.hands.rightOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount;
+      }
     }
 
     // Smoothly interpolate current X positions toward target

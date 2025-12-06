@@ -15,6 +15,8 @@ export type PlayerPhysicsDebugState = {
   forwardSpeed: number;
   lateralSpeed: number;
   pushForce: number; // Added to fix lint error
+  lastForwardImpulse: number;
+  lastLateralImpulse: number;
 };
 
 export class PlayerPhysics {
@@ -41,6 +43,8 @@ export class PlayerPhysics {
     forwardSpeed: 0,
     lateralSpeed: 0,
     pushForce: 0,
+    lastForwardImpulse: 0,
+    lastLateralImpulse: 0,
   };
 
   constructor(physics: PhysicsWorld, startPosition: THREE.Vector3) {
@@ -140,6 +144,11 @@ export class PlayerPhysics {
     this.body.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
 
     // 6. Debug Data
+    // Calculate impulse components for debug display
+    const forwardImpulse =
+      forwardForce * PLAYER_CONFIG.physics.mass * deltaSeconds + pushForceApplied;
+    const lateralImpulse = lateralForce * PLAYER_CONFIG.physics.mass * deltaSeconds;
+
     this.debugState = {
       yaw: this.yaw,
       isAwake: !this.body.isSleeping(),
@@ -149,7 +158,9 @@ export class PlayerPhysics {
       linearVelocity: this.currentVel,
       forwardSpeed,
       lateralSpeed,
-      pushForce: pushForceApplied, // Linter satisfied!
+      pushForce: pushForceApplied,
+      lastForwardImpulse: forwardImpulse,
+      lastLateralImpulse: lateralImpulse,
     };
   }
 
