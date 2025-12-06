@@ -21,11 +21,14 @@ export const About = () => {
 
           <div className="flex justify-center gap-4 mb-8 flex-wrap">
             {[
-              { name: 'Bun', url: 'https://bun.sh' },
-              { name: 'Vite', url: 'https://vitejs.dev' },
               { name: 'Three.js', url: 'https://threejs.org' },
               { name: 'Rapier', url: 'https://rapier.rs' },
               { name: 'TypeScript', url: 'https://www.typescriptlang.org' },
+              { name: 'React', url: 'https://reactjs.org' },
+              { name: 'Tailwind', url: 'https://tailwindcss.com' },
+              { name: 'Zustand', url: 'https://github.com/pmndrs/zustand' },
+              { name: 'Vite', url: 'https://vitejs.dev' },
+              { name: 'Bun', url: 'https://bun.sh' },
             ].map((tech) => (
               <a
                 key={tech.name}
