@@ -63,12 +63,12 @@ export const PLAYER_CONFIG = {
     // Animation config
     maxTurnRoll: Math.PI / 50, // 30 degrees banking when turning
     maxTurnYaw: Math.PI / 12, // 15 degrees steering into turn
-    turnAnimationMultiple: 0.4, // Multiplier for ski and hand turning animations (1.0 = default)
+    turnAnimationMultiple: 0.5, // Multiplier for ski and hand turning animations (1.0 = default)
     brakeOpenAngle: Math.PI / 8, // 22.5 degrees V-shape
     brakeEdgeRoll: Math.PI / 6, // 30 degrees inward edging
     brakeWidth: 0.45, // Distance from center when braking
     baseWidth: 0.3, // Distance from center when gliding
-    carveOffsetZ: 0.1, // How far the inside ski pulls back during a turn
+    carveOffsetZ: -0.02, // How far the inside ski pulls back during a turn
     animationSpeed: 10.0, // Lerp speed
     maxSpeedKmh: 120, // Maximum speed in km/h for speed ratio calculation
     vibrationIntensity: 0.02, // Shake amount at max speed
