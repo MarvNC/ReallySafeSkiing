@@ -45,7 +45,7 @@ export const PLAYER_CONFIG = {
     fov: 75,
     near: 0.1,
     far: 8000,
-    eyeHeight: 1.7,
+    eyeHeight: 0.1,
     tiltRadians: -0.5,
   },
   hands: {
