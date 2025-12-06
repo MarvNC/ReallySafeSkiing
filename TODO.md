@@ -4,8 +4,8 @@
   - Player
   - Ski?
   - Snow?
-- animations when carving and braking
-- Snow trails? But they'd be behind the player so idk
+- animations when carving?
+- different forward animation at high speeds
 - More fun/challenging course, obstacles, coins, avg speed stats, etc
 - SFX
 - Music

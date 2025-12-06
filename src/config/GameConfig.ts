@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export const PHYSICS_CONFIG = {
   // Global gravity for the game world
-  gravity: new THREE.Vector3(0, -30, 0),
+  gravity: new THREE.Vector3(0, -20, 0),
   // Safety clamp for the physics timestep
   maxDeltaTime: 1 / 20,
 } as const;
@@ -20,33 +20,29 @@ export const PLAYER_CONFIG = {
     capsuleHalfHeight: 1.0,
     mass: 100, // Reduced mass slightly to make forces feel snappier
 
-    // CHANGE 1: Remove general air resistance. We will calculate drag manually.
-    linearDamping: 0.3,
+    // Remove general air resistance. We will calculate drag manually.
     angularDamping: 3.0, // High damping to stop spinning instantly when key is released
 
-    // CHANGE 2: Ski properties
+    // Ski properties
     lateralFriction: 2.0, // "Edge Grip": How hard it stops you sliding sideways
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
 
-    // CHANGE 3: Poling mechanics
-    poleForce: 40.0, // Strong initial push
+    // Poling mechanics
+    poleForce: 30.0, // Strong initial push
     maxPoleSpeed: 15.0, // You can't pole effectively above this speed
 
-    // CHANGE 4: Steering
+    // Steering
     steerTurnSpeed: 1, // Rotation speed
 
-    // CHANGE 5: Physics limits
-    maxSpeed: 120.0, // Effectively uncapped, let gravity decide
-    brakeDamping: 5.0, // Drag applied when "snowplowing"
-    jumpImpulse: 12,
-    friction: 0.1, // Wall friction (keep 0)
+    // Physics limits
+    brakeDamping: 7.0, // Drag applied when "snowplowing"
   },
   camera: {
     fov: 75,
     near: 0.1,
     far: 8000,
     eyeHeight: 0.1,
-    tiltRadians: -0.5,
+    tiltRadians: -0.6,
   },
   hands: {
     leftOffset: new THREE.Vector3(-0.3, -0.3, -0.5),

@@ -162,6 +162,8 @@ export class GameApp {
     this.input.bindKey('enter', Action.Start);
     this.input.on(Action.Start, (_action, phase) => {
       if (phase === 'pressed') {
+        // Don't start game if debug camera is active (space is bound to DebugMoveUp)
+        if (this.useDebugCamera) return;
         if (this.gameState === GameState.MENU || this.gameState === GameState.GAME_OVER) {
           this.startGame();
         }
@@ -252,10 +254,22 @@ export class GameApp {
 
         // Request pointer lock for mouse look
         this.renderer.domElement.requestPointerLock();
+
+        // Bind space to DebugMoveUp for debug camera
+        if (this.input) {
+          this.input.unbindKey(' ');
+          this.input.bindKey(' ', Action.DebugMoveUp);
+        }
       } else {
         // Release pointer lock when switching back
         if (document.pointerLockElement === this.renderer.domElement) {
           document.exitPointerLock();
+        }
+
+        // Bind space back to Start action
+        if (this.input) {
+          this.input.unbindKey(' ');
+          this.input.bindKey(' ', Action.Start);
         }
       }
 
@@ -553,7 +567,10 @@ export class GameApp {
         moveVector.add(right);
       }
 
-      // Up/down (Shift only, Space is now Start action)
+      // Up/down (Space for up, Shift for down)
+      if (this.input.isActive(Action.DebugMoveUp)) {
+        moveVector.y += 1;
+      }
       if (this.input.isActive(Action.DebugMoveDown)) {
         moveVector.y -= 1;
       }

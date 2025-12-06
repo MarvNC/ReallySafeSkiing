@@ -105,10 +105,10 @@ export function createSkiPair(): THREE.Group {
   const skiGroup = new THREE.Group();
 
   const leftSki = createSki();
-  leftSki.position.set(-0.2, 0, 0);
+  leftSki.position.set(-0.3, 0, 0);
 
   const rightSki = createSki();
-  rightSki.position.set(0.2, 0, 0);
+  rightSki.position.set(0.3, 0, 0);
 
   skiGroup.add(leftSki, rightSki);
   return skiGroup;
