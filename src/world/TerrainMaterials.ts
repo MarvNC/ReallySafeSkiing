@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 
-import { LIGHTING_CONFIG } from '../config/GameConfig';
 import { COLOR_PALETTE } from '../constants/colors';
 
 export type TerrainMaterials = {
