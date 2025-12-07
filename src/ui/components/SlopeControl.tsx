@@ -71,15 +71,10 @@ export const SlopeControl = () => {
   const angleRad = (slopeAngle * Math.PI) / 180;
   const endX = baseX + Math.cos(angleRad) * lineLength;
   const endY = baseY - Math.sin(angleRad) * lineLength;
-  const markerX = endX + Math.cos(angleRad) * 14;
-  const markerY = endY - Math.sin(angleRad) * 14;
   const slopeColor = `hsl(${120 - (slopeAngle / 70) * 120}, 80%, 60%)`;
 
   return (
     <div className="w-full text-white select-none">
-      <div className="mb-3 flex items-center justify-between text-xs tracking-[0.2em] text-white/70 uppercase">
-        <span className="text-2xl font-bold text-sky-300">{Math.round(slopeAngle)}°</span>
-      </div>
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -90,7 +85,10 @@ export const SlopeControl = () => {
           <Minus className="h-5 w-5" />
         </button>
         <div className="flex-1 rounded-xl bg-white/5 p-2 shadow-inner">
-          <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-gradient-to-b from-[#0c1020]/80 to-[#0c1020]/40">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-gradient-to-b from-[#0c1020]/80 to-[#0c1020]/40">
+            <div className="pointer-events-none absolute top-4 right-4 z-10 text-2xl font-bold text-sky-300">
+              {Math.round(slopeAngle)}°
+            </div>
             <svg
               ref={svgRef}
               role="slider"
@@ -133,16 +131,6 @@ export const SlopeControl = () => {
                 strokeLinecap="round"
               />
               <circle cx={endX} cy={endY} r={8} fill={slopeColor} stroke="#fff" strokeWidth={1.5} />
-              <text
-                x={markerX}
-                y={markerY}
-                className="pointer-events-none"
-                fill="#fff"
-                fontSize="12"
-                fontWeight="700"
-              >
-                {Math.round(slopeAngle)}°
-              </text>
             </svg>
           </div>
         </div>

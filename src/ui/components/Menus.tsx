@@ -8,13 +8,13 @@ import { SlopeControl } from './SlopeControl';
 
 const SetupPanel: FC = () => (
   <div className="pointer-events-auto flex w-full max-w-xl flex-col gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm shadow-2xl backdrop-blur-md">
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="text-xs tracking-widest text-white/70 uppercase">Obstacle Difficulty</div>
       <DifficultySelector />
     </div>
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="text-xs tracking-widest text-white/70 uppercase">Slope Angle</div>
-      <div className="w-full py-4">
+      <div className="w-full">
         <SlopeControl />
       </div>
     </div>
@@ -24,7 +24,7 @@ const SetupPanel: FC = () => (
 const StartButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    className="bg-accent-orange font-russo pointer-events-auto mt-6 w-full max-w-3xl cursor-pointer rounded-xl py-4 text-xl tracking-widest text-black uppercase shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-400 active:scale-95"
+    className="bg-accent-orange font-russo pointer-events-auto mt-6 w-full max-w-3xl cursor-pointer rounded-xl py-4 text-xl tracking-widest text-white uppercase shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-400 active:scale-95"
   >
     {label}
   </button>
