@@ -11,6 +11,7 @@ export class SnowSparkles {
   private readonly positions: Float32Array;
   private readonly colors: Float32Array;
   private readonly baseHeights: Float32Array;
+  private readonly sizes: Float32Array;
   private readonly phases: Float32Array;
   private readonly twinkleSpeeds: Float32Array;
   private readonly baseAlphas: Float32Array;
@@ -49,6 +50,7 @@ export class SnowSparkles {
     this.positions = new Float32Array(this.count * 3);
     this.colors = new Float32Array(this.count * 3);
     this.baseHeights = new Float32Array(this.count);
+    this.sizes = new Float32Array(this.count);
     this.phases = new Float32Array(this.count);
     this.twinkleSpeeds = new Float32Array(this.count);
     this.baseAlphas = new Float32Array(this.count);
@@ -58,7 +60,7 @@ export class SnowSparkles {
     this.heightJitters = new Float32Array(this.count);
 
     this.material = new THREE.PointsMaterial({
-      size: 0.1,
+      size: 1.0, // Actual per-point size comes from aSize attribute
       map: this.createSparkleTexture(),
       transparent: true,
       depthWrite: false,
@@ -68,9 +70,25 @@ export class SnowSparkles {
       sizeAttenuation: true,
       opacity: 0.95,
     });
+    this.material.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace(
+        'void main() {',
+        /* glsl */ `
+attribute float aSize;
+void main() {
+`
+      );
+      shader.vertexShader = shader.vertexShader.replace(
+        'gl_PointSize = size;',
+        /* glsl */ `
+gl_PointSize = size * aSize;
+`
+      );
+    };
 
     this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
     this.geometry.setAttribute('color', new THREE.BufferAttribute(this.colors, 3));
+    this.geometry.setAttribute('aSize', new THREE.BufferAttribute(this.sizes, 1));
 
     this.points = new THREE.Points(this.geometry, this.material);
     this.points.frustumCulled = false;
@@ -97,6 +115,7 @@ export class SnowSparkles {
 
     this.tmpSunDir.copy(sunDir).normalize().multiplyScalar(-1);
 
+    let sizeNeedsUpdate = false;
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3;
       const driftAngle = (this.driftAngles[i] += this.driftSpeeds[i] * delta);
@@ -124,6 +143,7 @@ export class SnowSparkles {
         alongForward < -this.maxBehindDistance
       ) {
         this.respawnSparkle(i, this.tmpCamPos, this.tmpForward);
+        sizeNeedsUpdate = true;
         continue;
       }
     }
@@ -132,6 +152,9 @@ export class SnowSparkles {
 
     (this.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
     (this.geometry.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+    if (sizeNeedsUpdate) {
+      (this.geometry.getAttribute('aSize') as THREE.BufferAttribute).needsUpdate = true;
+    }
   }
 
   setVisible(visible: boolean): void {
@@ -164,6 +187,9 @@ export class SnowSparkles {
     this.driftSpeeds[index] = 0.4 + Math.random() * 1.1;
     this.tintStrengths[index] = 0.75 + Math.random() * 0.25;
     this.heightJitters[index] = 0.4 + Math.random() * 0.8;
+
+    const size = this.randomNormal(0.07, 0.04);
+    this.sizes[index] = THREE.MathUtils.clamp(size, 0.01, 0.2);
   }
 
   private updateColorBuffer(delta: number, forward: THREE.Vector3, sunDir: THREE.Vector3): void {
@@ -188,6 +214,17 @@ export class SnowSparkles {
 
       this.phases[i] += delta * this.twinkleSpeeds[i];
     }
+  }
+
+  private randomNormal(mean: number, stdDev: number): number {
+    let u = 0;
+    let v = 0;
+    // Use Box-Muller transform for a simple Gaussian sample
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    const mag = Math.sqrt(-2.0 * Math.log(u));
+    const z = mag * Math.cos(2.0 * Math.PI * v);
+    return mean + z * stdDev;
   }
 
   private createSparkleTexture(): THREE.Texture {
