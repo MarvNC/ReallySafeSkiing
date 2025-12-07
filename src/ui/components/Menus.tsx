@@ -20,6 +20,29 @@ export const Menus = () => {
     InputManager.instance?.triggerAction(Action.Start);
   };
 
+  const handlePauseMenuBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only resume if clicking the backdrop, not a button
+    if (e.target === e.currentTarget) {
+      // Set menuIndex to 0 (Resume) and trigger select
+      setMenuIndex(0);
+      setTimeout(() => {
+        InputManager.instance?.triggerAction(Action.MenuSelect);
+      }, 50);
+    }
+  };
+
+  const handlePauseMenuBackdropKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (e.target === e.currentTarget) {
+        setMenuIndex(0);
+        setTimeout(() => {
+          InputManager.instance?.triggerAction(Action.MenuSelect);
+        }, 50);
+      }
+    }
+  };
+
   return (
     <div
       className={clsx(
@@ -29,6 +52,11 @@ export const Menus = () => {
           ? 'bg-red-900/30 transition-colors duration-1000'
           : 'bg-sky-dark/40 backdrop-blur-sm'
       )}
+      onClick={uiState === UIState.PAUSED ? handlePauseMenuBackdropClick : undefined}
+      onKeyDown={uiState === UIState.PAUSED ? handlePauseMenuBackdropKeyDown : undefined}
+      role={uiState === UIState.PAUSED ? 'button' : undefined}
+      tabIndex={uiState === UIState.PAUSED ? 0 : undefined}
+      aria-label={uiState === UIState.PAUSED ? 'Click outside to resume' : undefined}
     >
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
@@ -55,7 +83,12 @@ export const Menus = () => {
       {uiState === UIState.PAUSED && (
         <>
           <h1 className="mb-8 text-7xl italic drop-shadow-lg">PAUSED</h1>
-          <div className="pointer-events-auto flex min-w-[300px] flex-col gap-4 text-center">
+          <div
+            className="pointer-events-auto flex min-w-[300px] flex-col gap-4 text-center"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
             {['RESUME', 'RESTART', 'ABOUT'].map((item, idx) => (
               <button
                 key={item}

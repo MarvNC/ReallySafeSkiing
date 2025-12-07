@@ -17,8 +17,8 @@
 - Particles in snow?
 - Camera tilt when turning
 - Better ski model
-- Mobile tilt controls
 - Start menu - choose infinite/timed mode (consult with gemini, arcade/timed/etc?)
   - Difficulty slider controlling terrain obstacles?
 - Player select steepness
 - Local saving high score?
+- Zoom out camera more?

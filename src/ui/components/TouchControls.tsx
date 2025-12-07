@@ -58,11 +58,6 @@ export const TouchControls = () => {
       <div className="pointer-events-auto absolute right-8 bottom-8 z-40 md:hidden">
         <SteerButton action={Action.SteerRight} label="→" />
       </div>
-
-      {/* Brake hint (optional central area) */}
-      <div className="font-russo pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2 text-xs text-white/50 md:hidden">
-        TAP BOTH TO BRAKE
-      </div>
     </>
   );
 };
