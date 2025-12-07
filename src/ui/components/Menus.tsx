@@ -57,7 +57,7 @@ export const Menus = () => {
       {uiState === UIState.CRASHED && (
         <div className="animate-in fade-in zoom-in duration-300">
           <h1
-            className="text-8xl italic tracking-widest text-accent-red drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
+            className="text-accent-red text-8xl tracking-widest italic drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
             style={{ textShadow: '4px 4px 0 #000, -2px -2px 0 #000' }}
           >
             WASTED

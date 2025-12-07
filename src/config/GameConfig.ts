@@ -38,7 +38,7 @@ export const PLAYER_CONFIG = {
 
     // Physics limits
     brakeDamping: 7.0, // Drag applied when "snowplowing"
-    friction: 0.12 // Base friction applied to simulate snow contact
+    friction: 0.12, // Base friction applied to simulate snow contact
   },
   camera: {
     fov: 75,

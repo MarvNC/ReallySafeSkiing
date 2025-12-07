@@ -634,9 +634,7 @@ export class TerrainChunk {
     );
     const collider = world.createCollider(
       RAPIER.ColliderDesc.cylinder(halfHeight, radius)
-        .setCollisionGroups(
-          makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player)
-        )
+        .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player))
         .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
       body
     );
@@ -652,9 +650,7 @@ export class TerrainChunk {
     );
     const collider = world.createCollider(
       RAPIER.ColliderDesc.ball(radius)
-        .setCollisionGroups(
-          makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player)
-        )
+        .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player))
         .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
       body
     );
@@ -682,9 +678,7 @@ export class TerrainChunk {
         z: quaternion.z,
         w: quaternion.w,
       })
-      .setCollisionGroups(
-        makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player)
-      )
+      .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player))
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     const collider = world.createCollider(colliderDesc, body);
     this.obstacleBodies.push(body);

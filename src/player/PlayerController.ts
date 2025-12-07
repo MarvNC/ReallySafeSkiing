@@ -190,7 +190,8 @@ export class PlayerController {
       targets.right.rot.z = bankAngle;
 
       // Rotation Y: Steering (Pointing into turn)
-      const steerAngle = turnInput * PLAYER_CONFIG.skis.maxTurnYaw * PLAYER_CONFIG.skis.turnAnimationMultiple;
+      const steerAngle =
+        turnInput * PLAYER_CONFIG.skis.maxTurnYaw * PLAYER_CONFIG.skis.turnAnimationMultiple;
       targets.left.rot.y = steerAngle;
       targets.right.rot.y = steerAngle;
 
@@ -267,15 +268,19 @@ export class PlayerController {
       if (steerLeft) {
         // Move both hands left when steering left
         targetLeftHandX =
-          PLAYER_CONFIG.hands.leftOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
+          PLAYER_CONFIG.hands.leftOffset.x -
+          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
         targetRightHandX =
-          PLAYER_CONFIG.hands.rightOffset.x - PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
+          PLAYER_CONFIG.hands.rightOffset.x -
+          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
       } else if (steerRight) {
         // Move both hands right when steering right
         targetLeftHandX =
-          PLAYER_CONFIG.hands.leftOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
+          PLAYER_CONFIG.hands.leftOffset.x +
+          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
         targetRightHandX =
-          PLAYER_CONFIG.hands.rightOffset.x + PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
+          PLAYER_CONFIG.hands.rightOffset.x +
+          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
       }
     }
 
