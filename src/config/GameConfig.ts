@@ -14,6 +14,18 @@ export const GAME_CONFIG = {
   crashSpeedThresholdKmh: 50,
 } as const;
 
+export const DIFFICULTY_SETTINGS = {
+  CHILL: {
+    obstacleDensity: 0.5,
+  },
+  SPORT: {
+    obstacleDensity: 1.0,
+  },
+  EXTREME: {
+    obstacleDensity: 2.0,
+  },
+} as const;
+
 export const PLAYER_CONFIG = {
   radius: 1.6,
   startPosition: new THREE.Vector3(0, 15, -5),

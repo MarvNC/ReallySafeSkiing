@@ -62,12 +62,27 @@ export class TerrainChunk {
   private terrainCollider?: RAPIER.Collider;
   private obstacleBodies: RAPIER.RigidBody[] = [];
   private obstacleColliders: RAPIER.Collider[] = [];
+  private readonly obstacleDensityMultiplier: number;
+  private readonly obstacleCapacity: number;
+  private readonly maxTreesPerBucket: number;
+  private readonly maxDeadTrees: number;
+  private readonly maxRocks: number;
 
-  constructor(points: PathPoint[], generator: TerrainGenerator, physics?: PhysicsWorld) {
+  constructor(
+    points: PathPoint[],
+    generator: TerrainGenerator,
+    obstacleDensityMultiplier: number,
+    physics?: PhysicsWorld
+  ) {
     this.generator = generator;
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
     this.physics = physics;
+    this.obstacleDensityMultiplier = obstacleDensityMultiplier;
+    this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * obstacleDensityMultiplier);
+    this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity / 3);
+    this.maxDeadTrees = Math.ceil(this.obstacleCapacity * 0.1);
+    this.maxRocks = this.obstacleCapacity;
 
     // Initialize Group
     this.group = new THREE.Group();
@@ -106,22 +121,21 @@ export class TerrainChunk {
     this.rockMaterial = materials.rock;
 
     // Initialize InstancedMeshes for tree buckets
-    const maxTreesPerBucket = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT / 3);
     this.treeBuckets = {
       small: new THREE.InstancedMesh(
         this.treeGeometries.small,
         this.treeMaterial,
-        maxTreesPerBucket
+        this.maxTreesPerBucket
       ),
       medium: new THREE.InstancedMesh(
         this.treeGeometries.medium,
         this.treeMaterial,
-        maxTreesPerBucket
+        this.maxTreesPerBucket
       ),
       large: new THREE.InstancedMesh(
         this.treeGeometries.large,
         this.treeMaterial,
-        maxTreesPerBucket
+        this.maxTreesPerBucket
       ),
     };
 
@@ -136,7 +150,7 @@ export class TerrainChunk {
     this.deadTreeMesh = new THREE.InstancedMesh(
       this.deadTreeGeometry,
       this.deadTreeMaterial,
-      Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * 0.1) // ~10% of obstacles can be dead trees
+      this.maxDeadTrees // ~10% of obstacles can be dead trees
     );
     this.deadTreeMesh.castShadow = true;
     this.deadTreeMesh.receiveShadow = true;
@@ -146,7 +160,7 @@ export class TerrainChunk {
     this.rockMesh = new THREE.InstancedMesh(
       this.rockGeometry,
       this.rockMaterial,
-      TERRAIN_CONFIG.OBSTACLE_COUNT
+      this.maxRocks
     );
     this.rockMesh.castShadow = true;
     this.rockMesh.receiveShadow = true;
@@ -348,6 +362,7 @@ export class TerrainChunk {
       large: this.treeBuckets.large.count,
     };
     const maxDeadTrees = this.deadTreeMesh.count;
+    const maxRocks = this.rockMesh.count;
 
     // Reset instance matrix usage
     Object.values(this.treeBuckets).forEach((mesh) => {
@@ -544,7 +559,7 @@ export class TerrainChunk {
         }
 
         // Place rock
-        if (placeRock && rockInstanceIndex < TERRAIN_CONFIG.OBSTACLE_COUNT) {
+        if (placeRock && rockInstanceIndex < maxRocks) {
           const rockScale = 0.8 + Math.random() * 0.6;
           const euler = new THREE.Euler(
             Math.random() * Math.PI * 0.3,

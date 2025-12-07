@@ -2,6 +2,8 @@ import clsx from 'clsx';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { UIState, useGameStore } from '../store';
+import { DifficultySelector } from './DifficultySelector';
+import { SlopeControl } from './SlopeControl';
 
 export const Menus = () => {
   const { uiState, menuIndex, distance, topSpeed, setMenuIndex } = useGameStore();
@@ -64,6 +66,27 @@ export const Menus = () => {
           <h1 className="mb-5 px-4 text-center text-6xl italic drop-shadow-lg md:text-7xl">
             REALLY SAFE SKIING
           </h1>
+
+          <div
+            className="pointer-events-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl bg-black/30 p-4 text-sm backdrop-blur"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-4 md:flex-row">
+              <div className="flex-1 rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 text-xs uppercase tracking-widest text-white/70">
+                  Slope Angle
+                </div>
+                <SlopeControl />
+              </div>
+              <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 md:max-w-xs">
+                <div className="text-xs uppercase tracking-widest text-white/70">
+                  Difficulty
+                </div>
+                <DifficultySelector />
+              </div>
+            </div>
+          </div>
 
           <button
             onClick={handleStart}
@@ -135,6 +158,29 @@ export const Menus = () => {
             </div>
             <div className="text-accent-orange animate-pulse text-2xl italic md:text-3xl">
               TOP SPEED: {topSpeed} km/h
+            </div>
+            <div
+              className="pointer-events-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-black/30 p-4 text-sm backdrop-blur"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 text-center text-xs uppercase tracking-widest text-white/70">
+                Tweak and try again
+              </div>
+              <div className="flex flex-col gap-4 md:flex-row">
+                <div className="flex-1 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="mb-2 text-xs uppercase tracking-widest text-white/70">
+                    Slope Angle
+                  </div>
+                  <SlopeControl />
+                </div>
+                <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 md:max-w-xs">
+                  <div className="text-xs uppercase tracking-widest text-white/70">
+                    Difficulty
+                  </div>
+                  <DifficultySelector />
+                </div>
+              </div>
             </div>
           </div>
           <button

@@ -105,6 +105,7 @@ export class TerrainGenerator {
   generatePathSegment(
     startZ: number,
     length: number,
+    startAltitude: number,
     previousPoints: PathPoint[] = []
   ): PathPoint[] {
     const {
@@ -119,7 +120,7 @@ export class TerrainGenerator {
       SMOOTHING_WINDOW,
       BANKING_STRENGTH,
     } = TERRAIN_CONFIG;
-    const { TOTAL_LENGTH, START_ALTITUDE, END_ALTITUDE } = MOUNTAIN_CONFIG;
+    const { TOTAL_LENGTH, END_ALTITUDE } = MOUNTAIN_CONFIG;
 
     const numPoints = Math.ceil(length / SEGMENT_LENGTH) + 1;
     const rawPoints: Array<{ x: number; y: number; z: number }> = [];
@@ -134,7 +135,7 @@ export class TerrainGenerator {
       const meander2 = Math.sin(progress * Math.PI * 2 * MEANDER2_FREQ + 1) * AMPLITUDE * 0.2;
       const x = startX + lateralNoise + meander1 + meander2;
       const globalProgress = this.clamp01(-currentZ / TOTAL_LENGTH);
-      const y = START_ALTITUDE + (END_ALTITUDE - START_ALTITUDE) * globalProgress;
+      const y = startAltitude + (END_ALTITUDE - startAltitude) * globalProgress;
 
       rawPoints.push({ x, y, z: currentZ });
     }

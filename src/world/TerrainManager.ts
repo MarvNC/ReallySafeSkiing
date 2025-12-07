@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
-import { MOUNTAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import { DIFFICULTY_SETTINGS, MOUNTAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import type { Difficulty } from '../ui/store';
 import { TerrainChunk } from './TerrainChunk';
 import { TerrainGenerator } from './TerrainGenerator';
 import type { PathPoint } from './WorldState';
@@ -12,29 +13,20 @@ export class TerrainManager {
   private wireframe = false;
   private readonly allPoints: PathPoint[] = [];
   private finishLine?: THREE.Mesh;
+  private readonly scene: THREE.Scene;
+  private readonly physics?: PhysicsWorld;
+  private startAltitude = MOUNTAIN_CONFIG.START_ALTITUDE;
 
-  constructor(scene: THREE.Scene, physics?: PhysicsWorld) {
+  constructor(
+    scene: THREE.Scene,
+    physics?: PhysicsWorld,
+    slopeAngle: number = 20,
+    difficulty: Difficulty = 'SPORT'
+  ) {
+    this.scene = scene;
+    this.physics = physics;
     this.generator = new TerrainGenerator();
-
-    // Generate the entire mountain path once
-    this.allPoints = this.generator.generatePathSegment(0, MOUNTAIN_CONFIG.TOTAL_LENGTH);
-
-    // Create chunks by slicing the allPoints array
-    const { CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
-    for (let i = 0; i < this.allPoints.length; i += CHUNK_SEGMENTS) {
-      const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
-      if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
-
-      const chunk = new TerrainChunk(chunkPoints, this.generator, physics);
-      this.chunks.push(chunk);
-      scene.add(chunk.group);
-    }
-
-    // Create finish line at the last point
-    if (this.allPoints.length > 0) {
-      const lastPoint = this.allPoints[this.allPoints.length - 1];
-      this.createFinishLine(scene, lastPoint);
-    }
+    this.regenerate(slopeAngle, difficulty);
   }
 
   private createFinishLine(scene: THREE.Scene, point: PathPoint): void {
@@ -46,6 +38,65 @@ export class TerrainManager {
     this.finishLine.castShadow = true;
     this.finishLine.receiveShadow = true;
     scene.add(this.finishLine);
+  }
+
+  regenerate(slopeAngle: number, difficulty: Difficulty): void {
+    this.disposeChunks();
+    const startAltitude = this.getStartAltitudeFromSlope(slopeAngle);
+    this.startAltitude = startAltitude;
+
+    const points = this.generator.generatePathSegment(
+      0,
+      MOUNTAIN_CONFIG.TOTAL_LENGTH,
+      startAltitude
+    );
+    this.allPoints.splice(0, this.allPoints.length, ...points);
+
+    const obstacleMultiplier = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
+
+    const { CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
+    for (let i = 0; i < this.allPoints.length; i += CHUNK_SEGMENTS) {
+      const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
+      if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
+
+      const chunk = new TerrainChunk(chunkPoints, this.generator, obstacleMultiplier, this.physics);
+      this.chunks.push(chunk);
+      this.scene.add(chunk.group);
+    }
+
+    if (this.wireframe) {
+      this.chunks.forEach((chunk) => chunk.setWireframe(true));
+    }
+
+    if (this.allPoints.length > 0) {
+      const lastPoint = this.allPoints[this.allPoints.length - 1];
+      this.createFinishLine(this.scene, lastPoint);
+    }
+  }
+
+  private getStartAltitudeFromSlope(slopeAngle: number): number {
+    const clamped = Math.max(0, Math.min(70, slopeAngle));
+    const height = MOUNTAIN_CONFIG.TOTAL_LENGTH * Math.tan(THREE.MathUtils.degToRad(clamped));
+    return height;
+  }
+
+  private disposeChunks(): void {
+    this.chunks.forEach((chunk) => {
+      this.scene.remove(chunk.group);
+      chunk.dispose();
+    });
+    this.chunks.length = 0;
+
+    if (this.finishLine) {
+      this.scene.remove(this.finishLine);
+      this.finishLine.geometry.dispose();
+      if (Array.isArray(this.finishLine.material)) {
+        this.finishLine.material.forEach((mat) => mat.dispose());
+      } else {
+        this.finishLine.material.dispose();
+      }
+      this.finishLine = undefined;
+    }
   }
 
   update(playerPosition?: THREE.Vector3): void {
@@ -69,7 +120,7 @@ export class TerrainManager {
       return new THREE.Vector3(firstPoint.x, firstPoint.y, firstPoint.z);
     }
     // Fallback
-    return new THREE.Vector3(0, MOUNTAIN_CONFIG.START_ALTITUDE, 0);
+    return new THREE.Vector3(0, this.startAltitude, 0);
   }
 
   /**
@@ -78,7 +129,7 @@ export class TerrainManager {
    */
   getPointAtOffset(offset: number = 0): THREE.Vector3 {
     if (this.allPoints.length === 0) {
-      return new THREE.Vector3(0, MOUNTAIN_CONFIG.START_ALTITUDE, 0);
+      return new THREE.Vector3(0, this.startAltitude, 0);
     }
     const index = Math.min(Math.max(0, offset), this.allPoints.length - 1);
     const point = this.allPoints[index];
@@ -91,7 +142,7 @@ export class TerrainManager {
    */
   getTerrainHeight(worldX: number, worldZ: number): number {
     if (this.allPoints.length === 0) {
-      return MOUNTAIN_CONFIG.START_ALTITUDE;
+      return this.startAltitude;
     }
 
     // Find the closest path point by Z coordinate

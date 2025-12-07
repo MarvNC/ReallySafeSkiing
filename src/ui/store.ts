@@ -10,6 +10,8 @@ export enum UIState {
   CRASHED, // Add this new state
 }
 
+export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
+
 interface GameState {
   // Game Flow
   uiState: UIState;
@@ -23,11 +25,17 @@ interface GameState {
   // Menu Navigation
   menuIndex: number; // 0: Resume, 1: Restart, 2: About
 
+  // Gameplay customization
+  slopeAngle: number;
+  difficulty: Difficulty;
+
   // Actions (Callable from React or GameApp)
   setUIState: (state: UIState) => void;
   updateStats: (speed: number, distance: number, time: number) => void;
   setTopSpeed: (speed: number) => void;
   setMenuIndex: (index: number) => void;
+  setSlopeAngle: (angle: number) => void;
+  setDifficulty: (difficulty: Difficulty) => void;
 }
 
 // Create store with subscription capability (useful if GameApp needs to react to UI changes)
@@ -39,10 +47,14 @@ export const useGameStore = create<GameState>()(
     timeRemaining: 60,
     topSpeed: 0,
     menuIndex: 0,
+    slopeAngle: 20, // ~matches previous START_ALTITUDE / TOTAL_LENGTH slope
+    difficulty: 'SPORT',
 
     setUIState: (uiState) => set({ uiState }),
     updateStats: (speed, distance, timeRemaining) => set({ speed, distance, timeRemaining }),
     setTopSpeed: (topSpeed) => set({ topSpeed }),
     setMenuIndex: (menuIndex) => set({ menuIndex }),
+    setSlopeAngle: (angle) => set({ slopeAngle: Math.max(0, Math.min(70, angle)) }),
+    setDifficulty: (difficulty) => set({ difficulty }),
   }))
 );

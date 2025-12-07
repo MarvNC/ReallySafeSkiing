@@ -106,19 +106,14 @@ export class GameApp {
     this.physics = new PhysicsWorld();
     await this.physics.init();
 
+    const { slopeAngle, difficulty } = useGameStore.getState();
+
     // 1. Create Terrain Manager (generates the world)
-    this.terrainManager = new TerrainManager(this.scene, this.physics);
+    this.terrainManager = new TerrainManager(this.scene, this.physics, slopeAngle, difficulty);
 
     // 2. Get Start Position from generated path
     // Spawn player a bit farther forward along the path (50 points ahead)
-    const startPoint = this.terrainManager.getPointAtOffset(50);
-    // Calculate actual terrain height at start position (accounts for moguls, banking, etc.)
-    const terrainHeight = this.terrainManager.getTerrainHeight(startPoint.x, startPoint.z);
-    // Spawn player slightly above terrain (player radius + small buffer)
-    const playerHeight = terrainHeight + PLAYER_CONFIG.radius + 0.5;
-
-    // Save start pos for resets
-    this.startPosition.set(startPoint.x, playerHeight, startPoint.z);
+    this.recalculateStartPosition();
 
     // 3. Create Player at Start Position
     this.playerPhysics = new PlayerPhysics(this.physics, this.startPosition);
@@ -341,6 +336,10 @@ export class GameApp {
     this.gameState = GameState.PLAYING;
     this.timeRemaining = GAME_CONFIG.timerDuration;
     this.topSpeed = 0; // Reset top speed
+
+    const { slopeAngle, difficulty } = useGameStore.getState();
+    this.terrainManager.regenerate(slopeAngle, difficulty);
+    this.recalculateStartPosition();
 
     // Reset player position
     this.playerPhysics.resetPosition(this.startPosition);
@@ -747,5 +746,17 @@ export class GameApp {
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
     return width / Math.max(1, height);
+  }
+
+  private recalculateStartPosition(): void {
+    // Spawn player a bit farther forward along the path (50 points ahead)
+    const startPoint = this.terrainManager.getPointAtOffset(50);
+    // Calculate actual terrain height at start position (accounts for moguls, banking, etc.)
+    const terrainHeight = this.terrainManager.getTerrainHeight(startPoint.x, startPoint.z);
+    // Spawn player slightly above terrain (player radius + small buffer)
+    const playerHeight = terrainHeight + PLAYER_CONFIG.radius + 0.5;
+
+    // Save start pos for resets
+    this.startPosition.set(startPoint.x, playerHeight, startPoint.z);
   }
 }
