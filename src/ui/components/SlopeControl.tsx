@@ -80,7 +80,7 @@ export const SlopeControl = () => {
           type="button"
           onClick={handleDecrement}
           aria-label="Decrease slope angle"
-          className="h-12 w-12 flex items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/20 active:scale-95"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/20 active:scale-95"
         >
           <Minus className="h-5 w-5" />
         </button>
@@ -111,10 +111,10 @@ export const SlopeControl = () => {
                   <stop offset="100%" stopColor="#0c1020" stopOpacity="0.4" />
                 </linearGradient>
                 <filter id="glow">
-                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                   <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
                   </feMerge>
                 </filter>
               </defs>
@@ -138,7 +138,15 @@ export const SlopeControl = () => {
                 strokeLinecap="round"
                 filter="url(#glow)"
               />
-              <circle cx={endX} cy={endY} r={10} fill={slopeColor} stroke="#fff" strokeWidth={2} filter="url(#glow)" />
+              <circle
+                cx={endX}
+                cy={endY}
+                r={10}
+                fill={slopeColor}
+                stroke="#fff"
+                strokeWidth={2}
+                filter="url(#glow)"
+              />
             </svg>
           </div>
         </div>
@@ -146,7 +154,7 @@ export const SlopeControl = () => {
           type="button"
           onClick={handleIncrement}
           aria-label="Increase slope angle"
-          className="h-12 w-12 flex items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/20 active:scale-95"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/20 active:scale-95"
         >
           <Plus className="h-5 w-5" />
         </button>

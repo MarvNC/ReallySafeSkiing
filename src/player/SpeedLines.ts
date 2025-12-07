@@ -39,14 +39,14 @@ export class SpeedLines {
     // Radius 5 to 15 units away from center
     const angle = Math.random() * Math.PI * 2;
     const radius = 5 + Math.random() * 10;
-    
+
     return {
       x: Math.cos(angle) * radius,
       y: Math.sin(angle) * radius,
-      // Start far ahead (negative Z is forward in WebGL/Three typically, 
+      // Start far ahead (negative Z is forward in WebGL/Three typically,
       // but here we want them "coming at" the camera or camera moving past them.
       // We'll simulate them moving past the camera.)
-      z: -20 - Math.random() * 50, 
+      z: -20 - Math.random() * 50,
       speed: 1.0 + Math.random() * 0.5, // Variance in speed
       len: 1.0 + Math.random() * 2.0, // Variance in length scale
     };
@@ -60,7 +60,10 @@ export class SpeedLines {
     // Calculate opacity based on speed
     let targetOpacity = 0;
     if (currentSpeedKmh > START_SPEED) {
-      const ratio = Math.min(1.0, (currentSpeedKmh - START_SPEED) / (MAX_OPACITY_SPEED - START_SPEED));
+      const ratio = Math.min(
+        1.0,
+        (currentSpeedKmh - START_SPEED) / (MAX_OPACITY_SPEED - START_SPEED)
+      );
       targetOpacity = ratio * 0.6; // Max 60% opacity at 200km/h
     }
 
@@ -79,7 +82,7 @@ export class SpeedLines {
     // We move the lines towards positive Z (past the camera)
     for (let i = 0; i < this.count; i++) {
       const line = this.lines[i];
-      
+
       // Move line 'back' towards the camera
       // The faster the player goes, the faster these should zip by
       const speedFactor = Math.max(1, currentSpeedKmh / 50);

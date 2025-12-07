@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { Timer, MapPin } from 'lucide-react';
 import { useGameStore } from '../store';
 
 // Configuration for visual max speed (the bar is full at this speed)
@@ -23,37 +24,40 @@ export const HUD = () => {
   const heavyShadow = 'drop-shadow-[2px_2px_0_rgba(0,0,0,0.75)]';
 
   return (
-    <div className="font-russo pointer-events-none absolute inset-0 text-white uppercase select-none">
+    <div className="font-russo pointer-events-none absolute inset-0 text-white uppercase select-none p-6 flex flex-col justify-between">
       
-      {/* --- STATS (Top Left) --- */}
-      <div className="absolute top-6 left-6 flex flex-col items-start gap-2 transition-all duration-300">
-        
-        {/* TIMER */}
-        <div 
-          className={clsx(
-            "text-5xl font-bold tabular-nums transition-colors duration-300", 
-            heavyShadow,
-            isUrgent ? "text-accent-red animate-pulse scale-110 origin-left" : "text-white"
-          )}
-        >
-          {timeStr}
+      {/* --- TOP LEFT: TIMER & DISTANCE --- */}
+      <div className="flex flex-col items-start gap-2">
+        {/* TIMER PILL */}
+        <div className={clsx(
+          "flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/40 px-5 py-2 backdrop-blur-md transition-all",
+          isUrgent && "border-accent-red/50 bg-red-900/40 animate-pulse"
+        )}>
+          <Timer className={clsx("w-6 h-6", isUrgent ? "text-accent-red" : "text-sky-300")} />
+          <div 
+            className={clsx(
+              "text-4xl font-bold tabular-nums tracking-wider", 
+              heavyShadow,
+              isUrgent ? "text-accent-red" : "text-white"
+            )}
+          >
+            {timeStr}
+          </div>
         </div>
 
         {/* DISTANCE */}
-        <div className="text-left">
-          <div className={clsx("text-4xl font-bold", heavyShadow)}>
-            {Math.floor(distance)} <span className="text-xl font-normal opacity-80">m</span>
-          </div>
-          <div className={clsx("text-xs tracking-widest opacity-90", heavyShadow)}>
-            Distance Traveled
+        <div className="flex items-center gap-2 opacity-90 pl-2">
+          <MapPin className="w-5 h-5 text-accent-orange" />
+          <div className={clsx("text-3xl font-bold tracking-wide", heavyShadow)}>
+            {Math.floor(distance)} <span className="text-lg text-white/70">m</span>
           </div>
         </div>
       </div>
 
-      {/* --- SPEEDOMETER (Bottom Left) --- */}
-      <div className="absolute bottom-8 left-8 flex flex-col gap-1">
+      {/* --- BOTTOM LEFT: SPEEDOMETER --- */}
+      <div className="flex flex-col items-start gap-1">
         
-        {/* Number Display */}
+        {/* SPEEDOMETER (Existing, slightly tweaked margins) */}
         <div className={clsx("text-6xl font-black italic flex items-baseline gap-2", heavyShadow)}>
           <span className={clsx(
             "transition-colors duration-300", 
@@ -67,12 +71,12 @@ export const HUD = () => {
         </div>
 
         {/* Visual Speed Bar */}
-        <div className="w-80 h-6 skew-x-[-12deg] bg-black/50 border-2 border-white/20 relative overflow-hidden rounded-sm backdrop-blur-sm">
-          {/* Background hash marks (optional style detail) */}
-          <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(90deg,transparent,transparent_19px,#fff_20px)]" />
-          
-          {/* Fill Bar */}
-          <div 
+        <div className="w-80 h-6 skew-x-[-12deg] bg-black/50 border-2 border-white/20 relative overflow-hidden rounded-sm backdrop-blur-sm mt-1">
+           {/* Background hash marks (optional style detail) */}
+           <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(90deg,transparent,transparent_19px,#fff_20px)]" />
+           
+           {/* Fill Bar */}
+           <div 
             className="h-full bg-gradient-to-r from-sky-400 via-white to-accent-orange transition-all duration-100 ease-out"
             style={{ width: `${speedPercent}%` }}
           />

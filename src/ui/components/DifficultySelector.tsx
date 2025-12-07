@@ -46,7 +46,7 @@ export const DifficultySelector = () => {
               type="button"
               className={clsx(
                 'flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 text-center text-sm font-semibold drop-shadow-md transition-all duration-200',
-                'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:scale-105',
+                'border-white/10 bg-white/5 text-white/60 hover:scale-105 hover:bg-white/10',
                 isActive && option.selectedClasses
               )}
               onClick={(e) => {

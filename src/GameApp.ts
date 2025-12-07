@@ -343,10 +343,10 @@ export class GameApp {
     this.topSpeed = 0; // Reset top speed
 
     const { slopeAngle, difficulty } = useGameStore.getState();
-    
+
     // Set camera tilt based on slope angle
     this.player.setSlopeAngle(slopeAngle);
-    
+
     this.terrainManager.regenerate(slopeAngle, difficulty);
     this.recalculateStartPosition();
 

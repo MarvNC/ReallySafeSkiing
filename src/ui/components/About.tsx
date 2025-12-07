@@ -73,15 +73,15 @@ export const About = () => {
             ))}
           </div>
 
-          <div className="font-russo border-t border-white/20 pt-5 text-lg text-white flex items-center justify-center gap-2">
+          <div className="font-russo flex items-center justify-center gap-2 border-t border-white/20 pt-5 text-lg text-white">
             CREATED BY{' '}
             <a
               href="https://github.com/MarvNC"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent-orange hover:bg-accent-orange relative px-1.5 py-0.5 transition-all hover:text-black hover:shadow-[0_0_15px_#ff6b35] flex items-center gap-2"
+              className="text-accent-orange hover:bg-accent-orange relative flex items-center gap-2 px-1.5 py-0.5 transition-all hover:text-black hover:shadow-[0_0_15px_#ff6b35]"
             >
-              <Github className="w-5 h-5" />
+              <Github className="h-5 w-5" />
               MarvNC
             </a>
           </div>

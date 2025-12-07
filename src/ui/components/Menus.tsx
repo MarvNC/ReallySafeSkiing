@@ -18,21 +18,29 @@ const SetupPanel: FC = () => (
         <SlopeControl />
       </div>
     </div>
-    <div className="mt-2 border-t border-white/10 pt-4 flex items-center justify-center gap-4 opacity-80">
+    <div className="mt-2 flex items-center justify-center gap-4 border-t border-white/10 pt-4 opacity-80">
       {/* Desktop controls */}
-      <div className="hidden md:flex items-center gap-2">
-        <span className="bg-white/20 rounded-md px-2 py-1 font-mono text-sm border-b-2 border-white/10">A</span>
+      <div className="hidden items-center gap-2 md:flex">
+        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono text-sm">
+          A
+        </span>
         <span className="text-xs tracking-widest">/</span>
-        <span className="bg-white/20 rounded-md px-2 py-1 font-mono text-sm border-b-2 border-white/10">D</span>
+        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono text-sm">
+          D
+        </span>
         <span className="text-xs tracking-widest">STEER</span>
-        <span className="text-xs tracking-widest mx-1">|</span>
-        <span className="bg-white/20 rounded-md px-2 py-1 font-mono text-sm border-b-2 border-white/10">A</span>
+        <span className="mx-1 text-xs tracking-widest">|</span>
+        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono text-sm">
+          A
+        </span>
         <span className="text-xs tracking-widest">+</span>
-        <span className="bg-white/20 rounded-md px-2 py-1 font-mono text-sm border-b-2 border-white/10">D</span>
+        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono text-sm">
+          D
+        </span>
         <span className="text-xs tracking-widest">TO WEDGE</span>
       </div>
       {/* Mobile controls */}
-      <div className="md:hidden flex flex-col items-center gap-1 text-xs tracking-widest text-center">
+      <div className="flex flex-col items-center gap-1 text-center text-xs tracking-widest md:hidden">
         <div>TAP LEFT AND RIGHT SIDES TO STEER</div>
         <div>TAP BOTH SIDES TO WEDGE</div>
       </div>
@@ -52,7 +60,7 @@ const StartButton: FC<{ label: string; onClick: () => void }> = ({ label, onClic
 const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    className="border-2 border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white hover:border-white/50 transition-all rounded-xl py-4 uppercase font-russo tracking-widest text-lg w-full max-w-3xl mt-4 pointer-events-auto cursor-pointer"
+    className="font-russo pointer-events-auto mt-4 w-full max-w-3xl cursor-pointer rounded-xl border-2 border-white/20 bg-transparent py-4 text-lg tracking-widest text-white/80 uppercase transition-all hover:border-white/50 hover:bg-white/10 hover:text-white"
   >
     {label}
   </button>
@@ -65,7 +73,7 @@ const MenuFooter: FC = () => {
       href="https://github.com/MarvNC"
       target="_blank"
       rel="noopener noreferrer"
-      className="pointer-events-auto absolute bottom-2 right-2 z-50 text-white/50 hover:text-white transition-colors text-sm font-russo tracking-wider hover:underline cursor-pointer"
+      className="font-russo pointer-events-auto absolute right-2 bottom-2 z-50 cursor-pointer text-sm tracking-wider text-white/50 transition-colors hover:text-white hover:underline"
     >
       By MarvNC
     </a>
@@ -171,7 +179,10 @@ export const Menus = () => {
 
           <StartButton label="START RUN" onClick={handleStart} />
 
-          <GhostButton label="ABOUT" onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)} />
+          <GhostButton
+            label="ABOUT"
+            onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
+          />
 
           <div className="mt-2 text-sm opacity-60 md:hidden">TOUCH CONTROLS ENABLED</div>
 
@@ -273,12 +284,13 @@ export const Menus = () => {
           </div>
           <div className="flex flex-col gap-4 text-left text-white/90">
             <p className="text-lg leading-relaxed">
-              <strong className="text-accent-orange">Really Safe Skiing</strong> is a fast-paced skiing game where you
-              navigate down a procedurally generated slope while avoiding obstacles.
+              <strong className="text-accent-orange">Really Safe Skiing</strong> is a fast-paced
+              skiing game where you navigate down a procedurally generated slope while avoiding
+              obstacles.
             </p>
             <div className="mt-4 space-y-2">
               <h3 className="text-xl font-bold text-white">Features:</h3>
-              <ul className="list-disc list-inside space-y-1 text-white/80">
+              <ul className="list-inside list-disc space-y-1 text-white/80">
                 <li>Three difficulty levels: Chill, Sport, and Extreme</li>
                 <li>Adjustable slope angle from 0° to 70°</li>
                 <li>Real-time physics simulation</li>
@@ -288,8 +300,8 @@ export const Menus = () => {
             </div>
             <div className="mt-4 border-t border-white/10 pt-4">
               <p className="text-sm text-white/60">
-                Press <kbd className="rounded bg-white/20 px-2 py-1 font-mono">ESC</kbd> or click outside to return to
-                the menu.
+                Press <kbd className="rounded bg-white/20 px-2 py-1 font-mono">ESC</kbd> or click
+                outside to return to the menu.
               </p>
             </div>
           </div>

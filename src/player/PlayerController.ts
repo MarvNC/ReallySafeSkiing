@@ -76,7 +76,7 @@ export class PlayerController {
 
     this.mesh = mesh;
     this.camera = camera;
-    
+
     // Speed Lines
     this.speedLines = new SpeedLines();
     this.camera.add(this.speedLines.mesh);
@@ -187,7 +187,7 @@ export class PlayerController {
 
     const time = performance.now() / 1000;
     const speed = this.physics.getSpeed(); // Requires getting speed from physics
-    
+
     // Convert to km/h for the effect
     const speedKmh = speed * 3.6;
     this.speedLines.update(speedKmh);
