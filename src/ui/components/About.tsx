@@ -33,7 +33,7 @@ export const About = () => {
       tabIndex={0}
       aria-label="Click outside to close"
     >
-      <h1 className="mb-5 text-7xl italic drop-shadow-lg">SYSTEM INFO</h1>
+      {/* <h1 className="mb-5 text-7xl italic drop-shadow-lg">SYSTEM INFO</h1> */}
 
       <div
         className="border-sky mb-10 max-w-2xl -skew-x-3 transform rounded-md border-2 bg-black/50 p-10 text-center shadow-[0_0_20px_rgba(135,206,235,0.2)]"

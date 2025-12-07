@@ -482,6 +482,9 @@ export class GameApp {
     // Notify Physics & Player
     this.playerPhysics.setCrashed(true);
     this.player.isCrashed = true;
+
+    // Capture camera state BEFORE the player starts tumbling
+    this.player.captureCrashCameraState();
   }
 
   private recoverFromCrash(): void {
@@ -490,8 +493,26 @@ export class GameApp {
     useGameStore.getState().setUIState(UIState.PLAYING);
     this.timeScale = 1.0;
 
-    // Reset Player Velocity & Camera (keep current position)
-    this.playerPhysics.resetVelocity();
+    // 1. Find Safe Ground
+    // Get current X/Z
+    const currentPos = this.playerPhysics.getPosition();
+
+    // "Cast a vertical line" - query the terrain generator for height at this X/Z
+    const safeY = this.terrainManager.getTerrainHeight(currentPos.x, currentPos.z);
+
+    // 2. Teleport Player
+    // Place slightly above terrain (radius + padding)
+    const resetPos = new THREE.Vector3(
+      currentPos.x,
+      safeY + PLAYER_CONFIG.radius + 0.5,
+      currentPos.z
+    );
+
+    this.playerPhysics.resetPosition(resetPos);
+    this.player.mesh.position.copy(resetPos);
+    this.player.mesh.quaternion.set(0, 0, 0, 1); // Reset rotation upright
+
+    // 3. Reset Camera
     this.player.resetCamera();
   }
 

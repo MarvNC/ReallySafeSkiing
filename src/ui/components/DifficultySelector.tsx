@@ -14,19 +14,19 @@ const OPTIONS: Array<{
     value: 'CHILL',
     icon: Snowflake,
     selectedClasses:
-      'border-cyan-400 text-cyan-400 bg-cyan-400/10 shadow-[0_0_20px_rgba(34,211,238,0.45)]',
+      'border-cyan-400 text-white bg-cyan-500 shadow-[0_0_20px_rgba(34,211,238,0.45)]',
   },
   {
     value: 'SPORT',
     icon: Wind,
     selectedClasses:
-      'border-orange-500 text-orange-500 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.45)]',
+      'border-orange-500 text-white bg-accent-orange shadow-[0_0_20px_rgba(249,115,22,0.45)]',
   },
   {
     value: 'EXTREME',
     icon: Skull,
     selectedClasses:
-      'border-rose-600 text-rose-500 bg-rose-500/10 shadow-[0_0_20px_rgba(225,29,72,0.45)]',
+      'border-rose-600 text-white bg-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.45)]',
   },
 ];
 
@@ -46,7 +46,7 @@ export const DifficultySelector = () => {
               type="button"
               className={clsx(
                 'flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 text-center text-sm font-semibold drop-shadow-md transition-all duration-200',
-                'border-white/10 bg-white/5 text-white/60 hover:bg-white/10',
+                'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:scale-105',
                 isActive && option.selectedClasses
               )}
               onClick={(e) => {

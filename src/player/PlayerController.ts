@@ -49,6 +49,10 @@ export class PlayerController {
   // Animation State
   public isCrashed = false;
 
+  // Crash Camera State
+  private crashStartPos = new THREE.Vector3();
+  private crashStartQuat = new THREE.Quaternion();
+
   constructor(scene: THREE.Scene, input: InputManager, options: PlayerOptions) {
     const startPosition = options.startPosition ?? PLAYER_CONFIG.startPosition.clone();
 
@@ -133,6 +137,12 @@ export class PlayerController {
     this.isCrashed = true;
     // Notify physics
     this.physics.setCrashed(true);
+  }
+
+  captureCrashCameraState(): void {
+    // Capture the exact world position/rotation of the camera at the moment of impact
+    this.camera.getWorldPosition(this.crashStartPos);
+    this.camera.getWorldQuaternion(this.crashStartQuat);
   }
 
   syncFromPhysics(): void {
@@ -431,16 +441,50 @@ export class PlayerController {
   }
 
   // Camera control methods for crash sequence (managed from GameApp)
-  public setCrashCameraValues(zoomFactor: number): void {
-    // zoomFactor goes from 0.0 (start of crash) to 1.0 (end)
+  public setCrashCameraValues(progress: number): void {
+    // Calculate Desired World Position
+    // 1. Get current player world position (where they are tumbling)
+    const playerWorldPos = new THREE.Vector3();
+    this.mesh.getWorldPosition(playerWorldPos);
 
-    // Move camera back and up
-    const targetY = PLAYER_CONFIG.camera.eyeHeight + 5.0 * zoomFactor;
-    const targetZ = 5.0 * zoomFactor; // Move backward relative to player
+    // 2. Define the "End" camera position (Third person: back and up)
+    // We want to be looking down at the player from behind/above
+    const offset = new THREE.Vector3(0, 6, 12); // Up 6, Back 12
+    const targetWorldPos = playerWorldPos.clone().add(offset);
 
-    // Look down at player
-    this.camera.position.set(0, targetY, targetZ);
-    this.camera.lookAt(0, -2, -5); // Look at where the skis roughly are
+    // 3. Interpolate from Crash Start -> Target
+    // Using smoothstep for nicer ease-out
+    const t = progress;
+    const currentWorldPos = new THREE.Vector3().lerpVectors(this.crashStartPos, targetWorldPos, t);
+
+    // 4. Calculate Desired World Rotation (Look at player)
+    const dummyCam = new THREE.Object3D();
+    dummyCam.position.copy(currentWorldPos);
+    dummyCam.lookAt(playerWorldPos);
+    const targetWorldQuat = dummyCam.quaternion;
+
+    // Interpolate rotation
+    const currentWorldQuat = this.crashStartQuat.clone().slerp(targetWorldQuat, t);
+
+    // 5. Convert World Space -> Local Space
+    // Since this.camera is a child of this.mesh (which is spinning wildly),
+    // we must apply the inverse of the parent's world matrix.
+
+    // Update parent world matrix first to be sure
+    this.mesh.updateMatrixWorld();
+
+    const parentInverse = this.mesh.matrixWorld.clone().invert();
+
+    // Apply position: P_local = P_world * M_inv
+    const localPos = currentWorldPos.clone().applyMatrix4(parentInverse);
+
+    // Apply rotation: Q_local = Q_parent_inv * Q_world
+    const parentQuatInv = this.mesh.quaternion.clone().invert();
+    const localQuat = parentQuatInv.multiply(currentWorldQuat);
+
+    // Apply to camera
+    this.camera.position.copy(localPos);
+    this.camera.quaternion.copy(localQuat);
   }
 
   public resetCamera(): void {
