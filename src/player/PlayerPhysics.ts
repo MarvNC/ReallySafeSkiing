@@ -38,6 +38,8 @@ export class PlayerPhysics {
   private isCrashed = false;
   // Source of truth for pushing state
   private _isPushing = false;
+  // NEW: Track the smoothed steering value (-1.0 to 1.0)
+  private currentSteering = 0;
   private debugState: PlayerPhysicsDebugState = {
     yaw: 0,
     isAwake: false,
@@ -118,6 +120,11 @@ export class PlayerPhysics {
     return this._isPushing;
   }
 
+  // NEW: Getter for the Controller to sync visuals
+  getSteeringValue(): number {
+    return this.currentSteering;
+  }
+
   getColliderHandle(): number {
     return this.collider.handle;
   }
@@ -134,22 +141,47 @@ export class PlayerPhysics {
 
     this.body.wakeUp();
 
-    // 1. Inputs
+    // 1. Raw Inputs (Binary)
     const steerLeft = input.isActive(Action.SteerLeft);
     const steerRight = input.isActive(Action.SteerRight);
     const isBraking = input.isBraking();
 
-    // 2. Rotate Player (Steering)
-    let steer = 0;
-    if (steerLeft) steer += 1;
-    if (steerRight) steer -= 1;
+    // 2. Calculate Target Input (-1 to 1)
+    let targetSteer = 0;
+    if (steerLeft) targetSteer += 1;
+    if (steerRight) targetSteer -= 1;
 
-    // Slightly reduce turning control while braking to simulate loss of edge control
+    // 3. SMOOTHING LOGIC (The new "Analog" feel)
+    // If we are providing input, move towards that input at 'accel' speed
+    // If no input, move towards 0 at 'decay' speed
+    const isProvidingInput = targetSteer !== 0;
+    const smoothingSpeed = isProvidingInput
+      ? PLAYER_CONFIG.physics.steerSmoothingAccel
+      : PLAYER_CONFIG.physics.steerSmoothingDecay;
+
+    // Move currentSteering towards targetSteer linearly
+    const delta = smoothingSpeed * deltaSeconds;
+    const diff = targetSteer - this.currentSteering;
+    if (Math.abs(diff) <= delta) {
+      this.currentSteering = targetSteer;
+    } else {
+      this.currentSteering += Math.sign(diff) * delta;
+    }
+
+    // 4. Apply Rotation
+    // Reduce turning control while braking
     const turnSpeed = isBraking
-      ? PLAYER_CONFIG.physics.steerTurnSpeed * 0.7
+      ? PLAYER_CONFIG.physics.steerTurnSpeed * 0.5
       : PLAYER_CONFIG.physics.steerTurnSpeed;
 
-    this.yaw += steer * turnSpeed * deltaSeconds;
+    // Calculate desired turn rate and cap it
+    const desiredTurnRate = this.currentSteering * turnSpeed;
+    const clampedTurnRate = Math.sign(desiredTurnRate) * Math.min(
+      Math.abs(desiredTurnRate),
+      PLAYER_CONFIG.physics.maxSteeringSpeed
+    );
+
+    this.yaw += clampedTurnRate * deltaSeconds;
 
     this.tmpQuat.setFromAxisAngle(this.upDir, this.yaw);
     this.body.setRotation(
@@ -219,7 +251,7 @@ export class PlayerPhysics {
       isAwake: !this.body.isSleeping(),
       isPushing: this._isPushing,
       isBraking,
-      steerInput: steer,
+      steerInput: this.currentSteering, // Visualization will now show the smooth bar
       linearVelocity: this.currentVel,
       forwardSpeed,
       lateralSpeed,
@@ -261,6 +293,7 @@ export class PlayerPhysics {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.yaw = 0;
+    this.currentSteering = 0;
     this.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
   }
 

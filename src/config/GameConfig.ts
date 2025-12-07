@@ -34,7 +34,10 @@ export const PLAYER_CONFIG = {
     maxPoleSpeedKmh: 20.0, // You can't pole effectively above this speed (in km/h)
 
     // Steering
-    steerTurnSpeed: 1, // Rotation speed
+    steerTurnSpeed: 1.6, // Base turn speed multiplier
+    steerSmoothingAccel: 2, // How fast we reach max turn speed
+    steerSmoothingDecay: 5.0, // How fast we center the skis when releasing keys
+    maxSteeringSpeed: 2.0, // Maximum turn rate in radians per second (caps the final turn speed)
 
     // Physics limits
     brakeDamping: 7.0, // Drag applied when "snowplowing"

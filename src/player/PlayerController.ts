@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { PLAYER_CONFIG } from '../config/GameConfig';
-import { Action, InputManager } from '../core/InputManager';
+import { InputManager } from '../core/InputManager';
 import { PlayerPhysics } from './PlayerPhysics';
 import { createHandWithPole, createSkiPair } from './SkierAssets';
 
@@ -134,8 +134,6 @@ export class PlayerController {
   }
 
   private updateVisuals(deltaTime: number): void {
-    const steerLeft = this.input.isActive(Action.SteerLeft);
-    const steerRight = this.input.isActive(Action.SteerRight);
     const isBraking = this.input.isBraking();
     // Read directly from the Source of Truth in Physics
     const isPoling = this.physics.isPushing;
@@ -145,6 +143,10 @@ export class PlayerController {
     // Convert km/h to m/s (divide by 3.6)
     const maxSpeedMs = PLAYER_CONFIG.skis.maxSpeedKmh / 3.6;
     const speedRatio = Math.min(1.0, speed / maxSpeedMs); // 0 to 1 based on speed
+
+    // NEW: Get the smoothed steering value from physics
+    const smoothSteering = this.physics.getSteeringValue();
+    // smoothSteering is positive for LEFT, negative for RIGHT
 
     // --- SKI ANIMATION (New Logic) ---
     const leftSki = this.skis.children[0];
@@ -178,29 +180,25 @@ export class PlayerController {
     } else {
       // --- GLIDING / TURNING STATE ---
 
-      // Determine Turn Input (-1 Right, 0 Center, 1 Left)
-      let turnInput = 0;
-      if (steerLeft) turnInput = 1;
-      if (steerRight) turnInput = -1;
+      // REPLACED: Use smoothSteering instead of raw turnInput
+      // smoothSteering is +1 (Left) to -1 (Right)
 
       // Rotation Z: Banking (Carving)
-      // If turning Left (+1), we roll Left (+Z rotation)
-      const bankAngle = turnInput * PLAYER_CONFIG.skis.maxTurnRoll;
+      // Roll the skis based on how hard we are currently steering
+      const bankAngle = smoothSteering * PLAYER_CONFIG.skis.maxTurnRoll;
       targets.left.rot.z = bankAngle;
       targets.right.rot.z = bankAngle;
 
       // Rotation Y: Steering (Pointing into turn)
       const steerAngle =
-        turnInput * PLAYER_CONFIG.skis.maxTurnYaw * PLAYER_CONFIG.skis.turnAnimationMultiple;
+        smoothSteering * PLAYER_CONFIG.skis.maxTurnYaw * PLAYER_CONFIG.skis.turnAnimationMultiple;
       targets.left.rot.y = steerAngle;
       targets.right.rot.y = steerAngle;
 
-      // Position Z: Parallel Offset (Inside ski moves back)
-      if (turnInput !== 0) {
-        // Turning Left: Left ski is inside (moves back), Right ski outside (moves forward)
-        targets.left.pos.z = -turnInput * PLAYER_CONFIG.skis.carveOffsetZ;
-        targets.right.pos.z = turnInput * PLAYER_CONFIG.skis.carveOffsetZ;
-      }
+      // Position Z: Parallel Offset
+      // Scale offset by steering intensity
+      targets.left.pos.z = -smoothSteering * PLAYER_CONFIG.skis.carveOffsetZ;
+      targets.right.pos.z = smoothSteering * PLAYER_CONFIG.skis.carveOffsetZ;
     }
 
     // 2. Apply Smooth Interpolation (Lerp)
@@ -247,17 +245,16 @@ export class PlayerController {
     rightSki.position.copy(this.currentSkiRightPos);
 
     // Update Hands (using the existing logic or the refined version below)
-    this.updateHands(deltaTime, steerLeft, steerRight, isBraking, isPoling, time);
+    this.updateHands(deltaTime, isBraking, isPoling, time, smoothSteering);
   }
 
   // Refactored Hand logic into its own method for cleanliness
   private updateHands(
     deltaTime: number,
-    steerLeft: boolean,
-    steerRight: boolean,
     isBraking: boolean,
     isPoling: boolean,
-    time: number
+    time: number,
+    smoothSteering: number // NEW param
   ): void {
     // Calculate target X positions for hands based on steering input
     let targetLeftHandX = PLAYER_CONFIG.hands.leftOffset.x;
@@ -265,23 +262,20 @@ export class PlayerController {
 
     // Don't apply lateral movement when braking - keep hands in default position
     if (!isBraking) {
-      if (steerLeft) {
-        // Move both hands left when steering left
-        targetLeftHandX =
-          PLAYER_CONFIG.hands.leftOffset.x -
-          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
-        targetRightHandX =
-          PLAYER_CONFIG.hands.rightOffset.x -
-          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
-      } else if (steerRight) {
-        // Move both hands right when steering right
-        targetLeftHandX =
-          PLAYER_CONFIG.hands.leftOffset.x +
-          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
-        targetRightHandX =
-          PLAYER_CONFIG.hands.rightOffset.x +
-          PLAYER_CONFIG.hands.lateralMovementAmount * PLAYER_CONFIG.skis.turnAnimationMultiple;
-      }
+      // Use smoothSteering (-1 Right to +1 Left) to drive hand lateral position
+      // Note: smoothSteering sign matches the logic: + is Left
+
+      const swayAmount =
+        smoothSteering *
+        PLAYER_CONFIG.hands.lateralMovementAmount *
+        PLAYER_CONFIG.skis.turnAnimationMultiple;
+
+      // If smoothSteering is positive (Left), we want to move Left.
+      // Looking at existing logic: Left key subtracted lateralMovementAmount.
+      // So Left = negative X offset.
+
+      targetLeftHandX -= swayAmount;
+      targetRightHandX -= swayAmount;
     }
 
     // Smoothly interpolate current X positions toward target

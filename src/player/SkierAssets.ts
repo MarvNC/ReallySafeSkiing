@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 import { COLOR_PALETTE } from '../constants/colors';
 
 /**
@@ -28,9 +29,9 @@ export function createSki(): THREE.Mesh {
   // We need to modify Z first (to round the shape), then Y (to lift the tip).
 
   for (let i = 0; i < pos.count; i++) {
-    let x = pos.getX(i);
+    const x = pos.getX(i);
     let z = pos.getZ(i);
-    let y = pos.getY(i);
+    const y = pos.getY(i);
 
     // --- STEP 1: ROUND THE TIP (Z-Axis Sculpting) ---
     // The "front face" of the box is originally at z = -length/2 (-1.0).
@@ -41,9 +42,6 @@ export function createSki(): THREE.Mesh {
     const tipBoundary = -(length / 2) + tipRadius;
 
     if (z < tipBoundary) {
-      // Calculate how far this vertex is from the center line (0.0 to 1.0)
-      const xRatio = Math.abs(x) / (width / 2);
-
       // Calculate circular offset.
       // At x=0 (center), offset is 0.
       // At x=max (edge), offset is full radius.
