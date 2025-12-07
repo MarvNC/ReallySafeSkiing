@@ -39,10 +39,11 @@ export class LightingManager {
   update({ position, velocity }: UpdateArgs): void {
     if (!this.sun || !this.sunTarget) return;
 
+    const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier ?? 1;
     const lookDir = this.computeLookDirection(velocity);
     const focus = position
       .clone()
-      .add(lookDir.multiplyScalar(LIGHTING_CONFIG.sun.followDistance));
+      .add(lookDir.multiplyScalar(LIGHTING_CONFIG.sun.followDistance * shadowScale));
 
     const sunBackOffset = this.sunDirection.clone().multiplyScalar(-LIGHTING_CONFIG.sun.positionOffset);
     const sunForwardOffset = this.sunDirection.clone().multiplyScalar(LIGHTING_CONFIG.sun.targetOffset);
@@ -73,14 +74,15 @@ export class LightingManager {
     this.sun.shadow.bias = LIGHTING_CONFIG.sun.shadow.bias;
     this.sun.shadow.normalBias = LIGHTING_CONFIG.sun.shadow.normalBias;
 
+    const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier ?? 1;
     const shadowCam = this.sun.shadow.camera as THREE.OrthographicCamera;
-    const halfExtent = LIGHTING_CONFIG.sun.shadow.bounds;
+    const halfExtent = LIGHTING_CONFIG.sun.shadow.bounds * shadowScale;
     shadowCam.left = -halfExtent;
     shadowCam.right = halfExtent;
     shadowCam.top = halfExtent;
     shadowCam.bottom = -halfExtent;
     shadowCam.near = camNear;
-    shadowCam.far = camFar;
+    shadowCam.far = camFar * shadowScale;
     shadowCam.updateProjectionMatrix();
 
     this.sunTarget = new THREE.Object3D();

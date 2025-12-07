@@ -207,6 +207,9 @@ export const OBSTACLE_CONFIG = {
 } as const;
 
 export const LIGHTING_CONFIG = {
+  shadow: {
+    distanceMultiplier: 4.0, // Increase to extend shadow coverage/distances
+  },
   device: {
     isMobile: () =>
       typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : false,
