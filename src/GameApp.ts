@@ -592,7 +592,11 @@ export class GameApp {
       this.lighting?.update({ position, velocity, camera: activeCamera });
     }
 
-    this.snowSparkles?.update(gameDelta, activeCamera, LIGHTING_CONFIG.sun.direction);
+    this.snowSparkles?.update(
+      gameDelta,
+      activeCamera,
+      this.lighting?.getSunDirection() ?? LIGHTING_CONFIG.sun.direction
+    );
 
     // ONLY step physics and timers if PLAYING
     if (this.gameState === GameState.PLAYING) {

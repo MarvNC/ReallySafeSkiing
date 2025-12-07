@@ -143,4 +143,8 @@ export class LightingManager {
       .normalize();
     return blended;
   }
+
+  getSunDirection(): THREE.Vector3 {
+    return this.sunDirection.clone();
+  }
 }
