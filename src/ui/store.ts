@@ -23,7 +23,7 @@ interface GameState {
   topSpeed: number;
 
   // Menu Navigation
-  menuIndex: number; // 0: Resume, 1: Restart, 2: About
+  menuIndex: number; // 0: Resume, 1: Restart, 2: Back to menu, 3: About
 
   // Gameplay customization
   slopeAngle: number;

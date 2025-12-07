@@ -59,7 +59,7 @@ export class GameApp {
   // New Menu State
   private menuIndex = 0;
   private isAboutOpen = false;
-  private readonly menuOptionsCount = 3; // Resume, Restart, About
+  private readonly menuOptionsCount = 4; // Resume, Restart, Back to menu, About
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -394,6 +394,16 @@ export class GameApp {
     this.updateKeyBindingsForGameState();
   }
 
+  private returnToMainMenu(): void {
+    // Leave the paused state and show the setup menu
+    this.gameState = GameState.MENU;
+    this.isAboutOpen = false;
+    this.menuIndex = 0;
+    useGameStore.getState().setMenuIndex(0);
+    useGameStore.getState().setUIState(UIState.MENU);
+    this.updateKeyBindingsForGameState();
+  }
+
   private openAbout(): void {
     this.isAboutOpen = true;
     useGameStore.getState().setUIState(UIState.ABOUT);
@@ -423,7 +433,10 @@ export class GameApp {
         this.resumeGame(); // Set state back to playing
         this.startGame(); // Reset positions/score
         break;
-      case 2: // About
+      case 2: // Back to menu
+        this.returnToMainMenu();
+        break;
+      case 3: // About
         this.openAbout();
         break;
     }

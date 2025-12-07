@@ -115,7 +115,7 @@ export const Menus = () => {
             onKeyDown={(e) => e.stopPropagation()}
             role="presentation"
           >
-            {['RESUME', 'RESTART', 'ABOUT'].map((item, idx) => (
+            {['RESUME', 'RESTART', 'BACK TO MENU', 'ABOUT'].map((item, idx) => (
               <button
                 key={item}
                 onClick={() => handleMenuClick(idx)}
