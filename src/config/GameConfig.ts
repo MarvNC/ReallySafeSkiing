@@ -222,7 +222,7 @@ export const LIGHTING_CONFIG = {
   sun: {
     color: '#fff1d0',
     direction: new THREE.Vector3(-1, -1.2, 0).normalize(), // higher sun angle
-    intensity: 2,
+    intensity: 3,
     positionOffset: 50, // how far behind camera we park the sun
     targetOffset: 120, // how far forward we point the sun
     followDistance: 30, // how far ahead of the player the shadow camera tracks
@@ -233,7 +233,7 @@ export const LIGHTING_CONFIG = {
       cameraNear: 8,
       cameraFar: 180,
       bias: -0.0005,
-      normalBias: 0.02,
+      normalBias: 0.015,
     },
   },
   hemisphereLight: {
@@ -243,7 +243,7 @@ export const LIGHTING_CONFIG = {
   },
   ambientLight: {
     color: '#9cc8ff',
-    intensity: 0.7,
+    intensity: 0.5,
   },
   fog: {
     color: '#cfe6ff',
