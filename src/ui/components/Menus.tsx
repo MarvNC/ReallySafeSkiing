@@ -69,11 +69,11 @@ export const Menus = () => {
             onClick={handleStart}
             className="animate-blink pointer-events-auto mt-8 cursor-pointer p-4 text-2xl transition-transform hover:scale-110 active:scale-95"
           >
-            TAP TO START
+            TAP OR STEER TO START
           </button>
 
           <div className="mt-8 text-sm opacity-60">
-            <span className="hidden md:inline">WASD / ARROWS TO STEER</span>
+            <span className="hidden md:inline">A / D TO STEER</span>
             <span className="md:hidden">TOUCH CONTROLS ENABLED</span>
           </div>
         </>
