@@ -7,3 +7,4 @@
 - Blur at distance
 - SFX
 - Music
+- Remove slope selector, make it just allow player to choose 60 45 22.5.

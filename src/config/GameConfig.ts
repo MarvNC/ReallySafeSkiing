@@ -247,7 +247,7 @@ export const LIGHTING_CONFIG = {
   },
   fog: {
     color: '#cfe6ff',
-    near: 400,
-    far: 3000,
+    near: 300,
+    far: 4000,
   },
 } as const;
