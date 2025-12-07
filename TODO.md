@@ -10,3 +10,4 @@
 - Make skis rotate with terrain
 - Fix physics?
 - Sparkles in snow
+- Blur at distance

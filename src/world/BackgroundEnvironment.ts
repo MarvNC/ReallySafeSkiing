@@ -76,8 +76,36 @@ export class BackgroundEnvironment {
     // Matches reference fog/sky feel
     const geometry = new THREE.SphereGeometry(6000, 32, 16);
     geometry.scale(-1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({
-      color: COLOR_PALETTE.background.sky,
+    const zenithColor = new THREE.Color(COLOR_PALETTE.background.sky);
+    const horizonColor = new THREE.Color(COLOR_PALETTE.background.fog);
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uZenithColor: { value: zenithColor },
+        uHorizonColor: { value: horizonColor },
+        uExponent: { value: 1.2 },
+      },
+      vertexShader: `
+        varying vec3 vPos;
+
+        void main() {
+          vPos = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vPos;
+
+        uniform vec3 uZenithColor;
+        uniform vec3 uHorizonColor;
+        uniform float uExponent;
+
+        void main() {
+          float t = clamp(normalize(vPos).y * 0.5 + 0.5, 0.0, 1.0);
+          t = pow(t, uExponent);
+          vec3 color = mix(uHorizonColor, uZenithColor, t);
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
       side: THREE.BackSide,
       fog: false,
       depthWrite: false,

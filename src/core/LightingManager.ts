@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 
 import { LIGHTING_CONFIG } from '../config/GameConfig';
+import { COLOR_PALETTE } from '../constants/colors';
+import { SunEffects } from './SunEffects';
+
+const ENABLE_FOG = false;
 
 type UpdateArgs = {
   position: THREE.Vector3;
@@ -17,6 +21,7 @@ export class LightingManager {
   private sunTarget!: THREE.Object3D;
   private hemisphere!: THREE.HemisphereLight;
   private ambient!: THREE.AmbientLight;
+  private sunEffects?: SunEffects;
 
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
     this.scene = scene;
@@ -56,6 +61,8 @@ export class LightingManager {
     this.sunTarget.position.copy(focus.clone().add(sunForwardOffset));
     this.sun.target = this.sunTarget;
     this.sunTarget.updateMatrixWorld();
+
+    this.sunEffects?.update();
   }
 
   private createSun(): void {
@@ -92,6 +99,8 @@ export class LightingManager {
     this.sunTarget = new THREE.Object3D();
     this.scene.add(this.sunTarget);
     this.scene.add(this.sun);
+
+    this.sunEffects = new SunEffects(this.sun);
   }
 
   private createFillLights(): void {
@@ -113,13 +122,21 @@ export class LightingManager {
   }
 
   private applyFogAndSky(): void {
-    const bgColor = this.isMobile
+    const bgColor = new THREE.Color(COLOR_PALETTE.background.sky);
+    this.scene.background = bgColor;
+
+    if (!ENABLE_FOG) {
+      this.scene.fog = null;
+      return;
+    }
+
+    const fogColorHex = this.isMobile
       ? LIGHTING_CONFIG.fog.color.mobile
       : LIGHTING_CONFIG.fog.color.desktop;
+    const near = this.isMobile ? LIGHTING_CONFIG.fog.near.mobile : LIGHTING_CONFIG.fog.near.desktop;
+    const far = this.isMobile ? LIGHTING_CONFIG.fog.far.mobile : LIGHTING_CONFIG.fog.far.desktop;
 
-    const color = new THREE.Color(bgColor);
-    this.scene.background = color.clone();
-    this.scene.fog = null; // fog disabled
+    this.scene.fog = new THREE.Fog(fogColorHex, near, far);
   }
 
   private computeLookDirection(velocity: THREE.Vector3): THREE.Vector3 {

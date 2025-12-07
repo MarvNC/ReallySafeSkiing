@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { GAME_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
+import { GAME_CONFIG, LIGHTING_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 import { LightingManager } from './core/LightingManager';
 import { DebugHelpers } from './debug/DebugHelpers';
@@ -10,6 +10,7 @@ import { PlayerController } from './player/PlayerController';
 import { PlayerPhysics } from './player/PlayerPhysics';
 import { UIState, useGameStore } from './ui/store';
 import { BackgroundEnvironment } from './world/BackgroundEnvironment';
+import { SnowSparkles } from './world/SnowSparkles';
 import { TerrainManager } from './world/TerrainManager';
 
 // 1. Define Game States
@@ -45,6 +46,7 @@ export class GameApp {
   private debugCameraSpeed = 50;
   private backgroundEnv?: BackgroundEnvironment;
   private lighting?: LightingManager;
+  private snowSparkles?: SnowSparkles;
 
   // 2. Game Logic Variables
   private gameState: GameState = GameState.MENU;
@@ -106,6 +108,9 @@ export class GameApp {
 
     // 1. Create Terrain Manager (generates the world)
     this.terrainManager = new TerrainManager(this.scene, this.physics, slopeAngle, difficulty);
+
+    this.snowSparkles = new SnowSparkles(this.terrainManager);
+    this.scene.add(this.snowSparkles.points);
 
     // 2. Get Start Position from generated path
     // Spawn player a bit farther forward along the path (50 points ahead)
@@ -566,6 +571,7 @@ export class GameApp {
 
     // 2. Calculate Game Delta (Slow-mo)
     const gameDelta = realDelta * this.timeScale;
+    const activeCamera = this.activeCamera ?? this.player.camera;
 
     // Keep sun/shadows following the rider
     if (this.playerPhysics) {
@@ -573,6 +579,8 @@ export class GameApp {
       const velocity = this.playerPhysics.getVelocity();
       this.lighting?.update({ position, velocity });
     }
+
+    this.snowSparkles?.update(gameDelta, activeCamera, LIGHTING_CONFIG.sun.direction);
 
     // ONLY step physics and timers if PLAYING
     if (this.gameState === GameState.PLAYING) {
@@ -731,15 +739,14 @@ export class GameApp {
     }
 
     // Update background environment
-    const camera = this.activeCamera ?? this.player.camera;
     if (this.backgroundEnv) {
       // Get world position of camera (player camera is a child of mesh, so we need world position)
       const cameraWorldPos = new THREE.Vector3();
-      camera.getWorldPosition(cameraWorldPos);
+      activeCamera.getWorldPosition(cameraWorldPos);
       this.backgroundEnv.update(cameraWorldPos);
     }
 
-    this.renderer.render(this.scene, camera);
+    this.renderer.render(this.scene, activeCamera);
     requestAnimationFrame(this.animate);
   };
 

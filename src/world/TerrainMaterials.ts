@@ -16,9 +16,9 @@ export function getTerrainMaterials(): TerrainMaterials {
 
   const snow = new THREE.MeshStandardMaterial({
     color: 0xf7fbff,
-    metalness: 0.03,
-    roughness: 0.35,
-    envMapIntensity: 0.6,
+    metalness: 0.08,
+    roughness: 0.18,
+    envMapIntensity: 1.1,
     flatShading: true,
     side: THREE.DoubleSide,
     vertexColors: true,
