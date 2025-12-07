@@ -212,7 +212,7 @@ export const LIGHTING_CONFIG = {
   },
   sun: {
     color: '#fff1d0',
-    direction: new THREE.Vector3(-0.2, -1.2, -0.1).normalize(), // higher sun angle
+    direction: new THREE.Vector3(-1, -1.2, 0).normalize(), // higher sun angle
     intensity: 2,
     positionOffset: 50, // how far behind camera we park the sun
     targetOffset: 120, // how far forward we point the sun
