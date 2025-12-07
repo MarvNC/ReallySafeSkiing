@@ -411,6 +411,11 @@ export class GameApp {
   }
 
   private executeMenuOption(): void {
+    // Read menuIndex from store to sync with React component clicks
+    const storeMenuIndex = useGameStore.getState().menuIndex;
+    // Sync internal menuIndex for consistency
+    this.menuIndex = storeMenuIndex;
+
     switch (this.menuIndex) {
       case 0: // Resume
         this.resumeGame();

@@ -16,11 +16,13 @@ export const HUD = () => {
         <div className="text-xs tracking-widest opacity-80">Time Remaining</div>
       </div>
 
-      {/* Speed */}
-      <div className="absolute bottom-5 left-8 drop-shadow-md">
-        <div className="text-accent-orange text-6xl font-black italic">
+      {/* Speed - Adjusted for mobile to avoid overlap with TopBar */}
+      <div className="absolute bottom-5 left-2 drop-shadow-md md:left-8">
+        <div className="text-accent-orange text-4xl font-black italic md:text-6xl">
           {Math.floor(speed * 3.6)}{' '}
-          <span className="text-2xl font-normal text-white not-italic opacity-80">km/h</span>
+          <span className="text-xl font-normal text-white not-italic opacity-80 md:text-2xl">
+            km/h
+          </span>
         </div>
       </div>
 

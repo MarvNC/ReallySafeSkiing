@@ -28,11 +28,15 @@ export type Action = (typeof Action)[keyof typeof Action];
 
 type ActionPhase = 'pressed' | 'released';
 
-type ActionListener = (action: Action, phase: ActionPhase, event: KeyboardEvent) => void;
+type ActionListener = (action: Action, phase: ActionPhase, event: KeyboardEvent | null) => void;
 
 export class InputManager {
+  // Singleton accessor for UI components
+  public static instance: InputManager | null = null;
+
   private readonly keyToAction = new Map<string, Action>();
   private readonly actionStates = new Map<Action, boolean>();
+  private readonly externalStates = new Map<Action, boolean>(); // New: For touch controls
   private readonly listeners = new Map<Action, Set<ActionListener>>();
   private readonly target: Window | HTMLElement;
 
@@ -60,9 +64,29 @@ export class InputManager {
   };
 
   constructor(target: Window | HTMLElement = window) {
+    InputManager.instance = this;
     this.target = target;
     this.target.addEventListener('keydown', this.handleKeyDown);
     this.target.addEventListener('keyup', this.handleKeyUp);
+  }
+
+  /**
+   * Allows UI buttons to trigger actions directly
+   */
+  setExternalState(action: Action, active: boolean): void {
+    const previous = this.externalStates.get(action) ?? false;
+    if (previous === active) return;
+
+    this.externalStates.set(action, active);
+    this.emit(action, active ? 'pressed' : 'released', null);
+  }
+
+  /**
+   * Helper to simulate a momentary press (like a menu click)
+   */
+  triggerAction(action: Action): void {
+    this.setExternalState(action, true);
+    setTimeout(() => this.setExternalState(action, false), 50);
   }
 
   bindKey(physicalKey: string, action: Action): void {
@@ -74,7 +98,9 @@ export class InputManager {
   }
 
   isActive(action: Action): boolean {
-    return this.actionStates.get(action) ?? false;
+    const keyboardActive = this.actionStates.get(action) ?? false;
+    const externalActive = this.externalStates.get(action) ?? false;
+    return keyboardActive || externalActive;
   }
 
   isBraking(): boolean {
@@ -100,10 +126,14 @@ export class InputManager {
     this.target.removeEventListener('keyup', this.handleKeyUp);
     this.keyToAction.clear();
     this.actionStates.clear();
+    this.externalStates.clear();
     this.listeners.clear();
+    if (InputManager.instance === this) {
+      InputManager.instance = null;
+    }
   }
 
-  private emit(action: Action, phase: ActionPhase, event: KeyboardEvent): void {
+  private emit(action: Action, phase: ActionPhase, event: KeyboardEvent | null): void {
     const set = this.listeners.get(action);
     if (!set) return;
     for (const listener of set) {

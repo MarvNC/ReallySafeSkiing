@@ -176,10 +176,9 @@ export class PlayerPhysics {
 
     // Calculate desired turn rate and cap it
     const desiredTurnRate = this.currentSteering * turnSpeed;
-    const clampedTurnRate = Math.sign(desiredTurnRate) * Math.min(
-      Math.abs(desiredTurnRate),
-      PLAYER_CONFIG.physics.maxSteeringSpeed
-    );
+    const clampedTurnRate =
+      Math.sign(desiredTurnRate) *
+      Math.min(Math.abs(desiredTurnRate), PLAYER_CONFIG.physics.maxSteeringSpeed);
 
     this.yaw += clampedTurnRate * deltaSeconds;
 
