@@ -12,4 +12,4 @@
 - Add "Back to menu" button on pause menu
 - Proper PWA
 - BETTER LIGHTING
-- Remove side steer buttons from mobile and make it so tapping either side steers
+- Allow esc menu during wasted animation

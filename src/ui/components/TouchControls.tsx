@@ -1,71 +1,96 @@
-import clsx from 'clsx';
+import { useEffect, useRef } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { UIState, useGameStore } from '../store';
 
-const SteerButton = ({
-  action,
-  direction,
-  className,
-}: {
-  action: Action;
-  direction: 'left' | 'right';
-  className?: string;
-}) => {
-  const handleDown = (e: React.PointerEvent | React.TouchEvent) => {
-    e.preventDefault(); // Prevent text selection or scrolling
-    InputManager.instance?.setExternalState(action, true);
-  };
-
-  const handleUp = (e: React.PointerEvent | React.TouchEvent) => {
-    e.preventDefault();
-    InputManager.instance?.setExternalState(action, false);
-  };
-
-  return (
-    <button
-      className={clsx(
-        'touch-none transition-transform select-none active:scale-95',
-        'rounded-full border-2 border-white/50 bg-white/20 backdrop-blur-md',
-        'font-russo flex h-24 w-24 items-center justify-center text-white shadow-lg',
-        className
-      )}
-      onPointerDown={handleDown}
-      onPointerUp={handleUp}
-      onPointerLeave={handleUp}
-      // Add touch handlers specifically for mobile reliability
-      onTouchStart={handleDown}
-      onTouchEnd={handleUp}
-    >
-      {/* Solid filled triangle */}
-      <div
-        className={clsx(
-          'h-0 w-0',
-          direction === 'left'
-            ? 'border-y-[15px] border-r-[20px] border-y-transparent border-r-white'
-            : 'border-y-[15px] border-l-[20px] border-y-transparent border-l-white'
-        )}
-      />
-    </button>
-  );
-};
+type Side = 'left' | 'right';
 
 export const TouchControls = () => {
   const { uiState } = useGameStore();
+
+  const pointerSides = useRef<Map<number, Side>>(new Map());
+  const activeCounts = useRef<{ left: number; right: number }>({ left: 0, right: 0 });
+
+  const setSideActive = (side: Side, active: boolean) => {
+    const action = side === 'left' ? Action.SteerLeft : Action.SteerRight;
+    InputManager.instance?.setExternalState(action, active);
+  };
+
+  const incrementSide = (side: Side) => {
+    activeCounts.current[side] += 1;
+    if (activeCounts.current[side] === 1) {
+      setSideActive(side, true);
+    }
+  };
+
+  const decrementSide = (side: Side) => {
+    if (activeCounts.current[side] === 0) return;
+    activeCounts.current[side] -= 1;
+    if (activeCounts.current[side] === 0) {
+      setSideActive(side, false);
+    }
+  };
+
+  const getSideFromEvent = (e: React.PointerEvent<HTMLDivElement>): Side => {
+    const midpoint = window.innerWidth / 2;
+    return e.clientX < midpoint ? 'left' : 'right';
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const side = getSideFromEvent(e);
+    pointerSides.current.set(e.pointerId, side);
+    incrementSide(side);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const previous = pointerSides.current.get(e.pointerId);
+    const current = getSideFromEvent(e);
+    if (!previous) {
+      pointerSides.current.set(e.pointerId, current);
+      incrementSide(current);
+      return;
+    }
+
+    if (previous !== current) {
+      decrementSide(previous);
+      pointerSides.current.set(e.pointerId, current);
+      incrementSide(current);
+    }
+  };
+
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const previous = pointerSides.current.get(e.pointerId);
+    if (!previous) return;
+    pointerSides.current.delete(e.pointerId);
+    decrementSide(previous);
+  };
+
+  // Ensure steering is released if this component unmounts while a touch is held
+  useEffect(
+    () => () => {
+      pointerSides.current.clear();
+      activeCounts.current = { left: 0, right: 0 };
+      setSideActive('left', false);
+      setSideActive('right', false);
+    },
+    []
+  );
 
   // Only show controls during gameplay
   if (uiState !== UIState.PLAYING && uiState !== UIState.CRASHED) return null;
 
   return (
-    <>
-      {/* Mobile Steering Controls - Only visible on mobile (hidden on md and above) */}
-      <div className="pointer-events-auto absolute bottom-32 left-8 z-40 md:hidden">
-        <SteerButton action={Action.SteerLeft} direction="left" />
-      </div>
-
-      <div className="pointer-events-auto absolute right-8 bottom-32 z-40 md:hidden">
-        <SteerButton action={Action.SteerRight} direction="right" />
-      </div>
-    </>
+    <div className="pointer-events-none fixed top-16 right-0 bottom-0 left-0 z-40 md:hidden">
+      <div
+        className="pointer-events-auto absolute inset-0 touch-none select-none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+      />
+    </div>
   );
 };
