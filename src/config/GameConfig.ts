@@ -31,7 +31,7 @@ export const PLAYER_CONFIG = {
 
     // Poling mechanics
     poleForce: 30.0, // Strong initial push
-    maxPoleSpeedKmh: 20.0, // You can't pole effectively above this speed (in km/h)
+    maxPoleSpeedKmh: 30.0, // You can't pole effectively above this speed (in km/h)
 
     // Steering
     steerTurnSpeed: 1.6, // Base turn speed multiplier
