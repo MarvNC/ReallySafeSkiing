@@ -52,7 +52,7 @@ export const PLAYER_CONFIG = {
     maxSteeringSpeed: 1.5, // Maximum turn rate in radians per second (caps the final turn speed)
 
     // Physics limits
-    brakeDamping: 7.0, // Drag applied when "snowplowing"
+    brakeDamping: 2.0, // Drag applied when "snowplowing"
     friction: 0.12, // Base friction applied to simulate snow contact
   },
   camera: {

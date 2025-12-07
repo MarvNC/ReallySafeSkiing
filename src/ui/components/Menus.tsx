@@ -30,6 +30,20 @@ const StartButton: FC<{ label: string; onClick: () => void }> = ({ label, onClic
   </button>
 );
 
+// Footer Component - Links to GitHub
+const MenuFooter: FC = () => {
+  return (
+    <a
+      href="https://github.com/MarvNC"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="pointer-events-auto absolute bottom-4 right-4 z-50 text-white/50 hover:text-white transition-colors text-sm font-russo tracking-wider hover:underline cursor-pointer"
+    >
+      By MarvNC
+    </a>
+  );
+};
+
 export const Menus = () => {
   const { uiState, menuIndex, distance, topSpeed, setMenuIndex } = useGameStore();
 
@@ -102,6 +116,14 @@ export const Menus = () => {
             <span className="rounded px-2 py-1 font-mono text-xs shadow-sm">[ D ]</span>
           </div>
           <div className="mt-2 text-sm opacity-60 md:hidden">TOUCH CONTROLS ENABLED</div>
+          <button
+            onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
+            className="pointer-events-auto mt-4 text-white/60 hover:text-white transition-colors text-sm font-russo tracking-wider hover:underline cursor-pointer"
+          >
+            ABOUT
+          </button>
+
+          <MenuFooter />
         </>
       )}
 
@@ -115,7 +137,7 @@ export const Menus = () => {
             onKeyDown={(e) => e.stopPropagation()}
             role="presentation"
           >
-            {['RESUME', 'RESTART', 'BACK TO MENU', 'ABOUT'].map((item, idx) => (
+            {['RESUME', 'RESTART', 'BACK TO MENU'].map((item, idx) => (
               <button
                 key={item}
                 onClick={() => handleMenuClick(idx)}
@@ -136,6 +158,7 @@ export const Menus = () => {
               </button>
             ))}
           </div>
+          <MenuFooter />
         </>
       )}
 
@@ -165,6 +188,7 @@ export const Menus = () => {
             <SetupPanel />
           </div>
           <StartButton label="PLAY AGAIN" onClick={handleStart} />
+          <MenuFooter />
         </>
       )}
     </div>

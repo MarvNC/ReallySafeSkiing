@@ -59,7 +59,7 @@ export class GameApp {
   // New Menu State
   private menuIndex = 0;
   private isAboutOpen = false;
-  private readonly menuOptionsCount = 4; // Resume, Restart, Back to menu, About
+  private readonly menuOptionsCount = 3; // Resume, Restart, Back to menu
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -180,14 +180,16 @@ export class GameApp {
     // PAUSE TOGGLE LOGIC
     this.input.on(Action.Pause, (_action, phase) => {
       if (phase === 'pressed') {
+        const currentUIState = useGameStore.getState().uiState;
+        // If About is open, close it regardless of game state
+        if (currentUIState === UIState.ABOUT) {
+          this.closeAbout();
+          return;
+        }
         if (this.gameState === GameState.PLAYING) {
           this.pauseGame();
         } else if (this.gameState === GameState.PAUSED) {
-          if (this.isAboutOpen) {
-            this.closeAbout();
-          } else {
-            this.resumeGame();
-          }
+          this.resumeGame();
         }
       }
     });
@@ -404,14 +406,14 @@ export class GameApp {
     this.updateKeyBindingsForGameState();
   }
 
-  private openAbout(): void {
-    this.isAboutOpen = true;
-    useGameStore.getState().setUIState(UIState.ABOUT);
-  }
-
   private closeAbout(): void {
     this.isAboutOpen = false;
-    useGameStore.getState().setUIState(UIState.PAUSED);
+    // Return to the previous state (MENU or PAUSED) based on gameState
+    if (this.gameState === GameState.MENU) {
+      useGameStore.getState().setUIState(UIState.MENU);
+    } else {
+      useGameStore.getState().setUIState(UIState.PAUSED);
+    }
   }
 
   private updateMenuVisuals(): void {
@@ -435,9 +437,6 @@ export class GameApp {
         break;
       case 2: // Back to menu
         this.returnToMainMenu();
-        break;
-      case 3: // About
-        this.openAbout();
         break;
     }
   }

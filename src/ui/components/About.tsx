@@ -1,3 +1,5 @@
+import { Github } from 'lucide-react';
+
 import { Action, InputManager } from '../../core/InputManager';
 import { UIState, useGameStore } from '../store';
 
@@ -14,9 +16,9 @@ export const About = () => {
   };
 
   const handleBackdropKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (e.target === e.currentTarget) {
+      if (e.key === 'Escape' || e.target === e.currentTarget) {
         InputManager.instance?.triggerAction(Action.Pause);
       }
     }
@@ -71,14 +73,15 @@ export const About = () => {
             ))}
           </div>
 
-          <div className="font-russo border-t border-white/20 pt-5 text-lg text-white">
+          <div className="font-russo border-t border-white/20 pt-5 text-lg text-white flex items-center justify-center gap-2">
             CREATED BY{' '}
             <a
               href="https://github.com/MarvNC"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent-orange hover:bg-accent-orange relative px-1.5 py-0.5 transition-all hover:text-black hover:shadow-[0_0_15px_#ff6b35]"
+              className="text-accent-orange hover:bg-accent-orange relative px-1.5 py-0.5 transition-all hover:text-black hover:shadow-[0_0_15px_#ff6b35] flex items-center gap-2"
             >
+              <Github className="w-5 h-5" />
               MarvNC
             </a>
           </div>

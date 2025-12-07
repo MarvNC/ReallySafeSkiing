@@ -9,7 +9,7 @@
 - Zoom out camera more?
 - Better player rotation - have player look at horizon?
 - Save setting to localstorage
-- Add "Back to menu" button on pause menu
 - Proper PWA
 - BETTER LIGHTING
 - Allow esc menu during wasted animation
+- Make game less bouncy
