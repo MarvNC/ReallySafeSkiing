@@ -38,7 +38,7 @@ export class SnowSparkles {
 
   constructor(terrain: TerrainManager) {
     this.terrain = terrain;
-    this.count = this.isMobile() ? 1400 : 2600;
+    this.count = 5000;
 
     this.geometry = new THREE.BufferGeometry();
     this.positions = new Float32Array(this.count * 3);
@@ -48,7 +48,7 @@ export class SnowSparkles {
     this.baseAlphas = new Float32Array(this.count);
 
     this.material = new THREE.PointsMaterial({
-      size: 0.06,
+      size: 0.1,
       map: this.createSparkleTexture(),
       transparent: true,
       depthWrite: false,
@@ -178,9 +178,5 @@ export class SnowSparkles {
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
     return texture;
-  }
-
-  private isMobile(): boolean {
-    return typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : false;
   }
 }

@@ -213,7 +213,7 @@ export const LIGHTING_CONFIG = {
   sun: {
     color: '#ffffff',
     direction: new THREE.Vector3(-0.2, -1.2, -0.1).normalize(), // higher sun angle
-    intensity: 2.8,
+    intensity: 1.8,
     positionOffset: 50, // how far behind camera we park the sun
     targetOffset: 120, // how far forward we point the sun
     followDistance: 30, // how far ahead of the player the shadow camera tracks
