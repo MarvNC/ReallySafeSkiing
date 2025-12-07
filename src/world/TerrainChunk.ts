@@ -9,6 +9,7 @@ import { getRockGeometry } from './AssetFactory';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
 import {
   createTreeGeometry,
+  getTreeHeight,
   TREE_ARCHETYPES,
   TREE_TRUNK_RADIUS_BOTTOM,
   type TreeArchetype,
@@ -540,7 +541,8 @@ export class TerrainChunk {
               dummy.position.x,
               dummy.position.y,
               dummy.position.z + startZ,
-              treeScale
+              treeScale,
+              placeTree
             );
           }
 
@@ -664,16 +666,31 @@ export class TerrainChunk {
     worldX: number,
     worldY: number,
     worldZ: number,
-    scale: number
+    scale: number,
+    archetype: TreeArchetype
   ): void {
     const world = physics.getWorld();
-    // Use the imported constant directly
-    // We multiply by scale because the visual mesh is scaled, so the radius must scale too.
+
+    // 1. Get the Source of Truth height
+    const layerCount = TREE_ARCHETYPES[archetype].layerCount;
+    const actualVisualHeight = getTreeHeight(layerCount);
+
+    // 2. Scale it
+    const scaledHeight = actualVisualHeight * scale;
+
+    // 3. Define Collider Height
+    // "Size of trunk or smaller": We use 2/3rds.
+    // This ensures the top third (the thin pointy bit) is non-solid.
+    const colliderHeight = scaledHeight * 0.67;
+
+    // Rapier cylinder takes half-height
+    const halfHeight = colliderHeight / 2;
     const radius = TREE_TRUNK_RADIUS_BOTTOM * scale;
-    const halfHeight = 4 * scale;
     const body = world.createRigidBody(
+      // Pivot is at bottom, so center is Y + halfHeight
       RAPIER.RigidBodyDesc.fixed().setTranslation(worldX, worldY + halfHeight, worldZ)
     );
+
     const collider = world.createCollider(
       RAPIER.ColliderDesc.cylinder(halfHeight, radius)
         .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Obstacle, PhysicsLayer.Player))

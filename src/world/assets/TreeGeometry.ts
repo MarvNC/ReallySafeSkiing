@@ -5,8 +5,30 @@ import { mergeGeometries } from '../utils/mergeGeometries';
 
 // === Export constants for physics to use ===
 export const TREE_TRUNK_RADIUS_TOP = 0.2;
-export const TREE_TRUNK_RADIUS_BOTTOM = 0.3; // This is the value we want for physics
+export const TREE_TRUNK_RADIUS_BOTTOM = 0.3;
 export const TREE_TRUNK_HEIGHT = 1.5;
+
+// === Configuration Source of Truth ===
+export const TREE_CONFIG = {
+  layerHeight: 1.2,
+  layerStartY: 1.0,
+  layerOverlap: 0.8, // 80% of height
+} as const;
+
+/**
+ * Calculates the exact visual height of a tree based on its layer count.
+ * Formula: Height = StartY + (Layers-1 * Offset) + LayerHeight
+ */
+export function getTreeHeight(layerCount: number): number {
+  if (layerCount <= 0) return TREE_TRUNK_HEIGHT;
+
+  // Calculate where the last layer starts
+  const lastLayerY =
+    TREE_CONFIG.layerStartY + (layerCount - 1) * (TREE_CONFIG.layerHeight * TREE_CONFIG.layerOverlap);
+
+  // The top is the start of the last layer + the height of that layer
+  return lastLayerY + TREE_CONFIG.layerHeight;
+}
 
 /**
  * Creates a low-poly pine tree geometry with variable layer count.
@@ -31,8 +53,7 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
   geometryInfo.push({ geometry: trunkGeo, isTrunk: true });
 
   // Foliage Layers: stacked cylinders (cones) with decreasing size
-  const layerHeight = 1.2;
-  let currentY = 1.0; // Start slightly overlapping trunk
+  let currentY = TREE_CONFIG.layerStartY;
   let currentRadius = 1.5;
 
   for (let i = 0; i < layerCount; i++) {
@@ -40,18 +61,18 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
     const coneGeo = new THREE.CylinderGeometry(
       currentRadius * 0.5, // Top radius (narrower)
       currentRadius, // Bottom radius (wider)
-      layerHeight, // Height
+      TREE_CONFIG.layerHeight, // Height
       7 // Radial segments (low for low-poly look)
     );
 
     // Position the layer
-    coneGeo.translate(0, currentY + layerHeight / 2, 0);
+    coneGeo.translate(0, currentY + TREE_CONFIG.layerHeight / 2, 0);
 
     geometries.push(coneGeo);
     geometryInfo.push({ geometry: coneGeo, isTrunk: false });
 
-    // Move cursor up for next layer (with slight overlap)
-    currentY += layerHeight * 0.8;
+    // Move cursor up using the constant factor
+    currentY += TREE_CONFIG.layerHeight * TREE_CONFIG.layerOverlap;
     currentRadius *= 0.7; // Shrink next layer
   }
 
