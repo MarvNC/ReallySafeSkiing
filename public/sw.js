@@ -39,7 +39,7 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Fetch event - cache everything and serve from cache when offline
+// Fetch event - cache everything and serve from cache only when offline
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -55,20 +55,11 @@ self.addEventListener('fetch', (event) => {
   const isExternal = !event.request.url.startsWith(self.location.origin);
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // If we have a cached version, return it (even if online for faster loading)
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      // Otherwise, fetch from network
-      return fetch(event.request)
-        .then((fetchResponse) => {
-          // Only cache successful responses
-          if (!fetchResponse || fetchResponse.status !== 200) {
-            return fetchResponse;
-          }
-
+    // Always try network first when online
+    fetch(event.request)
+      .then((fetchResponse) => {
+        // Only cache successful responses for offline use
+        if (fetchResponse && fetchResponse.status === 200) {
           // Don't cache opaque responses (CORS issues) unless it's external
           if (fetchResponse.type === 'opaque' && !isExternal) {
             return fetchResponse;
@@ -86,14 +77,20 @@ self.addEventListener('fetch', (event) => {
             .catch((error) => {
               console.warn('Service Worker: Failed to cache', event.request.url, error);
             });
+        }
 
-          return fetchResponse;
-        })
-        .catch((error) => {
-          // Network failed - try to serve from cache
-          console.warn('Service Worker: Network failed for', event.request.url, error);
+        return fetchResponse;
+      })
+      .catch((error) => {
+        // Network failed (offline) - try to serve from cache
+        console.warn('Service Worker: Network failed for', event.request.url, 'trying cache...', error);
 
-          // For navigation requests, return the main HTML
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          // For navigation requests, return the main HTML as fallback
           if (event.request.destination === 'document') {
             return caches.match('/index.html');
           }
@@ -101,6 +98,6 @@ self.addEventListener('fetch', (event) => {
           // For other requests, return undefined (will show network error)
           return undefined;
         });
-    })
+      })
   );
 });
