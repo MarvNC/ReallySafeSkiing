@@ -55,6 +55,7 @@ export class GameApp {
   private timeScale = 1.0;
   private crashTimer = 0;
   private readonly CRASH_DURATION = 3.0; // Real-time seconds
+  private wasCrashedBeforePause = false; // Track if we were in crash state before pausing
 
   // New Menu State
   private menuIndex = 0;
@@ -189,7 +190,7 @@ export class GameApp {
           this.closeAbout();
           return;
         }
-        if (this.gameState === GameState.PLAYING) {
+        if (this.gameState === GameState.PLAYING || this.gameState === GameState.CRASHED) {
           this.pauseGame();
         } else if (this.gameState === GameState.PAUSED) {
           this.resumeGame();
@@ -341,6 +342,7 @@ export class GameApp {
     this.gameState = GameState.PLAYING;
     this.timeRemaining = GAME_CONFIG.timerDuration;
     this.topSpeed = 0; // Reset top speed
+    this.wasCrashedBeforePause = false; // Reset crash flag on new game
 
     const { slopeAngle, difficulty } = useGameStore.getState();
 
@@ -382,6 +384,9 @@ export class GameApp {
   }
 
   private pauseGame(): void {
+    // Track if we were in crash state before pausing
+    this.wasCrashedBeforePause = this.gameState === GameState.CRASHED;
+    
     this.gameState = GameState.PAUSED;
     this.menuIndex = 0; // Reset to "Resume"
     useGameStore.getState().setUIState(UIState.PAUSED);
@@ -396,8 +401,15 @@ export class GameApp {
   }
 
   private resumeGame(): void {
-    this.gameState = GameState.PLAYING;
-    useGameStore.getState().setUIState(UIState.PLAYING);
+    // If we were crashed before pausing, restore the crash state
+    if (this.wasCrashedBeforePause) {
+      this.gameState = GameState.CRASHED;
+      useGameStore.getState().setUIState(UIState.CRASHED);
+      this.wasCrashedBeforePause = false; // Reset flag
+    } else {
+      this.gameState = GameState.PLAYING;
+      useGameStore.getState().setUIState(UIState.PLAYING);
+    }
     this.clock.getDelta(); // Clear accumulated delta time so we don't jump forward
     // Rebind keys for playing state
     this.updateKeyBindingsForGameState();
@@ -439,10 +451,12 @@ export class GameApp {
         this.resumeGame();
         break;
       case 1: // Restart
+        this.wasCrashedBeforePause = false; // Reset crash flag on restart
         this.resumeGame(); // Set state back to playing
         this.startGame(); // Reset positions/score
         break;
       case 2: // Back to menu
+        this.wasCrashedBeforePause = false; // Reset crash flag when returning to menu
         this.returnToMainMenu();
         break;
     }
@@ -481,7 +495,7 @@ export class GameApp {
 
     // Notify Physics & Player
     this.playerPhysics.setCrashed(true);
-    this.player.isCrashed = true;
+    this.player.triggerCrash(); // This will also hide speedlines
 
     // Capture camera state BEFORE the player starts tumbling
     this.player.captureCrashCameraState();

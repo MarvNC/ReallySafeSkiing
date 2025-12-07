@@ -144,6 +144,8 @@ export class PlayerController {
     this.isCrashed = true;
     // Notify physics
     this.physics.setCrashed(true);
+    // Hide speedlines during crash animation
+    this.speedLines.setVisible(false);
   }
 
   captureCrashCameraState(): void {
@@ -505,5 +507,7 @@ export class PlayerController {
     this.currentCameraBank = 0; // Reset bank
     this.isCrashed = false;
     this.physics.setCrashed(false);
+    // Show speedlines again after crash recovery
+    this.speedLines.setVisible(true);
   }
 }

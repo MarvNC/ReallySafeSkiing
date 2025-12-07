@@ -60,7 +60,7 @@ export const PLAYER_CONFIG = {
     near: 0.1,
     far: 8000,
     eyeHeight: 0.1,
-    tiltRadians: -0.6,
+    tiltRadians: -0.6, // look at ground
     // Banking settings
     maxBankAngle: Math.PI / 18, // ~10 degrees of tilt at max steering
     bankSmoothingSpeed: 5.0, // How fast the camera rolls into the turn

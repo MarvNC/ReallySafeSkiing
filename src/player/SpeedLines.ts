@@ -4,6 +4,7 @@ export class SpeedLines {
   public mesh: THREE.InstancedMesh;
   private dummy = new THREE.Object3D();
   private count = 20;
+  private forceHidden = false;
   private lines: Array<{
     x: number;
     y: number;
@@ -53,6 +54,12 @@ export class SpeedLines {
   }
 
   update(currentSpeedKmh: number) {
+    // If force hidden (e.g., during crash), hide and skip update
+    if (this.forceHidden) {
+      this.mesh.visible = false;
+      return;
+    }
+
     // Thresholds
     const START_SPEED = 100;
     const MAX_OPACITY_SPEED = 200;
@@ -105,5 +112,10 @@ export class SpeedLines {
     }
 
     this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  setVisible(visible: boolean): void {
+    this.forceHidden = !visible;
+    this.mesh.visible = visible;
   }
 }
