@@ -1,8 +1,11 @@
-import type React from 'react';
+import { Minus, Plus } from 'lucide-react';
+import type { MouseEvent, PointerEvent } from 'react';
 import { useRef } from 'react';
 
 import { useGameStore } from '../store';
 
+const VIEWBOX_WIDTH = 320;
+const VIEWBOX_HEIGHT = 240;
 const clampAngle = (angle: number) => Math.max(0, Math.min(70, angle));
 
 export const SlopeControl = () => {
@@ -10,18 +13,31 @@ export const SlopeControl = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const isDraggingRef = useRef(false);
 
-  const width = 260;
-  const height = 150;
-  const baseX = 20;
-  const baseY = height - 18;
-  const lineLength = 170;
+  const width = VIEWBOX_WIDTH;
+  const height = VIEWBOX_HEIGHT;
+  const baseX = 28;
+  const baseY = height - 26;
+  const lineLength = 220;
+
+  const handleIncrement = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setSlopeAngle(clampAngle(slopeAngle + 5));
+  };
+
+  const handleDecrement = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setSlopeAngle(clampAngle(slopeAngle - 5));
+  };
 
   const updateFromPointer = (clientX: number, clientY: number) => {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const anchorX = rect.left + baseX;
-    const anchorY = rect.top + baseY;
+    const scaleX = rect.width / width;
+    const scaleY = rect.height / height;
+
+    const anchorX = rect.left + baseX * scaleX;
+    const anchorY = rect.top + baseY * scaleY;
     const dx = clientX - anchorX;
     const dy = anchorY - clientY; // invert Y (screen coords)
     const angleRad = Math.atan2(Math.max(dy, 0), Math.max(dx, 0.001));
@@ -29,14 +45,14 @@ export const SlopeControl = () => {
     setSlopeAngle(angleDeg);
   };
 
-  const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+  const handlePointerDown = (event: PointerEvent<SVGSVGElement>) => {
     event.stopPropagation();
     isDraggingRef.current = true;
     event.currentTarget.setPointerCapture(event.pointerId);
     updateFromPointer(event.clientX, event.clientY);
   };
 
-  const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+  const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
     if (!isDraggingRef.current && event.buttons === 0) return;
     if (event.buttons === 0) return;
     event.stopPropagation();
@@ -44,7 +60,7 @@ export const SlopeControl = () => {
     updateFromPointer(event.clientX, event.clientY);
   };
 
-  const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
+  const handlePointerUp = (event: PointerEvent<SVGSVGElement>) => {
     isDraggingRef.current = false;
     event.stopPropagation();
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
@@ -60,64 +76,87 @@ export const SlopeControl = () => {
   const slopeColor = `hsl(${120 - (slopeAngle / 70) * 120}, 80%, 60%)`;
 
   return (
-    <div className="select-none text-white">
-      <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-white/70">
+    <div className="w-full text-white select-none">
+      <div className="mb-3 flex items-center justify-between text-xs tracking-[0.2em] text-white/70 uppercase">
         <span>Adjust slope</span>
-        <span className="text-base font-semibold text-white">{Math.round(slopeAngle)}°</span>
+        <span className="text-2xl font-bold text-sky-300">{Math.round(slopeAngle)}°</span>
       </div>
-      <svg
-        ref={svgRef}
-        role="slider"
-        aria-valuemin={0}
-        aria-valuemax={70}
-        aria-valuenow={Math.round(slopeAngle)}
-        aria-label="Slope angle"
-        width={width}
-        height={height}
-        className="w-full cursor-pointer"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-      >
-        <defs>
-          <linearGradient id="slope-bg" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#0c1020" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#0c1020" stopOpacity="0.4" />
-          </linearGradient>
-        </defs>
-        <rect x={0} y={0} width={width} height={height} rx={12} fill="url(#slope-bg)" />
-        <line
-          x1={baseX}
-          y1={baseY}
-          x2={width - 10}
-          y2={baseY}
-          stroke="#6b7280"
-          strokeWidth={3}
-          strokeLinecap="round"
-        />
-        <line
-          x1={baseX}
-          y1={baseY}
-          x2={endX}
-          y2={endY}
-          stroke={slopeColor}
-          strokeWidth={5}
-          strokeLinecap="round"
-        />
-        <circle cx={endX} cy={endY} r={6} fill={slopeColor} stroke="#fff" strokeWidth={1.5} />
-        <text
-          x={markerX}
-          y={markerY}
-          className="pointer-events-none"
-          fill="#fff"
-          fontSize="12"
-          fontWeight="700"
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleDecrement}
+          aria-label="Decrease slope angle"
+          className="rounded-full bg-white/10 p-3 text-white transition-all hover:bg-white/20 active:scale-95"
         >
-          {Math.round(slopeAngle)}°
-        </text>
-      </svg>
-      <p className="mt-2 text-xs text-white/60">Drag the line to pick 0°–70°.</p>
+          <Minus className="h-5 w-5" />
+        </button>
+        <div className="flex-1 rounded-xl bg-white/5 p-2 shadow-inner">
+          <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-gradient-to-b from-[#0c1020]/80 to-[#0c1020]/40">
+            <svg
+              ref={svgRef}
+              role="slider"
+              aria-valuemin={0}
+              aria-valuemax={70}
+              aria-valuenow={Math.round(slopeAngle)}
+              aria-label="Slope angle"
+              width="100%"
+              height="100%"
+              viewBox={`0 0 ${width} ${height}`}
+              className="h-full w-full cursor-pointer"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+            >
+              <defs>
+                <linearGradient id="slope-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#0c1020" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#0c1020" stopOpacity="0.4" />
+                </linearGradient>
+              </defs>
+              <rect x={0} y={0} width={width} height={height} rx={16} fill="url(#slope-bg)" />
+              <line
+                x1={baseX}
+                y1={baseY}
+                x2={width - 10}
+                y2={baseY}
+                stroke="#6b7280"
+                strokeWidth={4}
+                strokeLinecap="round"
+              />
+              <line
+                x1={baseX}
+                y1={baseY}
+                x2={endX}
+                y2={endY}
+                stroke={slopeColor}
+                strokeWidth={6}
+                strokeLinecap="round"
+              />
+              <circle cx={endX} cy={endY} r={8} fill={slopeColor} stroke="#fff" strokeWidth={1.5} />
+              <text
+                x={markerX}
+                y={markerY}
+                className="pointer-events-none"
+                fill="#fff"
+                fontSize="12"
+                fontWeight="700"
+              >
+                {Math.round(slopeAngle)}°
+              </text>
+            </svg>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleIncrement}
+          aria-label="Increase slope angle"
+          className="rounded-full bg-white/10 p-3 text-white transition-all hover:bg-white/20 active:scale-95"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-white/60">Drag the line or tap ± to pick 0°–70°.</p>
     </div>
   );
 };

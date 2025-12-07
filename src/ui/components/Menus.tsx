@@ -1,9 +1,34 @@
 import clsx from 'clsx';
+import type { FC } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
 import { SlopeControl } from './SlopeControl';
+
+const SetupPanel: FC = () => (
+  <div className="pointer-events-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/60 p-5 text-sm shadow-2xl backdrop-blur-md">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="text-xs tracking-widest text-white/70 uppercase">Difficulty</div>
+      <DifficultySelector />
+    </div>
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="text-xs tracking-widest text-white/70 uppercase">Slope Angle</div>
+      <div className="w-full py-4">
+        <SlopeControl />
+      </div>
+    </div>
+  </div>
+);
+
+const StartButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="bg-accent-orange font-russo pointer-events-auto mt-6 w-full max-w-3xl cursor-pointer rounded-xl py-4 text-xl tracking-widest text-black uppercase shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-400 active:scale-95"
+  >
+    {label}
+  </button>
+);
 
 export const Menus = () => {
   const { uiState, menuIndex, distance, topSpeed, setMenuIndex } = useGameStore();
@@ -63,42 +88,20 @@ export const Menus = () => {
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
         <>
-          <h1 className="mb-5 px-4 text-center text-6xl italic drop-shadow-lg md:text-7xl">
+          <h1 className="mb-5 bg-gradient-to-b from-white to-sky-200 bg-clip-text px-4 text-center text-6xl text-transparent italic drop-shadow-md md:text-7xl">
             REALLY SAFE SKIING
           </h1>
 
-          <div
-            className="pointer-events-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl bg-black/30 p-4 text-sm backdrop-blur"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col gap-4 md:flex-row">
-              <div className="flex-1 rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="mb-2 text-xs uppercase tracking-widest text-white/70">
-                  Slope Angle
-                </div>
-                <SlopeControl />
-              </div>
-              <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 md:max-w-xs">
-                <div className="text-xs uppercase tracking-widest text-white/70">
-                  Difficulty
-                </div>
-                <DifficultySelector />
-              </div>
-            </div>
-          </div>
+          <SetupPanel />
 
-          <button
-            onClick={handleStart}
-            className="animate-blink pointer-events-auto mt-8 cursor-pointer p-4 text-2xl transition-transform hover:scale-110 active:scale-95"
-          >
-            TAP OR STEER TO START
-          </button>
+          <StartButton label="START RUN" onClick={handleStart} />
 
-          <div className="mt-8 text-sm opacity-60">
-            <span className="hidden md:inline">A / D TO STEER</span>
-            <span className="md:hidden">TOUCH CONTROLS ENABLED</span>
+          <div className="mt-6 flex items-center gap-3 opacity-60">
+            <span className="rounded px-2 py-1 font-mono text-xs shadow-sm">[ A ]</span>
+            <span className="text-xs">STEER</span>
+            <span className="rounded px-2 py-1 font-mono text-xs shadow-sm">[ D ]</span>
           </div>
+          <div className="mt-2 text-sm opacity-60 md:hidden">TOUCH CONTROLS ENABLED</div>
         </>
       )}
 
@@ -159,36 +162,9 @@ export const Menus = () => {
             <div className="text-accent-orange animate-pulse text-2xl italic md:text-3xl">
               TOP SPEED: {topSpeed} km/h
             </div>
-            <div
-              className="pointer-events-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-black/30 p-4 text-sm backdrop-blur"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3 text-center text-xs uppercase tracking-widest text-white/70">
-                Tweak and try again
-              </div>
-              <div className="flex flex-col gap-4 md:flex-row">
-                <div className="flex-1 rounded-xl border border-white/10 bg-white/5 p-3">
-                  <div className="mb-2 text-xs uppercase tracking-widest text-white/70">
-                    Slope Angle
-                  </div>
-                  <SlopeControl />
-                </div>
-                <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 md:max-w-xs">
-                  <div className="text-xs uppercase tracking-widest text-white/70">
-                    Difficulty
-                  </div>
-                  <DifficultySelector />
-                </div>
-              </div>
-            </div>
+            <SetupPanel />
           </div>
-          <button
-            onClick={handleStart}
-            className="animate-blink pointer-events-auto p-4 text-2xl transition-transform hover:scale-110"
-          >
-            PLAY AGAIN
-          </button>
+          <StartButton label="PLAY AGAIN" onClick={handleStart} />
         </>
       )}
     </div>

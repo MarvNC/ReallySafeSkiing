@@ -11,3 +11,4 @@
 - Player select steepness
 - Local saving high score?
 - Zoom out camera more?
+- Better player rotation - have player look at horizon?

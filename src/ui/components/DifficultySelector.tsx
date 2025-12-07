@@ -1,38 +1,68 @@
 import clsx from 'clsx';
+import { Skull, Snowflake, Wind } from 'lucide-react';
+import type { ComponentType } from 'react';
 
 import type { Difficulty } from '../store';
 import { useGameStore } from '../store';
 
-const OPTIONS: Difficulty[] = ['CHILL', 'SPORT', 'EXTREME'];
+const OPTIONS: Array<{
+  value: Difficulty;
+  icon: ComponentType<{ className?: string }>;
+  selectedClasses: string;
+}> = [
+  {
+    value: 'CHILL',
+    icon: Snowflake,
+    selectedClasses:
+      'border-cyan-400 text-cyan-400 bg-cyan-400/10 shadow-[0_0_20px_rgba(34,211,238,0.45)]',
+  },
+  {
+    value: 'SPORT',
+    icon: Wind,
+    selectedClasses:
+      'border-orange-500 text-orange-500 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.45)]',
+  },
+  {
+    value: 'EXTREME',
+    icon: Skull,
+    selectedClasses:
+      'border-rose-600 text-rose-500 bg-rose-500/10 shadow-[0_0_20px_rgba(225,29,72,0.45)]',
+  },
+];
 
 export const DifficultySelector = () => {
   const { difficulty, setDifficulty } = useGameStore();
 
   return (
-    <div className="flex flex-col gap-3 text-white">
-      <div className="flex gap-2">
-        {OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className={clsx(
-              'flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition-all duration-150',
-              difficulty === option
-                ? 'border-accent-orange bg-accent-orange text-black shadow-lg shadow-accent-orange/40'
-                : 'border-white/20 bg-white/10 text-white hover:border-white/40 hover:bg-white/20'
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              setDifficulty(option);
-            }}
-            aria-pressed={difficulty === option}
-          >
-            {option}
-          </button>
-        ))}
+    <div className="flex flex-col gap-4 text-white">
+      <div className="grid grid-cols-3 gap-3">
+        {OPTIONS.map((option) => {
+          const Icon = option.icon;
+          const isActive = difficulty === option.value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={clsx(
+                'flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 text-center text-sm font-semibold drop-shadow-md transition-all duration-200',
+                'border-white/10 bg-white/5 text-white/60 hover:bg-white/10',
+                isActive && option.selectedClasses
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDifficulty(option.value);
+              }}
+              aria-pressed={isActive}
+            >
+              <Icon className="h-6 w-6" />
+              <span>{option.value}</span>
+            </button>
+          );
+        })}
       </div>
-      <div className="text-xs text-white/60">
-        <span className="font-semibold text-accent-orange">Extreme</span> doubles obstacle density;
+      <div className="flex min-h-[2.5rem] items-center justify-center text-center text-sm font-medium text-white/80">
+        <span className="font-semibold text-rose-400">Extreme</span> doubles obstacle density;
         <span className="font-semibold text-sky-200"> Chill</span> halves it.
       </div>
     </div>

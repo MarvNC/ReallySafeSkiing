@@ -62,7 +62,6 @@ export class TerrainChunk {
   private terrainCollider?: RAPIER.Collider;
   private obstacleBodies: RAPIER.RigidBody[] = [];
   private obstacleColliders: RAPIER.Collider[] = [];
-  private readonly obstacleDensityMultiplier: number;
   private readonly obstacleCapacity: number;
   private readonly maxTreesPerBucket: number;
   private readonly maxDeadTrees: number;
@@ -78,7 +77,6 @@ export class TerrainChunk {
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
     this.physics = physics;
-    this.obstacleDensityMultiplier = obstacleDensityMultiplier;
     this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * obstacleDensityMultiplier);
     this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity / 3);
     this.maxDeadTrees = Math.ceil(this.obstacleCapacity * 0.1);
@@ -157,11 +155,7 @@ export class TerrainChunk {
     this.group.add(this.deadTreeMesh);
 
     // Rock mesh
-    this.rockMesh = new THREE.InstancedMesh(
-      this.rockGeometry,
-      this.rockMaterial,
-      this.maxRocks
-    );
+    this.rockMesh = new THREE.InstancedMesh(this.rockGeometry, this.rockMaterial, this.maxRocks);
     this.rockMesh.castShadow = true;
     this.rockMesh.receiveShadow = true;
 

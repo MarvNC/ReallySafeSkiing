@@ -15,7 +15,7 @@ export class TerrainManager {
   private finishLine?: THREE.Mesh;
   private readonly scene: THREE.Scene;
   private readonly physics?: PhysicsWorld;
-  private startAltitude = MOUNTAIN_CONFIG.START_ALTITUDE;
+  private startAltitude: number = MOUNTAIN_CONFIG.START_ALTITUDE;
 
   constructor(
     scene: THREE.Scene,
