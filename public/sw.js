@@ -4,25 +4,23 @@
 // TypeScript doesn't have full type definitions for this context by default
 
 const CACHE_NAME = 'really-safe-skiing-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/src/main.tsx',
-  '/src/style.css',
-  '/icon.png',
-  '/manifest.json'
-];
 
-// Install event - cache resources
+// Install event - cache essential resources
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching files');
-        return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
-        console.error('Service Worker: Cache failed', error);
+        console.log('Service Worker: Installing and caching essential files');
+        // Only cache files that definitely exist in production
+        return cache.addAll([
+          '/',
+          '/index.html',
+          '/icon.png',
+          '/manifest.json'
+        ]).catch((error) => {
+          // Don't fail installation if some files are missing
+          console.warn('Service Worker: Some files could not be cached', error);
+        });
       })
   );
   // Force the waiting service worker to become the active service worker
@@ -47,7 +45,7 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - cache everything and serve from cache when offline
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -59,32 +57,56 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip external domains (like Google Fonts) - cache them but don't block on them
+  const isExternal = !event.request.url.startsWith(self.location.origin);
+  
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request).then((fetchResponse) => {
-          // Don't cache if not a valid response
-          if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
-            return fetchResponse;
-          }
-
-          // Clone the response
-          const responseToCache = fetchResponse.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return fetchResponse;
-        });
-      })
-      .catch(() => {
-        // If both cache and network fail, return offline page if available
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
+      .then((cachedResponse) => {
+        // If we have a cached version, return it (even if online for faster loading)
+        if (cachedResponse) {
+          return cachedResponse;
         }
+
+        // Otherwise, fetch from network
+        return fetch(event.request)
+          .then((fetchResponse) => {
+            // Only cache successful responses
+            if (!fetchResponse || fetchResponse.status !== 200) {
+              return fetchResponse;
+            }
+
+            // Don't cache opaque responses (CORS issues) unless it's external
+            if (fetchResponse.type === 'opaque' && !isExternal) {
+              return fetchResponse;
+            }
+
+            // Clone the response before caching
+            const responseToCache = fetchResponse.clone();
+
+            // Cache all successful responses for offline use
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              })
+              .catch((error) => {
+                console.warn('Service Worker: Failed to cache', event.request.url, error);
+              });
+
+            return fetchResponse;
+          })
+          .catch((error) => {
+            // Network failed - try to serve from cache
+            console.warn('Service Worker: Network failed for', event.request.url, error);
+            
+            // For navigation requests, return the main HTML
+            if (event.request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+            
+            // For other requests, return undefined (will show network error)
+            return undefined;
+          });
       })
   );
 });
