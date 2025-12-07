@@ -66,6 +66,7 @@ export class TerrainChunk {
   private readonly maxTreesPerBucket: number;
   private readonly maxDeadTrees: number;
   private readonly maxRocks: number;
+  private readonly obstacleDensityMultiplier: number;
 
   constructor(
     points: PathPoint[],
@@ -77,8 +78,9 @@ export class TerrainChunk {
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
     this.physics = physics;
+    this.obstacleDensityMultiplier = obstacleDensityMultiplier;
     this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * obstacleDensityMultiplier);
-    this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity / 3);
+    this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity);
     this.maxDeadTrees = Math.ceil(this.obstacleCapacity * 0.1);
     this.maxRocks = this.obstacleCapacity;
 
@@ -289,14 +291,34 @@ export class TerrainChunk {
 
     // Calculate base rarity (convert to a reasonable probability per grid point)
     // Higher rarity = more likely to spawn obstacles
-    const baseRarity = config.rarity / 100; // Scale down for reasonable probabilities
+    // Multiply by obstacleDensityMultiplier to scale rarity based on difficulty
+    const baseRarity = (config.rarity / 100) * this.obstacleDensityMultiplier; // Scale down for reasonable probabilities
+
+    // Multiply rockProbability by density multiplier for consistency
+    const rockProbability = 'rockProbability' in config 
+      ? (config.rockProbability * this.obstacleDensityMultiplier)
+      : undefined;
+
+    // Multiply noise threshold probabilities by density multiplier
+    let adjustedNoiseThresholds: Record<string, { min: number; max: number; probability?: number }> | undefined = undefined;
+    if ('noiseThresholds' in config && config.noiseThresholds) {
+      adjustedNoiseThresholds = {};
+      for (const [key, threshold] of Object.entries(config.noiseThresholds)) {
+        adjustedNoiseThresholds[key] = {
+          ...threshold,
+          probability: threshold.probability !== undefined 
+            ? threshold.probability * this.obstacleDensityMultiplier
+            : undefined,
+        };
+      }
+    }
 
     return {
       baseRarity,
       obstacleTypeProportions,
       treeSizeProportions,
-      noiseThresholds: 'noiseThresholds' in config ? config.noiseThresholds : undefined,
-      rockProbability: 'rockProbability' in config ? config.rockProbability : undefined,
+      noiseThresholds: adjustedNoiseThresholds,
+      rockProbability,
     };
   }
 
