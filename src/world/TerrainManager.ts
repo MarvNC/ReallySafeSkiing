@@ -114,6 +114,26 @@ export class TerrainManager {
     return this.wireframe;
   }
 
+  private getClosestPathPoint(worldZ: number): PathPoint | undefined {
+    if (this.allPoints.length === 0) {
+      return undefined;
+    }
+
+    let closestPoint = this.allPoints[0];
+    let minDist = Math.abs(this.allPoints[0].z - worldZ);
+
+    for (let i = 1; i < this.allPoints.length; i++) {
+      const point = this.allPoints[i];
+      const dist = Math.abs(point.z - worldZ);
+      if (dist < minDist) {
+        minDist = dist;
+        closestPoint = point;
+      }
+    }
+
+    return closestPoint;
+  }
+
   getStartPoint(): THREE.Vector3 {
     if (this.allPoints.length > 0) {
       const firstPoint = this.allPoints[0];
@@ -141,22 +161,41 @@ export class TerrainManager {
    * This accounts for moguls, banking, and canyon walls.
    */
   getTerrainHeight(worldX: number, worldZ: number): number {
-    if (this.allPoints.length === 0) {
+    const closestPoint = this.getClosestPathPoint(worldZ);
+    if (!closestPoint) {
       return this.startAltitude;
     }
 
-    // Find the closest path point by Z coordinate
-    let closestPoint = this.allPoints[0];
-    let minDist = Math.abs(this.allPoints[0].z - worldZ);
+    return this.generator.getSnowHeightAt(worldX, worldZ, closestPoint);
+  }
 
-    for (const point of this.allPoints) {
-      const dist = Math.abs(point.z - worldZ);
-      if (dist < minDist) {
-        minDist = dist;
-        closestPoint = point;
-      }
+  /**
+   * Approximate the surface normal at a world position by sampling nearby heights.
+   */
+  getSurfaceNormal(
+    worldX: number,
+    worldZ: number,
+    target: THREE.Vector3 = new THREE.Vector3(),
+    sampleDistance: number = 0.75
+  ): THREE.Vector3 {
+    const closestPoint = this.getClosestPathPoint(worldZ);
+    if (!closestPoint) {
+      return target.set(0, 1, 0);
     }
 
-    return this.generator.getSnowHeightAt(worldX, worldZ, closestPoint);
+    const delta = Math.max(0.1, sampleDistance);
+    const hL = this.generator.getSnowHeightAt(worldX - delta, worldZ, closestPoint);
+    const hR = this.generator.getSnowHeightAt(worldX + delta, worldZ, closestPoint);
+    const hB = this.generator.getSnowHeightAt(worldX, worldZ - delta, closestPoint);
+    const hF = this.generator.getSnowHeightAt(worldX, worldZ + delta, closestPoint);
+
+    const dHdX = (hR - hL) / (2 * delta);
+    const dHdZ = (hF - hB) / (2 * delta);
+
+    if (!Number.isFinite(dHdX) || !Number.isFinite(dHdZ)) {
+      return target.set(0, 1, 0);
+    }
+
+    return target.set(-dHdX, 1, -dHdZ).normalize();
   }
 }

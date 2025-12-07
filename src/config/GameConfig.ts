@@ -79,6 +79,7 @@ export const PLAYER_CONFIG = {
     rightOffset: new THREE.Vector3(0.3, -0.3, -0.5),
     rightMirrorScaleX: -1,
     poleAngleRadians: Math.PI / 12,
+    baseBackTiltRadians: 0.35,
     lateralMovementAmount: 0.15, // How far hands move left/right when steering
     lateralAnimationSpeed: 8.0, // Speed of lateral animation interpolation
     brakeRotationInward: Math.PI / 6, // How much hands rotate inward when braking (30 degrees)
@@ -87,6 +88,13 @@ export const PLAYER_CONFIG = {
   },
   skis: {
     offset: new THREE.Vector3(0, -1.5, 0.3),
+    groundAlignment: {
+      sampleDistance: 0.8, // How far to offset height probes (meters) when computing surface normal
+      smoothingSpeed: 7, // Lerp speed for normals/alignment to avoid jitter
+      handTiltFactor: 0.6, // 1 = hands fully follow ground tilt, 0 = ignore ground tilt
+      sinkOffset: 0.1, // Constant downward offset to visually plant skis in snow
+      steepnessSinkMax: 0.4, // Extra downward offset added as slope gets steeper (0 flat -> max on vertical)
+    },
     // Animation config
     maxTurnRoll: Math.PI / 50, // 30 degrees banking when turning
     maxTurnYaw: Math.PI / 12, // 15 degrees steering into turn

@@ -124,6 +124,7 @@ export class GameApp {
     this.player = new PlayerController(this.scene, this.input!, {
       startPosition: this.startPosition,
       playerPhysics: this.playerPhysics,
+      terrain: this.terrainManager,
     });
 
     // Set initial camera tilt based on slope angle

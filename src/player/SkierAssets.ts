@@ -176,7 +176,7 @@ export function createHandWithPole(): THREE.Group {
   const pole = createPole();
 
   // Angle pole back slightly for realistic skiing pose
-  pole.rotation.x = Math.PI / 8;
+  pole.rotation.x = -Math.PI / 16;
   pole.position.y = 0;
 
   handGroup.add(mitten, pole);

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { PLAYER_CONFIG } from '../config/GameConfig';
 import { InputManager } from '../core/InputManager';
+import { TerrainManager } from '../world/TerrainManager';
 import { PlayerPhysics } from './PlayerPhysics';
 import { createHandWithPole, createSkiPair } from './SkierAssets';
 import { SpeedLines } from './SpeedLines';
@@ -10,6 +11,7 @@ type PlayerOptions = {
   startPosition?: THREE.Vector3;
   radius?: number;
   playerPhysics: PlayerPhysics;
+  terrain: TerrainManager;
 };
 
 export class PlayerController {
@@ -20,10 +22,12 @@ export class PlayerController {
   private skis!: THREE.Group;
   private leftHand!: THREE.Group;
   private rightHand!: THREE.Group;
+  private handRig!: THREE.Group;
 
   private speedLines: SpeedLines;
 
   private input: InputManager;
+  private terrain: TerrainManager;
 
   // Hand animation state for smooth lateral movement
   private currentLeftHandX: number = PLAYER_CONFIG.hands.leftOffset.x;
@@ -32,8 +36,8 @@ export class PlayerController {
   // Hand rotation state for smooth rotation animation
   private currentLeftHandRotationZ: number = -PLAYER_CONFIG.hands.poleAngleRadians;
   private currentRightHandRotationZ: number = PLAYER_CONFIG.hands.poleAngleRadians;
-  private currentLeftHandRotationX: number = 0;
-  private currentRightHandRotationX: number = 0;
+  private currentLeftHandRotationX: number = -PLAYER_CONFIG.hands.baseBackTiltRadians;
+  private currentRightHandRotationX: number = -PLAYER_CONFIG.hands.baseBackTiltRadians;
 
   // Add state trackers for smooth ski animation
   private currentSkiLeftRot = new THREE.Euler();
@@ -46,6 +50,25 @@ export class PlayerController {
 
   // Base camera pitch (vertical tilt) - dynamically adjusted based on slope
   private basePitch: number = PLAYER_CONFIG.camera.tiltRadians;
+
+  // Ground alignment state (shared by skis and hands)
+  private currentGroundNormal = new THREE.Vector3(0, 1, 0);
+  private currentGroundQuat = new THREE.Quaternion();
+  private targetGroundQuat = new THREE.Quaternion();
+  private currentHandAlignQuat = new THREE.Quaternion();
+  private targetHandAlignQuat = new THREE.Quaternion();
+  private readonly identityQuat = new THREE.Quaternion();
+  private readonly baseSkiOffset = PLAYER_CONFIG.skis.offset.clone();
+  private currentSkiYOffset = PLAYER_CONFIG.skis.offset.y;
+
+  // Scratch objects to avoid allocations
+  private readonly tmpVecA = new THREE.Vector3();
+  private readonly tmpVecB = new THREE.Vector3();
+  private readonly tmpForward = new THREE.Vector3();
+  private readonly tmpOrigin = new THREE.Vector3(0, 0, 0);
+  private readonly tmpMatrix = new THREE.Matrix4();
+  private readonly tmpQuatA = new THREE.Quaternion();
+  private readonly tmpQuatB = new THREE.Quaternion();
 
   private physics: PlayerPhysics;
 
@@ -74,14 +97,18 @@ export class PlayerController {
     camera.rotation.x = this.basePitch; // Slight downward tilt to see skis
     mesh.add(camera);
 
-    this.mesh = mesh;
+    this.handRig = new THREE.Group();
     this.camera = camera;
+    this.camera.add(this.handRig);
+
+    this.mesh = mesh;
 
     // Speed Lines
     this.speedLines = new SpeedLines();
     this.camera.add(this.speedLines.mesh);
     this.input = input;
     this.physics = options.playerPhysics;
+    this.terrain = options.terrain;
 
     // 4. Setup visual components
     this.setupHands();
@@ -106,14 +133,14 @@ export class PlayerController {
     this.leftHand = createHandWithPole();
     this.leftHand.position.copy(PLAYER_CONFIG.hands.leftOffset);
     this.leftHand.rotation.z = -PLAYER_CONFIG.hands.poleAngleRadians; // Slight outward angle
-    this.camera.add(this.leftHand);
+    this.handRig.add(this.leftHand);
 
     // Right Hand (mirrored)
     this.rightHand = createHandWithPole();
     this.rightHand.position.copy(PLAYER_CONFIG.hands.rightOffset);
     this.rightHand.rotation.z = PLAYER_CONFIG.hands.poleAngleRadians; // Slight outward angle
     this.rightHand.scale.x = PLAYER_CONFIG.hands.rightMirrorScaleX; // Mirror the geometry
-    this.camera.add(this.rightHand);
+    this.handRig.add(this.rightHand);
   }
 
   /**
@@ -121,7 +148,7 @@ export class PlayerController {
    */
   private setupSkis(): void {
     this.skis = createSkiPair();
-    this.skis.position.copy(PLAYER_CONFIG.skis.offset); // Below the player, slightly forward
+    this.skis.position.copy(this.baseSkiOffset); // Below the player, slightly forward
     this.mesh.add(this.skis);
   }
 
@@ -193,7 +220,77 @@ export class PlayerController {
     }
   }
 
+  private updateGroundAlignment(deltaTime: number): void {
+    if (!this.terrain || !PLAYER_CONFIG.skis.groundAlignment) return;
+
+    const { smoothingSpeed, sampleDistance, handTiltFactor } = PLAYER_CONFIG.skis.groundAlignment;
+    if (smoothingSpeed <= 0) return;
+
+    const alignLerp = 1.0 - Math.exp(-smoothingSpeed * deltaTime);
+
+    // Sample world normal and smooth it to reduce jitter.
+    const sampledNormal = this.terrain.getSurfaceNormal(
+      this.mesh.position.x,
+      this.mesh.position.z,
+      this.tmpVecA,
+      sampleDistance
+    );
+    this.currentGroundNormal.lerp(sampledNormal, alignLerp).normalize();
+
+    // --- Align skis in the player's local space (parent = mesh) ---
+    const parentInverse = this.tmpQuatA.copy(this.mesh.quaternion).invert();
+    const upLocal = this.tmpVecB
+      .copy(this.currentGroundNormal)
+      .applyQuaternion(parentInverse)
+      .normalize();
+
+    const forwardLocal = this.tmpForward.set(0, 0, -1).projectOnPlane(upLocal);
+    if (forwardLocal.lengthSq() < 1e-6) {
+      forwardLocal.set(0, 0, -1);
+    } else {
+      forwardLocal.normalize();
+    }
+
+    this.tmpMatrix.lookAt(this.tmpOrigin, forwardLocal, upLocal);
+    this.targetGroundQuat.setFromRotationMatrix(this.tmpMatrix);
+    this.currentGroundQuat.slerp(this.targetGroundQuat, alignLerp);
+    this.skis.quaternion.copy(this.currentGroundQuat);
+
+    // --- Small sink to keep skis visually planted on steep slopes ---
+    const { sinkOffset = 0, steepnessSinkMax = 0 } = PLAYER_CONFIG.skis.groundAlignment;
+    const steepness = 1 - THREE.MathUtils.clamp(this.currentGroundNormal.y, 0, 1); // 0 flat, 1 vertical
+    const targetYOffset = this.baseSkiOffset.y - (sinkOffset + steepness * steepnessSinkMax);
+    this.currentSkiYOffset = THREE.MathUtils.lerp(this.currentSkiYOffset, targetYOffset, alignLerp);
+    this.skis.position.y = this.currentSkiYOffset;
+
+    // --- Align hands in camera space (so camera orientation is preserved) ---
+    this.camera.getWorldQuaternion(this.tmpQuatB);
+    const normalInCamera = this.tmpVecB
+      .copy(this.currentGroundNormal)
+      .applyQuaternion(this.tmpQuatA.copy(this.tmpQuatB).invert())
+      .normalize();
+
+    const handForward = this.tmpForward.set(0, 0, -1).projectOnPlane(normalInCamera);
+    if (handForward.lengthSq() < 1e-6) {
+      handForward.set(0, 0, -1);
+    } else {
+      handForward.normalize();
+    }
+
+    this.tmpMatrix.lookAt(this.tmpOrigin, handForward, normalInCamera);
+    this.targetHandAlignQuat.setFromRotationMatrix(this.tmpMatrix);
+
+    if (handTiltFactor < 1) {
+      this.targetHandAlignQuat.slerp(this.identityQuat, 1 - handTiltFactor);
+    }
+
+    this.currentHandAlignQuat.slerp(this.targetHandAlignQuat, alignLerp);
+    this.handRig.quaternion.copy(this.currentHandAlignQuat);
+  }
+
   private updateVisuals(deltaTime: number): void {
+    this.updateGroundAlignment(deltaTime);
+
     const isBraking = this.input.isBraking();
     // Read directly from the Source of Truth in Physics
     const isPoling = this.physics.isPushing;
@@ -381,20 +478,22 @@ export class PlayerController {
     // Calculate target rotations based on braking state
     let targetLeftHandRotationZ = -PLAYER_CONFIG.hands.poleAngleRadians;
     let targetRightHandRotationZ = PLAYER_CONFIG.hands.poleAngleRadians;
-    let targetLeftHandRotationX = 0;
-    let targetRightHandRotationX = 0;
+    let targetLeftHandRotationX = -PLAYER_CONFIG.hands.baseBackTiltRadians;
+    let targetRightHandRotationX = -PLAYER_CONFIG.hands.baseBackTiltRadians;
 
     if (isBraking) {
       // When braking, rotate hands inward and forward
       // Left hand: rotate Z more positive (toward center), X forward (positive)
       targetLeftHandRotationZ =
         -PLAYER_CONFIG.hands.poleAngleRadians + PLAYER_CONFIG.hands.brakeRotationInward;
-      targetLeftHandRotationX = PLAYER_CONFIG.hands.brakeRotationForward;
+      targetLeftHandRotationX =
+        -PLAYER_CONFIG.hands.baseBackTiltRadians + PLAYER_CONFIG.hands.brakeRotationForward;
 
       // Right hand: rotate Z more negative (toward center), X forward (positive)
       targetRightHandRotationZ =
         PLAYER_CONFIG.hands.poleAngleRadians - PLAYER_CONFIG.hands.brakeRotationInward;
-      targetRightHandRotationX = PLAYER_CONFIG.hands.brakeRotationForward;
+      targetRightHandRotationX =
+        -PLAYER_CONFIG.hands.baseBackTiltRadians + PLAYER_CONFIG.hands.brakeRotationForward;
     }
 
     // Smoothly interpolate current rotations toward target
@@ -516,6 +615,15 @@ export class PlayerController {
     this.camera.position.set(0, PLAYER_CONFIG.camera.eyeHeight, 0);
     this.camera.rotation.set(this.basePitch, 0, 0);
     this.currentCameraBank = 0; // Reset bank
+    this.currentGroundNormal.set(0, 1, 0);
+    this.currentGroundQuat.identity();
+    this.targetGroundQuat.identity();
+    this.currentHandAlignQuat.identity();
+    this.targetHandAlignQuat.identity();
+    this.skis.quaternion.identity();
+    this.handRig.quaternion.identity();
+    this.currentSkiYOffset = this.baseSkiOffset.y;
+    this.skis.position.copy(this.baseSkiOffset);
     this.isCrashed = false;
     this.physics.setCrashed(false);
     // Show speedlines again after crash recovery
