@@ -14,6 +14,12 @@ export const GAME_CONFIG = {
   crashSpeedThresholdKmh: 50,
 } as const;
 
+const isLowPreset =
+  typeof navigator !== 'undefined' &&
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+export const GRAPHICS_PRESET: 'high' | 'low' = isLowPreset ? 'low' : 'high';
+
 export const DIFFICULTY_SETTINGS = {
   CHILL: {
     obstacleDensity: 0.5,
@@ -221,8 +227,9 @@ export const LIGHTING_CONFIG = {
     targetOffset: 120, // how far forward we point the sun
     followDistance: 30, // how far ahead of the player the shadow camera tracks
     shadow: {
-      mapSize: 2048,
-      bounds: 60, // half-extent for ortho shadow camera
+      mapSizeHigh: 4096,
+      mapSizeLow: 2048,
+      bounds: 40, // half-extent for ortho shadow camera
       cameraNear: 8,
       cameraFar: 180,
       bias: -0.0005,
@@ -240,7 +247,7 @@ export const LIGHTING_CONFIG = {
   },
   fog: {
     color: '#cfe6ff',
-    near: 600,
-    far: 5000,
+    near: 400,
+    far: 3000,
   },
 } as const;

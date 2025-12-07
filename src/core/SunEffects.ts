@@ -2,6 +2,8 @@ import * as THREE from 'three';
 
 export class SunEffects {
   private readonly halo: THREE.Sprite;
+  private readonly tmpToSun = new THREE.Vector3();
+  private readonly tmpViewDir = new THREE.Vector3();
 
   constructor(sun: THREE.DirectionalLight) {
     const haloTexture = this.createHaloTexture();
@@ -24,8 +26,17 @@ export class SunEffects {
     this.halo.position.set(0, 0, 0);
   }
 
-  update(): void {
-    // Reserved for future modulation (size/intensity vs camera angle)
+  update(camera: THREE.Camera): void {
+    if (!this.halo.parent) return;
+
+    this.tmpToSun.setFromMatrixPosition(this.halo.parent.matrixWorld).sub(camera.position).normalize();
+    this.tmpViewDir.set(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+
+    const facing = Math.max(0.0, this.tmpToSun.dot(this.tmpViewDir));
+    const opacity = 0.25 + 0.75 * Math.pow(facing, 4.0);
+
+    const mat = this.halo.material as THREE.SpriteMaterial;
+    mat.opacity = opacity;
   }
 
   setVisible(visible: boolean): void {

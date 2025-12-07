@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 
+import { LIGHTING_CONFIG } from '../config/GameConfig';
 import { COLOR_PALETTE } from '../constants/colors';
 
 export type TerrainMaterials = {
@@ -15,11 +16,11 @@ export function getTerrainMaterials(): TerrainMaterials {
   if (cachedMaterials) return cachedMaterials;
 
   const snow = new THREE.MeshStandardMaterial({
-    color: 0xf7fbff,
-    metalness: 0.08,
-    roughness: 0.18,
-    envMapIntensity: 1.1,
-    flatShading: true,
+    color: 0xfafcff,
+    metalness: 0.0,
+    roughness: 0.08,
+    envMapIntensity: 1.4,
+    flatShading: false,
     side: THREE.DoubleSide,
     vertexColors: true,
   });

@@ -1,13 +1,9 @@
-- Sun
+- Make skis rotate with terrain
+- Fix tree tops
+- BETTER LIGHTING, sparkly snow, etc
 - animations when carving / snow animations
+- FOV warp at speed
+- Zoom out camera more?
+- Blur at distance
 - SFX
 - Music
-- FOV warp at speed
-- Slalom gates
-- Local saving high score?
-- Zoom out camera more?
-- BETTER LIGHTING
-- Make skis rotate with terrain
-- Fix physics?
-- Sparkles in snow
-- Blur at distance

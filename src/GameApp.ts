@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { GAME_CONFIG, LIGHTING_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
+import { GAME_CONFIG, GRAPHICS_PRESET, LIGHTING_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 import { LightingManager } from './core/LightingManager';
 import { DebugHelpers } from './debug/DebugHelpers';
@@ -70,6 +70,9 @@ export class GameApp {
     this.scene = new THREE.Scene();
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = GRAPHICS_PRESET === 'high' ? 1.15 : 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -586,7 +589,7 @@ export class GameApp {
     if (this.playerPhysics) {
       const position = this.playerPhysics.getPosition();
       const velocity = this.playerPhysics.getVelocity();
-      this.lighting?.update({ position, velocity });
+      this.lighting?.update({ position, velocity, camera: activeCamera });
     }
 
     this.snowSparkles?.update(gameDelta, activeCamera, LIGHTING_CONFIG.sun.direction);

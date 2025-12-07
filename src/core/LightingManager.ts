@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { LIGHTING_CONFIG } from '../config/GameConfig';
+import { GRAPHICS_PRESET, LIGHTING_CONFIG } from '../config/GameConfig';
 import { COLOR_PALETTE } from '../constants/colors';
 import { SunEffects } from './SunEffects';
 
@@ -9,6 +9,7 @@ const ENABLE_FOG = true;
 type UpdateArgs = {
   position: THREE.Vector3;
   velocity: THREE.Vector3;
+  camera: THREE.Camera;
 };
 
 export class LightingManager {
@@ -37,10 +38,11 @@ export class LightingManager {
     this.update({
       position: new THREE.Vector3(),
       velocity: new THREE.Vector3(),
+      camera: new THREE.PerspectiveCamera(),
     });
   }
 
-  update({ position, velocity }: UpdateArgs): void {
+  update({ position, velocity, camera }: UpdateArgs): void {
     if (!this.sun || !this.sunTarget) return;
 
     const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier ?? 1;
@@ -61,12 +63,15 @@ export class LightingManager {
     this.sun.target = this.sunTarget;
     this.sunTarget.updateMatrixWorld();
 
-    this.sunEffects?.update();
+    this.sunEffects?.update(camera);
   }
 
   private createSun(): void {
     const intensity = LIGHTING_CONFIG.sun.intensity;
-    const mapSize = LIGHTING_CONFIG.sun.shadow.mapSize;
+    const mapSize =
+      GRAPHICS_PRESET === 'high'
+        ? LIGHTING_CONFIG.sun.shadow.mapSizeHigh
+        : LIGHTING_CONFIG.sun.shadow.mapSizeLow;
     const camNear = LIGHTING_CONFIG.sun.shadow.cameraNear;
     const camFar = LIGHTING_CONFIG.sun.shadow.cameraFar;
 
