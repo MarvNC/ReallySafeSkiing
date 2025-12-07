@@ -49,6 +49,9 @@ export const PLAYER_CONFIG = {
     far: 8000,
     eyeHeight: 0.1,
     tiltRadians: -0.6,
+    // Banking settings
+    maxBankAngle: Math.PI / 18, // ~10 degrees of tilt at max steering
+    bankSmoothingSpeed: 5.0, // How fast the camera rolls into the turn
   },
   hands: {
     leftOffset: new THREE.Vector3(-0.3, -0.3, -0.5),

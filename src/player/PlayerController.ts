@@ -38,6 +38,9 @@ export class PlayerController {
   private currentSkiLeftPos = new THREE.Vector3(-0.3, 0, 0); // Local to ski group
   private currentSkiRightPos = new THREE.Vector3(0.3, 0, 0); // Local to ski group
 
+  // Track current bank angle for camera banking
+  private currentCameraBank = 0;
+
   private physics: PlayerPhysics;
 
   // Animation State
@@ -244,6 +247,27 @@ export class PlayerController {
     rightSki.rotation.copy(this.currentSkiRightRot);
     rightSki.position.copy(this.currentSkiRightPos);
 
+    // --- CAMERA BANKING ---
+    // Calculate target bank angle based on steering
+    // Standard banking: Steer Left -> Roll Left (CCW, +Z)
+    let targetBank = 0;
+
+    // Only bank if we are moving significantly and not just pivoting
+    // (Optional: multiply by bankSpeedRatio to reduce tilt at low speeds)
+    const bankSpeedRatio = Math.min(1.0, speed / 10.0); // 0-1 cap at 10m/s
+
+    targetBank = smoothSteering * PLAYER_CONFIG.camera.maxBankAngle * bankSpeedRatio;
+
+    // Smoothly interpolate current bank to target
+    const bankLerp = 1.0 - Math.exp(-PLAYER_CONFIG.camera.bankSmoothingSpeed * deltaTime);
+    this.currentCameraBank = THREE.MathUtils.lerp(this.currentCameraBank, targetBank, bankLerp);
+
+    // Apply rotations
+    // Keep the existing X tilt (Pitch)
+    this.camera.rotation.x = PLAYER_CONFIG.camera.tiltRadians;
+    // Apply new Z tilt (Roll)
+    this.camera.rotation.z = this.currentCameraBank;
+
     // Update Hands (using the existing logic or the refined version below)
     this.updateHands(deltaTime, isBraking, isPoling, time, smoothSteering);
   }
@@ -395,6 +419,7 @@ export class PlayerController {
   public resetCamera(): void {
     this.camera.position.set(0, PLAYER_CONFIG.camera.eyeHeight, 0);
     this.camera.rotation.set(PLAYER_CONFIG.camera.tiltRadians, 0, 0);
+    this.currentCameraBank = 0; // Reset bank
     this.isCrashed = false;
     this.physics.setCrashed(false);
   }
