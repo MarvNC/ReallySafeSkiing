@@ -381,7 +381,7 @@ export class GameApp {
   private pauseGame(): void {
     // Track if we were in crash state before pausing
     this.wasCrashedBeforePause = this.gameState === GameState.CRASHED;
-    
+
     this.gameState = GameState.PAUSED;
     this.menuIndex = 0; // Reset to "Resume"
     useGameStore.getState().setUIState(UIState.PAUSED);

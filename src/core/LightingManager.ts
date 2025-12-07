@@ -45,8 +45,12 @@ export class LightingManager {
       .clone()
       .add(lookDir.multiplyScalar(LIGHTING_CONFIG.sun.followDistance * shadowScale));
 
-    const sunBackOffset = this.sunDirection.clone().multiplyScalar(-LIGHTING_CONFIG.sun.positionOffset);
-    const sunForwardOffset = this.sunDirection.clone().multiplyScalar(LIGHTING_CONFIG.sun.targetOffset);
+    const sunBackOffset = this.sunDirection
+      .clone()
+      .multiplyScalar(-LIGHTING_CONFIG.sun.positionOffset);
+    const sunForwardOffset = this.sunDirection
+      .clone()
+      .multiplyScalar(LIGHTING_CONFIG.sun.targetOffset);
 
     this.sun.position.copy(focus.clone().add(sunBackOffset));
     this.sunTarget.position.copy(focus.clone().add(sunForwardOffset));
@@ -122,7 +126,9 @@ export class LightingManager {
     const vel = velocity.clone();
     vel.y = 0;
     const hasVelocity = vel.lengthSq() > 1e-4;
-    const velocityDir = hasVelocity ? vel.normalize() : this.sunDirection.clone().multiplyScalar(-1);
+    const velocityDir = hasVelocity
+      ? vel.normalize()
+      : this.sunDirection.clone().multiplyScalar(-1);
 
     const blended = velocityDir
       .clone()

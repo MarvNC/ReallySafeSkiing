@@ -24,7 +24,8 @@ export function getTreeHeight(layerCount: number): number {
 
   // Calculate where the last layer starts
   const lastLayerY =
-    TREE_CONFIG.layerStartY + (layerCount - 1) * (TREE_CONFIG.layerHeight * TREE_CONFIG.layerOverlap);
+    TREE_CONFIG.layerStartY +
+    (layerCount - 1) * (TREE_CONFIG.layerHeight * TREE_CONFIG.layerOverlap);
 
   // The top is the start of the last layer + the height of that layer
   return lastLayerY + TREE_CONFIG.layerHeight;
