@@ -25,29 +25,28 @@ export const HUD = () => {
   return (
     <div className="font-russo pointer-events-none absolute inset-0 text-white uppercase select-none">
       
-      {/* --- TIMER (Top Center) --- */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center transition-all duration-300">
+      {/* --- STATS (Top Left) --- */}
+      <div className="absolute top-6 left-6 flex flex-col items-start gap-2 transition-all duration-300">
+        
+        {/* TIMER */}
         <div 
           className={clsx(
             "text-5xl font-bold tabular-nums transition-colors duration-300", 
             heavyShadow,
-            isUrgent ? "text-accent-red animate-pulse scale-110" : "text-white"
+            isUrgent ? "text-accent-red animate-pulse scale-110 origin-left" : "text-white"
           )}
         >
           {timeStr}
         </div>
-        <div className={clsx("text-xs tracking-widest opacity-90", heavyShadow)}>
-          {isUrgent ? "HURRY UP!" : "TIME REMAINING"}
-        </div>
-      </div>
 
-      {/* --- DISTANCE (Top Right) --- */}
-      <div className="absolute top-6 right-6 text-right transition-all duration-300">
-        <div className={clsx("text-4xl font-bold", heavyShadow)}>
-          {Math.floor(distance)} <span className="text-xl font-normal opacity-80">m</span>
-        </div>
-        <div className={clsx("text-xs tracking-widest opacity-90", heavyShadow)}>
-          Distance Traveled
+        {/* DISTANCE */}
+        <div className="text-left">
+          <div className={clsx("text-4xl font-bold", heavyShadow)}>
+            {Math.floor(distance)} <span className="text-xl font-normal opacity-80">m</span>
+          </div>
+          <div className={clsx("text-xs tracking-widest opacity-90", heavyShadow)}>
+            Distance Traveled
+          </div>
         </div>
       </div>
 
