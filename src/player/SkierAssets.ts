@@ -1,33 +1,83 @@
 import * as THREE from 'three';
-
 import { COLOR_PALETTE } from '../constants/colors';
 
 /**
- * Creates a single ski with curved tip using procedural geometry.
- * The ski curves up at the front to simulate realistic ski shape.
+ * Creates a single ski with a curved and rounded tip using procedural geometry.
+ * The ski curves up (Y-axis) and forms a blunt, semi-circular shape at the tip.
+ */
+export function createSki(): THREE.Mesh; /**
+ * Creates a ski with a realistic semi-circle tip.
+ * Uses high segmentation and Z-axis sculpting to round the front edge physically.
  */
 export function createSki(): THREE.Mesh {
-  // High segment count on Z axis for smooth bending
-  const geo = new THREE.BoxGeometry(0.15, 0.02, 2.0, 1, 1, 20);
+  const width = 0.15;
+  const length = 2.0;
+
+  // CRITICAL CHANGE:
+  // widthSegments is set to 8. This splits the "top plane" into 8 strips,
+  // creating vertices we can move to form a true curve instead of a flat square edge.
+  // depthSegments is 60 for very smooth bending.
+  const geo = new THREE.BoxGeometry(width, 0.02, length, 8, 1, 60);
   const pos = geo.attributes.position;
 
-  // Bend the tip (assuming negative Z is forward)
+  // Parameters
+  const bendStart = -0.4; // Where the ski starts curving up
+  const tipRadius = width / 2; // Radius for the semi-circle tip
+
+  // We perform the modification in two passes or combined logic.
+  // We need to modify Z first (to round the shape), then Y (to lift the tip).
+
   for (let i = 0; i < pos.count; i++) {
-    const z = pos.getZ(i);
-    if (z < -0.5) {
-      // The front 25% of the ski
-      const offset = -0.5 - z; // Distance from bend start
-      const lift = offset * offset * 0.5; // Quadratic curve for smooth upturn
-      pos.setY(i, pos.getY(i) + lift);
+    let x = pos.getX(i);
+    let z = pos.getZ(i);
+    let y = pos.getY(i);
+
+    // --- STEP 1: ROUND THE TIP (Z-Axis Sculpting) ---
+    // The "front face" of the box is originally at z = -length/2 (-1.0).
+    // We want to pull the outer corners BACK towards the tail to make a semi-circle.
+
+    // Check if we are near the very front of the ski
+    // We only apply this rounding to the last "tipRadius" of the geometry
+    const tipBoundary = -(length / 2) + tipRadius;
+
+    if (z < tipBoundary) {
+      // Calculate how far this vertex is from the center line (0.0 to 1.0)
+      const xRatio = Math.abs(x) / (width / 2);
+
+      // Calculate circular offset.
+      // At x=0 (center), offset is 0.
+      // At x=max (edge), offset is full radius.
+      // Formula: z = z + (Radius - sqrt(Radius^2 - x^2))
+      // This creates a perfect semi-circle arc.
+      const circleOffset = tipRadius - Math.sqrt(Math.max(0, tipRadius * tipRadius - x * x));
+
+      // Apply the offset to Z. This physically curves the flat front edge.
+      z += circleOffset;
+      pos.setZ(i, z);
+    }
+
+    // --- STEP 2: LIFT THE TIP (Y-Axis Bending) ---
+    // Now we lift based on the *new* Z position so the curve flows naturally.
+
+    if (z < bendStart) {
+      const dist = bendStart - z;
+
+      // Quadratic lift for smooth rocker
+      const lift = dist * dist * 0.45;
+      pos.setY(i, y + lift);
     }
   }
 
+  // Re-compute normals so the new curved surface reflects light correctly
   geo.computeVertexNormals();
+
+  // Center the ski vertically
+  geo.translate(0, 0.01, 0);
 
   const mat = new THREE.MeshStandardMaterial({
     color: COLOR_PALETTE.charactersAndGear.redJacket,
     roughness: 0.4,
-    flatShading: true,
+    flatShading: true, // Highlights the low-poly faces nicely
   });
 
   return new THREE.Mesh(geo, mat);
