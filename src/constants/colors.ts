@@ -1,7 +1,7 @@
 export const COLOR_PALETTE = {
   background: {
-    sky: '#87ceeb', // Matches reference
-    fog: '#b8d8e8', // Matches reference fog
+    sky: '#cfe6ff',
+    fog: '#d7ecff',
     mountainShadow: '#3e4452',
   },
   primaryEnvironment: {

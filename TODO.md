@@ -9,3 +9,4 @@
 - BETTER LIGHTING
 - Make skis rotate with terrain
 - Fix physics?
+- Make it so cache ONLY applies if offline

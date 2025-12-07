@@ -75,8 +75,12 @@ export function createSki(): THREE.Mesh {
   const mat = new THREE.MeshStandardMaterial({
     color: COLOR_PALETTE.charactersAndGear.redJacket,
     roughness: 0.4,
+    metalness: 0.05,
+    emissive: new THREE.Color(COLOR_PALETTE.charactersAndGear.redJacket),
+    emissiveIntensity: 0.12,
     flatShading: true, // Highlights the low-poly faces nicely
   });
+  mat.color.multiplyScalar(1.08);
 
   return new THREE.Mesh(geo, mat);
 }

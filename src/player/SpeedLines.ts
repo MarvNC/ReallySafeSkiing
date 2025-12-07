@@ -27,6 +27,8 @@ export class SpeedLines {
     });
 
     this.mesh = new THREE.InstancedMesh(geometry, material, this.count);
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = false;
     this.mesh.frustumCulled = false; // Always render if camera is active
 
     // Initialize line data randomly around the center

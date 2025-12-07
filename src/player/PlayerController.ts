@@ -86,6 +86,7 @@ export class PlayerController {
     // 4. Setup visual components
     this.setupHands();
     this.setupSkis();
+    this.configureShadows();
 
     scene.add(this.mesh);
 
@@ -121,9 +122,19 @@ export class PlayerController {
   private setupSkis(): void {
     this.skis = createSkiPair();
     this.skis.position.copy(PLAYER_CONFIG.skis.offset); // Below the player, slightly forward
-    this.skis.castShadow = true;
-    this.skis.receiveShadow = true;
     this.mesh.add(this.skis);
+  }
+
+  private configureShadows(): void {
+    this.mesh.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+      }
+    });
+    this.speedLines.mesh.castShadow = false;
+    this.speedLines.mesh.receiveShadow = false;
   }
 
   /**

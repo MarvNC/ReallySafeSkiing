@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
-import { GAME_CONFIG, LIGHTING_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
-import { COLOR_PALETTE } from './constants/colors';
+import { GAME_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
+import { LightingManager } from './core/LightingManager';
 import { DebugHelpers } from './debug/DebugHelpers';
 import { DebugUI } from './debug/DebugUI';
 import { PhysicsWorld } from './physics/PhysicsWorld';
@@ -44,6 +44,7 @@ export class GameApp {
   private euler = new THREE.Euler(0, 0, 0, 'YXZ');
   private debugCameraSpeed = 50;
   private backgroundEnv?: BackgroundEnvironment;
+  private lighting?: LightingManager;
 
   // 2. Game Logic Variables
   private gameState: GameState = GameState.MENU;
@@ -91,15 +92,9 @@ export class GameApp {
     // Setup mouse look for debug camera
     this.setupMouseLook();
 
-    this.setupLights();
+    this.lighting = new LightingManager(this.scene, this.renderer);
+    this.lighting.init();
     this.addHelpers();
-
-    // Update Fog to match the new palette
-    // Use the color from our palette configuration
-    const fogColor = new THREE.Color(COLOR_PALETTE.background.fog);
-    this.scene.background = new THREE.Color(COLOR_PALETTE.background.sky);
-    // Denser fog starting closer to blend the "floor" disc edge
-    this.scene.fog = new THREE.Fog(fogColor, 600, 5000);
 
     // Initialize Background
     this.backgroundEnv = new BackgroundEnvironment(this.scene);
@@ -555,44 +550,6 @@ export class GameApp {
     document.addEventListener('pointerlockchange', onPointerLockChange);
   }
 
-  private setupLights(): void {
-    const keyLight = new THREE.DirectionalLight(
-      LIGHTING_CONFIG.keyLight.color,
-      LIGHTING_CONFIG.keyLight.intensity
-    );
-    keyLight.position.copy(LIGHTING_CONFIG.keyLight.position);
-    keyLight.castShadow = LIGHTING_CONFIG.keyLight.castShadow;
-    keyLight.shadow.mapSize.set(
-      LIGHTING_CONFIG.keyLight.shadow.mapSize.width,
-      LIGHTING_CONFIG.keyLight.shadow.mapSize.height
-    );
-    keyLight.shadow.camera.near = LIGHTING_CONFIG.keyLight.shadow.camera.near;
-    keyLight.shadow.camera.far = LIGHTING_CONFIG.keyLight.shadow.camera.far;
-    keyLight.shadow.camera.left = LIGHTING_CONFIG.keyLight.shadow.camera.left;
-    keyLight.shadow.camera.right = LIGHTING_CONFIG.keyLight.shadow.camera.right;
-    keyLight.shadow.camera.top = LIGHTING_CONFIG.keyLight.shadow.camera.top;
-    keyLight.shadow.camera.bottom = LIGHTING_CONFIG.keyLight.shadow.camera.bottom;
-    keyLight.shadow.bias = LIGHTING_CONFIG.keyLight.shadow.bias;
-
-    const fillLight = new THREE.DirectionalLight(
-      LIGHTING_CONFIG.fillLight.color,
-      LIGHTING_CONFIG.fillLight.intensity
-    );
-    fillLight.position.copy(LIGHTING_CONFIG.fillLight.position);
-
-    const bounceLight = new THREE.HemisphereLight(
-      LIGHTING_CONFIG.hemisphereLight.skyColor,
-      LIGHTING_CONFIG.hemisphereLight.groundColor,
-      LIGHTING_CONFIG.hemisphereLight.intensity
-    );
-    const ambient = new THREE.AmbientLight(
-      LIGHTING_CONFIG.ambientLight.color,
-      LIGHTING_CONFIG.ambientLight.intensity
-    );
-
-    this.scene.add(keyLight, fillLight, bounceLight, ambient);
-  }
-
   private addHelpers(): void {
     const axes = new THREE.AxesHelper(10);
     this.grid = new THREE.GridHelper(200, 20, '#ff6b35', '#8c9ea8');
@@ -609,6 +566,13 @@ export class GameApp {
 
     // 2. Calculate Game Delta (Slow-mo)
     const gameDelta = realDelta * this.timeScale;
+
+    // Keep sun/shadows following the rider
+    if (this.playerPhysics) {
+      const position = this.playerPhysics.getPosition();
+      const velocity = this.playerPhysics.getVelocity();
+      this.lighting?.update({ position, velocity });
+    }
 
     // ONLY step physics and timers if PLAYING
     if (this.gameState === GameState.PLAYING) {

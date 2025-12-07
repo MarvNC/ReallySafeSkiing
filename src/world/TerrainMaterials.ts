@@ -15,8 +15,10 @@ export function getTerrainMaterials(): TerrainMaterials {
   if (cachedMaterials) return cachedMaterials;
 
   const snow = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.1,
+    color: 0xf7fbff,
+    metalness: 0.03,
+    roughness: 0.35,
+    envMapIntensity: 0.6,
     flatShading: true,
     side: THREE.DoubleSide,
     vertexColors: true,
@@ -37,7 +39,7 @@ export function getTerrainMaterials(): TerrainMaterials {
 
   const rock = new THREE.MeshStandardMaterial({
     color: COLOR_PALETTE.terrainAndObjects.rockGray,
-    roughness: 0.9,
+    roughness: 0.75,
     flatShading: true,
   });
 
