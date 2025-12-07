@@ -11,4 +11,4 @@
 - BETTER LIGHTING
 - Make game less bouncy
 - Make skis rotate with terrain
-- Fix physics?
+- Fix physics (adjust params until gravity/speeds feel right)

@@ -236,6 +236,13 @@ export class PlayerPhysics {
       pushForceApplied = pushImpulse; // Variable is now used below
     }
 
+    // Downforce / Adhesion
+    // Apply extra gravity to keep player glued to the floor at speed.
+    // We scale this by speed so you don't feel heavy when standing still.
+    const speedRatio = Math.min(1.0, currentSpeed / 20.0); // Max downforce at ~70km/h
+    const downforce = new THREE.Vector3(0, -PLAYER_CONFIG.physics.downforce * speedRatio, 0);
+    impulse.add(downforce);
+
     impulse.multiplyScalar(PLAYER_CONFIG.physics.mass * deltaSeconds);
     this.body.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
 
