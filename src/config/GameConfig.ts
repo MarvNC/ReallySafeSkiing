@@ -20,7 +20,7 @@ export const PLAYER_CONFIG = {
   physics: {
     capsuleRadius: 0.5,
     capsuleHalfHeight: 1.0,
-    mass: 40,
+    mass: 50,
 
     // Remove general air resistance. We will calculate drag manually.
     angularDamping: 0, // High damping to stop spinning instantly when key is released
@@ -124,9 +124,9 @@ export const OBSTACLE_CONFIG = {
   // Proportions are relative - code will normalize them to percentages
   surfaces: {
     track: {
-      rarity: 5, // Overall rarity (relative - lower = rarer)
+      rarity: 15, // Overall rarity (relative - lower = rarer)
       treeProportion: 1, // Tree proportion when obstacle appears
-      rockProportion: 4, // Rock proportion when obstacle appears
+      rockProportion: 2, // Rock proportion when obstacle appears
       treeSizes: {
         small: 1, // Small tree proportion
         medium: 0, // Medium tree proportion
@@ -134,8 +134,8 @@ export const OBSTACLE_CONFIG = {
       },
     },
     bank: {
-      rarity: 10, // Overall rarity
-      treeProportion: 3, // Tree proportion
+      rarity: 50, // Overall rarity
+      treeProportion: 4, // Tree proportion
       rockProportion: 1, // Rock proportion
       treeSizes: {
         small: 1, // Small tree proportion

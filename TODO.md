@@ -18,7 +18,7 @@
 - Camera tilt when turning
 - Better ski model
 - Mobile tilt controls
-- Remove w key, have player auto move forward below max pole speed
 - Start menu - choose infinite/timed mode (consult with gemini, arcade/timed/etc?)
+  - Difficulty slider controlling terrain obstacles?
 - Player select steepness
 - Local saving high score?
