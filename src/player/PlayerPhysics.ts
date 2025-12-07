@@ -201,15 +201,39 @@ export class PlayerPhysics {
 
     // 5. Apply Forces
 
-    // Lateral Friction (Drift control)
+    // Lateral Friction (Drift control from ski edge)
     const lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction;
 
-    // Forward Friction (Braking slide)
-    let forwardDrag: number = PLAYER_CONFIG.physics.forwardFriction;
-    if (isBraking) {
-      forwardDrag = PLAYER_CONFIG.physics.brakeDamping;
+    // Forward snow friction (roughly linear in speed)
+    let forwardForce = -forwardSpeed * PLAYER_CONFIG.physics.forwardFriction;
+
+    // --- NEW: Non-linear air drag ---
+    // Use total speed so drag acts on whatever direction you're actually moving.
+    const speed = this.currentVel.length();
+    if (speed > 0.1) {
+      // v^2 drag: F_drag ~ -k * v * |v|
+      const airK = PLAYER_CONFIG.physics.airDragCoeff;
+
+      // Directional decomposition: project drag onto forward axis
+      const speedSq = speed * speed;
+
+      // How much of the velocity is forward (in terms of ratio)
+      const forwardRatio = speed > 0 ? Math.abs(forwardSpeed) / speed : 0;
+
+      const forwardSign = Math.sign(forwardSpeed) || 1;
+
+      // Forward air drag - grows ~ v^2
+      const forwardAir = -forwardSign * airK * speedSq * forwardRatio;
+
+      forwardForce += forwardAir;
     }
-    const forwardForce = -forwardSpeed * forwardDrag;
+
+    // Extra damping when snow-plowing
+    if (isBraking) {
+      const forwardSign = Math.sign(forwardSpeed) || 1;
+      const brakeForce = -forwardSign * PLAYER_CONFIG.physics.brakeDamping * Math.abs(forwardSpeed);
+      forwardForce += brakeForce;
+    }
 
     const impulse = new THREE.Vector3()
       .copy(this.rightDir)

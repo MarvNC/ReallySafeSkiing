@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export const PHYSICS_CONFIG = {
   // Global gravity for the game world
-  gravity: new THREE.Vector3(0, -15, 0),
+  gravity: new THREE.Vector3(0, -18, 0),
   // Safety clamp for the physics timestep
   maxDeltaTime: 1 / 20,
 } as const;
@@ -40,6 +40,9 @@ export const PLAYER_CONFIG = {
     // Ski properties
     lateralFriction: 2.0, // "Edge Grip": How hard it stops you sliding sideways
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
+
+    // --- NEW: Air drag (non-linear with speed) ---
+    airDragCoeff: 0.0025, // Strength of v^2 drag. Start small (0.01-0.05).
 
     // Poling mechanics
     poleForce: 30.0, // Strong initial push
