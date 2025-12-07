@@ -52,7 +52,7 @@ export const PLAYER_CONFIG = {
     maxSteeringSpeed: 1.5, // Maximum turn rate in radians per second (caps the final turn speed)
 
     // Physics limits
-    brakeDamping: 6.0, // Drag applied when "snowplowing"
+    brakeDamping: 2.0, // Drag applied when "snowplowing"
     friction: 0.12, // Base friction applied to simulate snow contact
   },
   camera: {
@@ -211,9 +211,9 @@ export const LIGHTING_CONFIG = {
     distanceMultiplier: 4.0, // Increase to extend shadow coverage/distances
   },
   sun: {
-    color: '#ffffff',
+    color: '#fff1d0',
     direction: new THREE.Vector3(-0.2, -1.2, -0.1).normalize(), // higher sun angle
-    intensity: 1.8,
+    intensity: 2,
     positionOffset: 50, // how far behind camera we park the sun
     targetOffset: 120, // how far forward we point the sun
     followDistance: 30, // how far ahead of the player the shadow camera tracks
@@ -233,7 +233,7 @@ export const LIGHTING_CONFIG = {
   },
   ambientLight: {
     color: '#9cc8ff',
-    intensity: 0.4,
+    intensity: 0.7,
   },
   fog: {
     color: '#cfe6ff',

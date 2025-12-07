@@ -14,14 +14,14 @@ const MOUNTAIN_CONFIG = {
 
   // BACK LAYER - Far away, large, smooth mountains with bluish tint
   backLayer: {
-    count: 18, // Number of mountains in this ring
+    count: 40, // Number of mountains in this ring
     radiusMin: 3000, // Closest distance from player (units)
     radiusMax: 5000, // Farthest distance from player (units)
-    scaleMin: 1000, // Minimum mountain height (units)
+    scaleMin: 700, // Minimum mountain height (units)
     scaleMax: 1400, // Maximum mountain height (units)
     yOffset: -20, // Vertical position (lower = below track, higher = above track)
     noiseScale: 0.002, // Noise frequency (lower = smoother)
-    detail: 0.3, // Detail level 0-1 (lower = smoother peaks)
+    detail: 2, // Detail level 0-1 (lower = smoother peaks)
   },
 
   // MID LAYER - Medium distance, detailed, white/rocky mountains
