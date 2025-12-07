@@ -210,34 +210,18 @@ export const LIGHTING_CONFIG = {
   shadow: {
     distanceMultiplier: 4.0, // Increase to extend shadow coverage/distances
   },
-  device: {
-    isMobile: () =>
-      typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : false,
-  },
   sun: {
     color: '#ffffff',
     direction: new THREE.Vector3(-0.2, -1.2, -0.1).normalize(), // higher sun angle
-    intensity: {
-      desktop: 2.1,
-      mobile: 1.8,
-    },
+    intensity: 2.8,
     positionOffset: 50, // how far behind camera we park the sun
     targetOffset: 120, // how far forward we point the sun
     followDistance: 30, // how far ahead of the player the shadow camera tracks
     shadow: {
-      mapSize: {
-        desktop: 2048,
-        mobile: 1024,
-      },
+      mapSize: 2048,
       bounds: 60, // half-extent for ortho shadow camera
-      cameraNear: {
-        desktop: 8,
-        mobile: 10,
-      },
-      cameraFar: {
-        desktop: 180,
-        mobile: 140,
-      },
+      cameraNear: 8,
+      cameraFar: 180,
       bias: -0.0005,
       normalBias: 0.02,
     },
@@ -245,30 +229,15 @@ export const LIGHTING_CONFIG = {
   hemisphereLight: {
     skyColor: '#b9d9ff',
     groundColor: '#9fc7e0',
-    intensity: {
-      desktop: 0.55,
-      mobile: 0.65,
-    },
+    intensity: 1.8,
   },
   ambientLight: {
     color: '#9cc8ff',
-    intensity: {
-      desktop: 0.22,
-      mobile: 0.28,
-    },
+    intensity: 0.4,
   },
   fog: {
-    color: {
-      desktop: '#cfe6ff',
-      mobile: '#d7ecff',
-    },
-    near: {
-      desktop: 220,
-      mobile: 180,
-    },
-    far: {
-      desktop: 520,
-      mobile: 420,
-    },
+    color: '#cfe6ff',
+    near: 600,
+    far: 5000,
   },
 } as const;

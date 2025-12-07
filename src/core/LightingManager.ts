@@ -4,7 +4,7 @@ import { LIGHTING_CONFIG } from '../config/GameConfig';
 import { COLOR_PALETTE } from '../constants/colors';
 import { SunEffects } from './SunEffects';
 
-const ENABLE_FOG = false;
+const ENABLE_FOG = true;
 
 type UpdateArgs = {
   position: THREE.Vector3;
@@ -15,7 +15,6 @@ export class LightingManager {
   private readonly scene: THREE.Scene;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly sunDirection = LIGHTING_CONFIG.sun.direction.clone();
-  private readonly isMobile = LIGHTING_CONFIG.device.isMobile();
 
   private sun!: THREE.DirectionalLight;
   private sunTarget!: THREE.Object3D;
@@ -66,18 +65,10 @@ export class LightingManager {
   }
 
   private createSun(): void {
-    const intensity = this.isMobile
-      ? LIGHTING_CONFIG.sun.intensity.mobile
-      : LIGHTING_CONFIG.sun.intensity.desktop;
-    const mapSize = this.isMobile
-      ? LIGHTING_CONFIG.sun.shadow.mapSize.mobile
-      : LIGHTING_CONFIG.sun.shadow.mapSize.desktop;
-    const camNear = this.isMobile
-      ? LIGHTING_CONFIG.sun.shadow.cameraNear.mobile
-      : LIGHTING_CONFIG.sun.shadow.cameraNear.desktop;
-    const camFar = this.isMobile
-      ? LIGHTING_CONFIG.sun.shadow.cameraFar.mobile
-      : LIGHTING_CONFIG.sun.shadow.cameraFar.desktop;
+    const intensity = LIGHTING_CONFIG.sun.intensity;
+    const mapSize = LIGHTING_CONFIG.sun.shadow.mapSize;
+    const camNear = LIGHTING_CONFIG.sun.shadow.cameraNear;
+    const camFar = LIGHTING_CONFIG.sun.shadow.cameraFar;
 
     this.sun = new THREE.DirectionalLight(LIGHTING_CONFIG.sun.color, intensity);
     this.sun.castShadow = true;
@@ -104,12 +95,8 @@ export class LightingManager {
   }
 
   private createFillLights(): void {
-    const hemiIntensity = this.isMobile
-      ? LIGHTING_CONFIG.hemisphereLight.intensity.mobile
-      : LIGHTING_CONFIG.hemisphereLight.intensity.desktop;
-    const ambientIntensity = this.isMobile
-      ? LIGHTING_CONFIG.ambientLight.intensity.mobile
-      : LIGHTING_CONFIG.ambientLight.intensity.desktop;
+    const hemiIntensity = LIGHTING_CONFIG.hemisphereLight.intensity;
+    const ambientIntensity = LIGHTING_CONFIG.ambientLight.intensity;
 
     this.hemisphere = new THREE.HemisphereLight(
       LIGHTING_CONFIG.hemisphereLight.skyColor,
@@ -130,11 +117,9 @@ export class LightingManager {
       return;
     }
 
-    const fogColorHex = this.isMobile
-      ? LIGHTING_CONFIG.fog.color.mobile
-      : LIGHTING_CONFIG.fog.color.desktop;
-    const near = this.isMobile ? LIGHTING_CONFIG.fog.near.mobile : LIGHTING_CONFIG.fog.near.desktop;
-    const far = this.isMobile ? LIGHTING_CONFIG.fog.far.mobile : LIGHTING_CONFIG.fog.far.desktop;
+    const fogColorHex = LIGHTING_CONFIG.fog.color;
+    const near = LIGHTING_CONFIG.fog.near;
+    const far = LIGHTING_CONFIG.fog.far;
 
     this.scene.fog = new THREE.Fog(fogColorHex, near, far);
   }
