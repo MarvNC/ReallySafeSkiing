@@ -7,9 +7,9 @@ import { DifficultySelector } from './DifficultySelector';
 import { SlopeControl } from './SlopeControl';
 
 const SetupPanel: FC = () => (
-  <div className="pointer-events-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/60 p-5 text-sm shadow-2xl backdrop-blur-md">
+  <div className="pointer-events-auto flex w-full max-w-xl flex-col gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm shadow-2xl backdrop-blur-md">
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-      <div className="text-xs tracking-widest text-white/70 uppercase">Difficulty</div>
+      <div className="text-xs tracking-widest text-white/70 uppercase">Obstacle Difficulty</div>
       <DifficultySelector />
     </div>
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">

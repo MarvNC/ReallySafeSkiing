@@ -61,10 +61,6 @@ export const DifficultySelector = () => {
           );
         })}
       </div>
-      <div className="flex min-h-[2.5rem] items-center justify-center text-center text-sm font-medium text-white/80">
-        <span className="font-semibold text-rose-400">Extreme</span> doubles obstacle density;
-        <span className="font-semibold text-sky-200"> Chill</span> halves it.
-      </div>
     </div>
   );
 };

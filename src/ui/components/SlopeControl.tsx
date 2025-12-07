@@ -21,12 +21,12 @@ export const SlopeControl = () => {
 
   const handleIncrement = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    setSlopeAngle(clampAngle(slopeAngle + 5));
+    setSlopeAngle(clampAngle(slopeAngle + 1));
   };
 
   const handleDecrement = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    setSlopeAngle(clampAngle(slopeAngle - 5));
+    setSlopeAngle(clampAngle(slopeAngle - 1));
   };
 
   const updateFromPointer = (clientX: number, clientY: number) => {
@@ -78,7 +78,6 @@ export const SlopeControl = () => {
   return (
     <div className="w-full text-white select-none">
       <div className="mb-3 flex items-center justify-between text-xs tracking-[0.2em] text-white/70 uppercase">
-        <span>Adjust slope</span>
         <span className="text-2xl font-bold text-sky-300">{Math.round(slopeAngle)}°</span>
       </div>
       <div className="flex items-center gap-3">
@@ -156,7 +155,6 @@ export const SlopeControl = () => {
           <Plus className="h-5 w-5" />
         </button>
       </div>
-      <p className="mt-2 text-xs text-white/60">Drag the line or tap ± to pick 0°–70°.</p>
     </div>
   );
 };

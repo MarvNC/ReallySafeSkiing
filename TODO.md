@@ -5,10 +5,11 @@
 - FOV warp at speed
 - Speed lines/wind effect
 - Slalom gates
-- Pause menu
-- Start menu - choose infinite/timed mode (consult with gemini, arcade/timed/etc?)
-  - Difficulty slider controlling terrain obstacles?
-- Player select steepness
 - Local saving high score?
 - Zoom out camera more?
 - Better player rotation - have player look at horizon?
+- Save setting to localstorage
+- Add "Back to menu" button on pause menu
+- Proper PWA
+- BETTER LIGHTING
+- Remove side steer buttons from mobile and make it so tapping either side steers
