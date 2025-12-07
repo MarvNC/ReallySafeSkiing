@@ -29,12 +29,12 @@ const SetupPanel: FC = () => (
         <span className="bg-white/20 rounded-md px-2 py-1 font-mono text-sm border-b-2 border-white/10">A</span>
         <span className="text-xs tracking-widest">+</span>
         <span className="bg-white/20 rounded-md px-2 py-1 font-mono text-sm border-b-2 border-white/10">D</span>
-        <span className="text-xs tracking-widest">TO BRAKE</span>
+        <span className="text-xs tracking-widest">TO WEDGE</span>
       </div>
       {/* Mobile controls */}
       <div className="md:hidden flex flex-col items-center gap-1 text-xs tracking-widest text-center">
         <div>TAP LEFT AND RIGHT SIDES TO STEER</div>
-        <div>TAP BOTH SIDES TO BRAKE</div>
+        <div>TAP BOTH SIDES TO WEDGE</div>
       </div>
     </div>
   </div>
