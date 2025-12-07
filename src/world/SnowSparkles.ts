@@ -10,23 +10,28 @@ export class SnowSparkles {
   private readonly material: THREE.PointsMaterial;
   private readonly positions: Float32Array;
   private readonly colors: Float32Array;
+  private readonly baseHeights: Float32Array;
   private readonly phases: Float32Array;
   private readonly twinkleSpeeds: Float32Array;
   private readonly baseAlphas: Float32Array;
+  private readonly driftAngles: Float32Array;
+  private readonly driftSpeeds: Float32Array;
+  private readonly tintStrengths: Float32Array;
+  private readonly heightJitters: Float32Array;
   private readonly count: number;
   private readonly terrain: TerrainManager;
 
   private readonly baseColor = new THREE.Color(COLOR_PALETTE.primaryEnvironment.iceBlue).lerp(
     new THREE.Color(0xffffff),
-    0.35
+    0.5
   );
-  private readonly spawnRadiusNear = 8;
-  private readonly spawnRadiusFar = 220;
-  private readonly maxDistance = 520;
-  private readonly maxBehindDistance = 20;
-  private readonly forwardArc = Math.PI / 3; // +/- 60deg
-  private readonly verticalOffset = 0.08;
-  private readonly spawnHeightMax = 35;
+  private readonly spawnRadiusNear = 5.5;
+  private readonly spawnRadiusFar = 200;
+  private readonly maxDistance = 480;
+  private readonly maxBehindDistance = 45;
+  private readonly forwardArc = Math.PI / 2.2; // Wider arc to keep sparkles in view
+  private readonly verticalOffset = 0.22;
+  private readonly spawnHeightMax = 12;
 
   private readonly tmpPos = new THREE.Vector3();
   private readonly tmpCamPos = new THREE.Vector3();
@@ -38,14 +43,19 @@ export class SnowSparkles {
 
   constructor(terrain: TerrainManager) {
     this.terrain = terrain;
-    this.count = 5000;
+    this.count = 6500;
 
     this.geometry = new THREE.BufferGeometry();
     this.positions = new Float32Array(this.count * 3);
     this.colors = new Float32Array(this.count * 3);
+    this.baseHeights = new Float32Array(this.count);
     this.phases = new Float32Array(this.count);
     this.twinkleSpeeds = new Float32Array(this.count);
     this.baseAlphas = new Float32Array(this.count);
+    this.driftAngles = new Float32Array(this.count);
+    this.driftSpeeds = new Float32Array(this.count);
+    this.tintStrengths = new Float32Array(this.count);
+    this.heightJitters = new Float32Array(this.count);
 
     this.material = new THREE.PointsMaterial({
       size: 0.1,
@@ -56,6 +66,7 @@ export class SnowSparkles {
       vertexColors: true,
       color: new THREE.Color(0xffffff),
       sizeAttenuation: true,
+      opacity: 0.95,
     });
 
     this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
@@ -88,6 +99,16 @@ export class SnowSparkles {
 
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3;
+      const driftAngle = (this.driftAngles[i] += this.driftSpeeds[i] * delta);
+      const driftStep = (0.45 + this.baseAlphas[i] * 0.65) * delta;
+
+      this.positions[idx] += Math.cos(driftAngle) * driftStep;
+      this.positions[idx + 2] += Math.sin(driftAngle) * driftStep;
+
+      const bobPhase = this.phases[i] * 0.35 + driftAngle * 0.15;
+      this.positions[idx + 1] =
+        this.baseHeights[i] + Math.sin(bobPhase) * 0.2 * this.heightJitters[i];
+
       this.tmpPos.fromArray(this.positions, idx);
 
       const toCamera = this.tmpDir.subVectors(this.tmpPos, this.tmpCamPos);
@@ -137,7 +158,12 @@ export class SnowSparkles {
 
     this.baseAlphas[index] = 0.35 + Math.random() * 0.35;
     this.phases[index] = Math.random() * Math.PI * 2;
-    this.twinkleSpeeds[index] = 2.0 + Math.random() * 3.0;
+    this.twinkleSpeeds[index] = 2.4 + Math.random() * 3.6;
+    this.baseHeights[index] = this.positions[idx + 1];
+    this.driftAngles[index] = Math.random() * Math.PI * 2;
+    this.driftSpeeds[index] = 0.4 + Math.random() * 1.1;
+    this.tintStrengths[index] = 0.75 + Math.random() * 0.25;
+    this.heightJitters[index] = 0.4 + Math.random() * 0.8;
   }
 
   private updateColorBuffer(delta: number, forward: THREE.Vector3, sunDir: THREE.Vector3): void {
@@ -148,11 +174,17 @@ export class SnowSparkles {
       const idx = i * 3;
       const twinkle = 0.5 + 0.5 * Math.sin(this.phases[i]);
       const facing = Math.max(0, forward.dot(viewToSun) * 0.5 + 0.5);
-      const strength = this.baseAlphas[i] * twinkle * sunElevation * (0.4 + 0.6 * facing);
+      const fresnel = Math.pow(Math.max(0, 1 - forward.dot(viewToSun)), 2.2);
+      const tint = this.tintStrengths[i];
+      const strength =
+        this.baseAlphas[i] * twinkle * sunElevation * (0.35 + 0.65 * facing + 0.2 * fresnel);
 
-      this.colors[idx] = this.baseColor.r * strength;
-      this.colors[idx + 1] = this.baseColor.g * strength;
-      this.colors[idx + 2] = this.baseColor.b * strength;
+      const coolTint = 0.85 + 0.15 * tint;
+      const warmTint = 0.9 + 0.1 * (1 - tint);
+
+      this.colors[idx] = this.baseColor.r * strength * warmTint;
+      this.colors[idx + 1] = this.baseColor.g * strength * (0.9 + 0.1 * tint);
+      this.colors[idx + 2] = this.baseColor.b * strength * coolTint;
 
       this.phases[i] += delta * this.twinkleSpeeds[i];
     }
@@ -167,15 +199,43 @@ export class SnowSparkles {
     const context = canvas.getContext('2d');
     if (context) {
       const center = size / 2;
-      const gradient = context.createRadialGradient(center, center, 0, center, center, center);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-      gradient.addColorStop(0.4, 'rgba(210, 235, 255, 0.6)');
-      gradient.addColorStop(1, 'rgba(210, 235, 255, 0)');
+      const radius = size / 2;
+      const gradient = context.createRadialGradient(center, center, 0, center, center, radius);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      gradient.addColorStop(0.32, 'rgba(230, 240, 255, 0.65)');
+      gradient.addColorStop(0.55, 'rgba(200, 225, 255, 0.35)');
+      gradient.addColorStop(1, 'rgba(200, 225, 255, 0)');
       context.fillStyle = gradient;
       context.fillRect(0, 0, size, size);
+
+      const drawCross = (rotation: number, alpha: number) => {
+        context.save();
+        context.translate(center, center);
+        context.rotate(rotation);
+        context.globalAlpha = alpha;
+        context.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        context.lineWidth = size * 0.06;
+        context.lineCap = 'round';
+        context.beginPath();
+        context.moveTo(-radius * 0.8, 0);
+        context.lineTo(radius * 0.8, 0);
+        context.stroke();
+        context.restore();
+      };
+
+      context.globalCompositeOperation = 'lighter';
+      drawCross(0, 0.9);
+      drawCross(Math.PI / 4, 0.6);
+
+      context.beginPath();
+      context.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      context.arc(center, center, size * 0.08, 0, Math.PI * 2);
+      context.fill();
     }
 
     const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
     texture.needsUpdate = true;
     return texture;
   }
