@@ -41,6 +41,9 @@ export class PlayerController {
   // Track current bank angle for camera banking
   private currentCameraBank = 0;
 
+  // Base camera pitch (vertical tilt) - dynamically adjusted based on slope
+  private basePitch: number = PLAYER_CONFIG.camera.tiltRadians;
+
   private physics: PlayerPhysics;
 
   // Animation State
@@ -61,7 +64,7 @@ export class PlayerController {
       PLAYER_CONFIG.camera.far
     );
     camera.position.set(0, PLAYER_CONFIG.camera.eyeHeight, 0); // Eye height
-    camera.rotation.x = PLAYER_CONFIG.camera.tiltRadians; // Slight downward tilt to see skis
+    camera.rotation.x = this.basePitch; // Slight downward tilt to see skis
     mesh.add(camera);
 
     this.mesh = mesh;
@@ -134,6 +137,30 @@ export class PlayerController {
 
   syncFromPhysics(): void {
     this.physics.syncToThree(this.mesh);
+  }
+
+  /**
+   * Set the camera's base pitch angle based on the slope.
+   * Formula: basePitch = -(slopeAngle + horizonOffset)
+   * This ensures the camera looks down the slope, matching the terrain angle.
+   */
+  public setSlopeAngle(angleDegrees: number): void {
+    // Convert slope to radians
+    const slopeRad = THREE.MathUtils.degToRad(angleDegrees);
+
+    // Calculate ideal pitch:
+    // We want to look down the slope, plus a slight fixed downward tilt (offset)
+    // to center the player and see the path ahead.
+    // Based on current tuning: 20deg slope needs ~0.6 rad tilt.
+    // 0.6 - degToRad(20) ~= 0.25 offset
+    const horizonOffset = 0.25;
+
+    this.basePitch = -(slopeRad + horizonOffset);
+
+    // Apply immediately if not crashed
+    if (!this.isCrashed) {
+      this.camera.rotation.x = this.basePitch;
+    }
   }
 
   private updateVisuals(deltaTime: number): void {
@@ -264,7 +291,7 @@ export class PlayerController {
 
     // Apply rotations
     // Keep the existing X tilt (Pitch)
-    this.camera.rotation.x = PLAYER_CONFIG.camera.tiltRadians;
+    this.camera.rotation.x = this.basePitch;
     // Apply new Z tilt (Roll)
     this.camera.rotation.z = this.currentCameraBank;
 
@@ -418,7 +445,7 @@ export class PlayerController {
 
   public resetCamera(): void {
     this.camera.position.set(0, PLAYER_CONFIG.camera.eyeHeight, 0);
-    this.camera.rotation.set(PLAYER_CONFIG.camera.tiltRadians, 0, 0);
+    this.camera.rotation.set(this.basePitch, 0, 0);
     this.currentCameraBank = 0; // Reset bank
     this.isCrashed = false;
     this.physics.setCrashed(false);

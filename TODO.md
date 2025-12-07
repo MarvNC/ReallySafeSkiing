@@ -7,8 +7,6 @@
 - Slalom gates
 - Local saving high score?
 - Zoom out camera more?
-- Better player rotation - have player look at horizon?
-- Save setting to localstorage
 - Proper PWA
 - BETTER LIGHTING
 - Allow esc menu during wasted animation

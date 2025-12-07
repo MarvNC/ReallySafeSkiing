@@ -122,6 +122,9 @@ export class GameApp {
       playerPhysics: this.playerPhysics,
     });
 
+    // Set initial camera tilt based on slope angle
+    this.player.setSlopeAngle(slopeAngle);
+
     if (!this.useDebugCamera) {
       this.activeCamera = this.player.camera;
     }
@@ -340,6 +343,10 @@ export class GameApp {
     this.topSpeed = 0; // Reset top speed
 
     const { slopeAngle, difficulty } = useGameStore.getState();
+    
+    // Set camera tilt based on slope angle
+    this.player.setSlopeAngle(slopeAngle);
+    
     this.terrainManager.regenerate(slopeAngle, difficulty);
     this.recalculateStartPosition();
 
