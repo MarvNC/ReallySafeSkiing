@@ -339,29 +339,40 @@ export class GameApp {
   }
 
   private startGame() {
-    this.gameState = GameState.PLAYING;
-    this.timeRemaining = GAME_CONFIG.timerDuration;
-    this.topSpeed = 0; // Reset top speed
-    this.wasCrashedBeforePause = false; // Reset crash flag on new game
-
     const { slopeAngle, difficulty } = useGameStore.getState();
 
-    // Set camera tilt based on slope angle
-    this.player.setSlopeAngle(slopeAngle);
+    // Full reset so restart behaves like a fresh page load
+    this.timeScale = 1;
+    this.crashTimer = 0;
+    this.wasCrashedBeforePause = false;
+    this.isAboutOpen = false;
+    this.menuIndex = 0;
+    this.gameState = GameState.PLAYING;
 
+    // Rebuild world
     this.terrainManager.regenerate(slopeAngle, difficulty);
     this.recalculateStartPosition();
 
-    // Reset player position
+    // Reset player + physics
+    this.player.setSlopeAngle(slopeAngle);
+    this.playerPhysics.setCrashed(false);
     this.playerPhysics.resetPosition(this.startPosition);
+    this.playerPhysics.resetVelocity();
     this.player.mesh.position.copy(this.startPosition);
     this.player.mesh.quaternion.set(0, 0, 0, 1);
+    this.player.resetCamera();
 
-    // Update UI via store
+    // Reset timers/UI
+    this.timeRemaining = GAME_CONFIG.timerDuration;
+    this.topSpeed = 0;
+
+    useGameStore.getState().setMenuIndex(0);
     useGameStore.getState().setUIState(UIState.PLAYING);
     useGameStore.getState().setTopSpeed(0);
+    useGameStore.getState().updateStats(0, 0, this.timeRemaining);
 
     // Reset clock
+    this.clock.stop();
     this.clock.start();
 
     // Rebind keys for playing state
@@ -451,9 +462,7 @@ export class GameApp {
         this.resumeGame();
         break;
       case 1: // Restart
-        this.wasCrashedBeforePause = false; // Reset crash flag on restart
-        this.resumeGame(); // Set state back to playing
-        this.startGame(); // Reset positions/score
+        this.startGame(); // Reset everything
         break;
       case 2: // Back to menu
         this.wasCrashedBeforePause = false; // Reset crash flag when returning to menu
