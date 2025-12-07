@@ -31,11 +31,11 @@ export class SpeedLines {
 
     // Initialize line data randomly around the center
     for (let i = 0; i < this.count; i++) {
-      this.lines.push(this.resetLine(new THREE.Vector3()));
+      this.lines.push(this.resetLine());
     }
   }
 
-  private resetLine(pos: THREE.Vector3) {
+  private resetLine() {
     // Spawn in a tunnel shape around the center (where the camera is)
     // Radius 5 to 15 units away from center
     const angle = Math.random() * Math.PI * 2;
