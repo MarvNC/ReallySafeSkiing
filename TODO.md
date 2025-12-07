@@ -9,6 +9,6 @@
 - Zoom out camera more?
 - Proper PWA
 - BETTER LIGHTING
-- Allow esc menu during wasted animation
 - Make game less bouncy
 - Make skis rotate with terrain
+- Fix physics?
