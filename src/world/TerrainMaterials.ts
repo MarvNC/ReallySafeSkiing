@@ -14,11 +14,16 @@ let cachedMaterials: TerrainMaterials | null = null;
 export function getTerrainMaterials(): TerrainMaterials {
   if (cachedMaterials) return cachedMaterials;
 
-  const snow = new THREE.MeshStandardMaterial({
+  const snow = new THREE.MeshPhysicalMaterial({
     color: 0xfafcff,
     metalness: 0.0,
-    roughness: 0.08,
-    envMapIntensity: 1.4,
+    roughness: 0.06,
+    envMapIntensity: 1.65,
+    clearcoat: 0.4,
+    clearcoatRoughness: 0.16,
+    sheen: 0.35,
+    sheenColor: new THREE.Color(0xf4f8ff),
+    sheenRoughness: 0.5,
     flatShading: false,
     side: THREE.DoubleSide,
     vertexColors: true,
