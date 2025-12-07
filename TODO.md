@@ -8,4 +8,4 @@
 - Zoom out camera more?
 - BETTER LIGHTING
 - Make skis rotate with terrain
-- Fix physics (adjust params until gravity/speeds feel right)
+- Fix physics?
