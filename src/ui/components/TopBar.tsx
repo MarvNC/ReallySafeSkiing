@@ -40,7 +40,7 @@ export const TopBar = () => {
   const isPaused = uiState === UIState.PAUSED || uiState === UIState.ABOUT;
 
   return (
-    <div className="pointer-events-none absolute top-0 left-0 z-50 flex w-full items-start justify-between p-2 md:p-4">
+    <div className="md:hidden pointer-events-none absolute top-0 left-0 z-50 flex w-full items-start justify-between p-2 md:p-4">
       {/* Fullscreen Toggle */}
       <button
         onClick={toggleFullscreen}
