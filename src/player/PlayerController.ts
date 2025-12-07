@@ -4,6 +4,7 @@ import { PLAYER_CONFIG } from '../config/GameConfig';
 import { InputManager } from '../core/InputManager';
 import { PlayerPhysics } from './PlayerPhysics';
 import { createHandWithPole, createSkiPair } from './SkierAssets';
+import { SpeedLines } from './SpeedLines';
 
 type PlayerOptions = {
   startPosition?: THREE.Vector3;
@@ -19,6 +20,8 @@ export class PlayerController {
   private skis!: THREE.Group;
   private leftHand!: THREE.Group;
   private rightHand!: THREE.Group;
+
+  private speedLines: SpeedLines;
 
   private input: InputManager;
 
@@ -73,6 +76,10 @@ export class PlayerController {
 
     this.mesh = mesh;
     this.camera = camera;
+    
+    // Speed Lines
+    this.speedLines = new SpeedLines();
+    this.camera.add(this.speedLines.mesh);
     this.input = input;
     this.physics = options.playerPhysics;
 
@@ -180,6 +187,11 @@ export class PlayerController {
 
     const time = performance.now() / 1000;
     const speed = this.physics.getSpeed(); // Requires getting speed from physics
+    
+    // Convert to km/h for the effect
+    const speedKmh = speed * 3.6;
+    this.speedLines.update(speedKmh);
+
     // Convert km/h to m/s (divide by 3.6)
     const maxSpeedMs = PLAYER_CONFIG.skis.maxSpeedKmh / 3.6;
     const speedRatio = Math.min(1.0, speed / maxSpeedMs); // 0 to 1 based on speed
