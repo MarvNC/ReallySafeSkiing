@@ -3,6 +3,11 @@ import * as THREE from 'three';
 import { COLOR_PALETTE } from '../../constants/colors';
 import { mergeGeometries } from '../utils/mergeGeometries';
 
+// === Export constants for physics to use ===
+export const TREE_TRUNK_RADIUS_TOP = 0.2;
+export const TREE_TRUNK_RADIUS_BOTTOM = 0.3; // This is the value we want for physics
+export const TREE_TRUNK_HEIGHT = 1.5;
+
 /**
  * Creates a low-poly pine tree geometry with variable layer count.
  * Uses CylinderGeometry for both trunk and foliage layers to achieve the low-poly look.
@@ -15,7 +20,12 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
   const geometryInfo: Array<{ geometry: THREE.BufferGeometry; isTrunk: boolean }> = [];
 
   // Trunk: cylinder with low radial segments for low-poly look
-  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 7);
+  const trunkGeo = new THREE.CylinderGeometry(
+    TREE_TRUNK_RADIUS_TOP,
+    TREE_TRUNK_RADIUS_BOTTOM,
+    TREE_TRUNK_HEIGHT,
+    7
+  );
   trunkGeo.translate(0, 0.75, 0); // Move pivot to bottom
   geometries.push(trunkGeo);
   geometryInfo.push({ geometry: trunkGeo, isTrunk: true });

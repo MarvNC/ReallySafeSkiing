@@ -7,7 +7,12 @@ import { makeCollisionGroups, PhysicsLayer } from '../physics/PhysicsLayers';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { getRockGeometry } from './AssetFactory';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
-import { createTreeGeometry, TREE_ARCHETYPES, type TreeArchetype } from './assets/TreeGeometry';
+import {
+  createTreeGeometry,
+  TREE_ARCHETYPES,
+  TREE_TRUNK_RADIUS_BOTTOM,
+  type TreeArchetype,
+} from './assets/TreeGeometry';
 import { TerrainGenerator } from './TerrainGenerator';
 import { getTerrainMaterials } from './TerrainMaterials';
 import type { PathPoint } from './WorldState';
@@ -627,7 +632,9 @@ export class TerrainChunk {
     scale: number
   ): void {
     const world = physics.getWorld();
-    const radius = 0.8 * scale;
+    // Use the imported constant directly
+    // We multiply by scale because the visual mesh is scaled, so the radius must scale too.
+    const radius = TREE_TRUNK_RADIUS_BOTTOM * scale;
     const halfHeight = 4 * scale;
     const body = world.createRigidBody(
       RAPIER.RigidBodyDesc.fixed().setTranslation(worldX, worldY + halfHeight, worldZ)
