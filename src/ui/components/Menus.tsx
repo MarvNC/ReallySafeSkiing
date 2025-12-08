@@ -75,13 +75,12 @@ const ResponsiveWrapper: FC<{ children: ReactNode; className?: string }> = ({
 
   return (
     <div
-      className={clsx(
-        'flex flex-col items-center justify-center transition-transform duration-200 ease-out will-change-transform',
-        className
-      )}
+      className={
+        'flex flex-col items-center justify-center transition-transform duration-200 ease-out will-change-transform'
+      }
       style={{ transform: `scale(${scale})` }}
     >
-      <div ref={contentRef} className="flex w-full flex-col items-center">
+      <div ref={contentRef} className={clsx('flex w-full flex-col items-center', className)}>
         {children}
       </div>
     </div>
