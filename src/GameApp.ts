@@ -67,6 +67,11 @@ export class GameApp {
   private airTimeAccumulator = 0;
   private tmpVecA = new THREE.Vector3();
   private tmpVecB = new THREE.Vector3();
+  private lifeShakeTime = 0;
+  private readonly lifeShakeDuration = ARCADE_CONFIG.LIFE_IMPACT_DURATION;
+  private readonly lifeShakeMagnitude = 0.5;
+  private lifeShakeStartPos = new THREE.Vector3();
+  private lifeShakeBaseRotZ = 0;
 
   // Crash sequence variables
   private timeScale = 1.0;
@@ -651,6 +656,7 @@ export class GameApp {
     if (speedKmh >= ARCADE_CONFIG.DAMAGE_THRESHOLD_KMH) {
       store.loseLife(1);
       const { multiplier } = useGameStore.getState();
+      this.triggerLifeShake();
       store.triggerScorePopup({
         text: 'LIFE LOST',
         multiplier,
@@ -805,6 +811,34 @@ export class GameApp {
     useGameStore.getState().triggerPenaltyNotification();
   }
 
+  private triggerLifeShake(): void {
+    if (!this.player) return;
+    this.lifeShakeTime = this.lifeShakeDuration;
+    this.lifeShakeStartPos.copy(this.player.camera.position);
+    this.lifeShakeBaseRotZ = this.player.camera.rotation.z;
+  }
+
+  private applyLifeShake(realDelta: number): void {
+    if (!this.player || this.useDebugCamera || this.lifeShakeTime <= 0) return;
+    const camera = this.player.camera;
+    const t = Math.max(0, this.lifeShakeTime / this.lifeShakeDuration);
+    const strength = this.lifeShakeMagnitude * t * t;
+
+    const offsetX = (Math.random() - 0.5) * strength;
+    const offsetY = (Math.random() - 0.5) * strength * 0.6;
+    const offsetZ = (Math.random() - 0.5) * strength * 0.4;
+
+    camera.position.copy(this.lifeShakeStartPos).add(this.tmpVecA.set(offsetX, offsetY, offsetZ));
+    camera.rotation.z = this.lifeShakeBaseRotZ + (Math.random() - 0.5) * strength * 0.12;
+
+    this.lifeShakeTime = Math.max(0, this.lifeShakeTime - realDelta);
+
+    if (this.lifeShakeTime <= 0) {
+      camera.position.copy(this.lifeShakeStartPos);
+      camera.rotation.z = this.lifeShakeBaseRotZ;
+    }
+  }
+
   private setupMouseLook(): void {
     const onMouseMove = (event: MouseEvent): void => {
       if (!this.useDebugCamera || !this.debugCamera || !this.isPointerLocked) return;
@@ -852,6 +886,7 @@ export class GameApp {
     if (this.arcadeInvulnerability > 0) {
       this.arcadeInvulnerability = Math.max(0, this.arcadeInvulnerability - realDelta);
     }
+    this.applyLifeShake(realDelta);
     this.updateArcadeHandling();
 
     // Keep sun/shadows following the rider

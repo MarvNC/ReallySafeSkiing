@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { AlertTriangle, Coins, MapPin, Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { SPRINT_CONFIG } from '../../config/GameConfig';
+import { ARCADE_CONFIG, SPRINT_CONFIG } from '../../config/GameConfig';
 import { useGameStore } from '../store';
 import { ScoreFeed } from './ScoreFeed';
 
@@ -97,6 +97,7 @@ export const HUD = () => {
   const [multiplierFlash, setMultiplierFlash] = useState(false);
   const [lifeToast, setLifeToast] = useState(false);
   const [lostHeartIndex, setLostHeartIndex] = useState<number | null>(null);
+  const [lifeImpact, setLifeImpact] = useState(false);
   const prevMultiplier = useRef(multiplier);
   const prevLives = useRef(lives);
 
@@ -134,6 +135,7 @@ export const HUD = () => {
     if (gameMode !== 'ARCADE') {
       prevLives.current = lives;
       const frame = requestAnimationFrame(() => setLostHeartIndex(null));
+      setLifeImpact(false);
       return () => cancelAnimationFrame(frame);
     }
 
@@ -142,11 +144,13 @@ export const HUD = () => {
       const frame = requestAnimationFrame(() => {
         setLifeToast(true);
         setLostHeartIndex(lostIdx);
+        setLifeImpact(true);
       });
       const timer = setTimeout(() => {
         setLifeToast(false);
         setLostHeartIndex(null);
-      }, 1200);
+        setLifeImpact(false);
+      }, (ARCADE_CONFIG.LIFE_IMPACT_DURATION ?? 0.8) * 1000);
       prevLives.current = lives;
       return () => {
         cancelAnimationFrame(frame);
@@ -200,6 +204,12 @@ export const HUD = () => {
           />
         </div>
       )}
+      {lifeImpact && (
+        <div
+          className="pointer-events-none fixed inset-0 z-25 animate-[redPulse_0.35s_ease-out] bg-[radial-gradient(circle_at_center,rgba(248,113,113,0.3),rgba(127,29,29,0.45)_50%,rgba(15,23,42,0.9)_82%)]"
+          style={{ animationDuration: `${ARCADE_CONFIG.LIFE_IMPACT_DURATION ?? 0.8}s` }}
+        />
+      )}
 
       <div
         className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
@@ -210,7 +220,12 @@ export const HUD = () => {
         }}
       />
       <ScoreFeed />
-      <div className="font-russo pointer-events-none absolute inset-0 z-30 flex flex-col justify-between p-6 text-white uppercase select-none">
+      <div
+        className={clsx(
+          'font-russo pointer-events-none absolute inset-0 z-30 flex flex-col justify-between p-6 text-white uppercase select-none',
+          lifeImpact && 'animate-[hudShake_0.6s_ease]'
+        )}
+      >
         <div className="flex items-start justify-between gap-4">
           {/* --- TOP LEFT: HYPE ZONE (ARCADE) OR TIMER/DISTANCE (OTHERS) --- */}
           <div className="relative flex flex-col items-start gap-3">

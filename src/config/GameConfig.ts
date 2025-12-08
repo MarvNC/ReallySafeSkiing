@@ -43,6 +43,7 @@ export const ARCADE_CONFIG = {
   STEER_NOISE_DAMAGED: 0.05,
   STEER_NOISE_CRITICAL: 0.2,
   LATERAL_FRICTION_CRITICAL: 0.7,
+  LIFE_IMPACT_DURATION: 0.8,
 } as const;
 
 const isLowPreset =
