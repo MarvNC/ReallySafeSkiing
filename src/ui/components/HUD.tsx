@@ -134,8 +134,10 @@ export const HUD = () => {
   useEffect(() => {
     if (gameMode !== 'ARCADE') {
       prevLives.current = lives;
-      const frame = requestAnimationFrame(() => setLostHeartIndex(null));
-      setLifeImpact(false);
+      const frame = requestAnimationFrame(() => {
+        setLostHeartIndex(null);
+        setLifeImpact(false);
+      });
       return () => cancelAnimationFrame(frame);
     }
 
@@ -146,11 +148,14 @@ export const HUD = () => {
         setLostHeartIndex(lostIdx);
         setLifeImpact(true);
       });
-      const timer = setTimeout(() => {
-        setLifeToast(false);
-        setLostHeartIndex(null);
-        setLifeImpact(false);
-      }, (ARCADE_CONFIG.LIFE_IMPACT_DURATION ?? 0.8) * 1000);
+      const timer = setTimeout(
+        () => {
+          setLifeToast(false);
+          setLostHeartIndex(null);
+          setLifeImpact(false);
+        },
+        (ARCADE_CONFIG.LIFE_IMPACT_DURATION ?? 0.8) * 1000
+      );
       prevLives.current = lives;
       return () => {
         cancelAnimationFrame(frame);
