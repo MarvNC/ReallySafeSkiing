@@ -1,5 +1,4 @@
 - Remove time and distance from HUD in arcade mode
-- Make arcade mode default
 - Revamp HUD elements for arcade mode
 - Add score animations for arcade stuff to be more fun whenever we pick up a coin or accumulate airtime
 - Steering 0.7 as effective on one life

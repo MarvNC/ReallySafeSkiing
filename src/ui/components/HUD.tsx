@@ -27,6 +27,7 @@ export const HUD = () => {
   const [lifeToast, setLifeToast] = useState(false);
   const prevMultiplier = useRef(multiplier);
   const prevLives = useRef(lives);
+  const isArcadeMode = (gameMode as string) === 'ARCADE';
 
   // Handle penalty notification auto-clear
   useEffect(() => {
@@ -127,7 +128,7 @@ export const HUD = () => {
         {/* --- TOP LEFT: TIMER & DISTANCE --- */}
         <div className="flex flex-col items-start gap-2">
           {/* TIMER PILL */}
-          {gameMode !== 'ZEN' && (
+          {!isArcadeMode && gameMode !== 'ZEN' && (
             <div
               className={clsx(
                 'flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/40 px-5 py-2 backdrop-blur-md transition-all',
@@ -159,17 +160,19 @@ export const HUD = () => {
           )}
 
           {/* DISTANCE */}
-          <div className="flex items-center gap-2 pl-2 opacity-90">
-            <MapPin className="text-accent-orange h-5 w-5" />
-            <div className={clsx('text-3xl font-bold tracking-wide', heavyShadow)}>
-              {Math.floor(distance)} <span className="text-lg text-white/70">m</span>
-              {gameMode === 'SPRINT' && (
-                <span className="ml-2 text-lg text-white/60">
-                  / {SPRINT_CONFIG.TARGET_DISTANCE}m
-                </span>
-              )}
+          {!isArcadeMode && (
+            <div className="flex items-center gap-2 pl-2 opacity-90">
+              <MapPin className="text-accent-orange h-5 w-5" />
+              <div className={clsx('text-3xl font-bold tracking-wide', heavyShadow)}>
+                {Math.floor(distance)} <span className="text-lg text-white/70">m</span>
+                {gameMode === 'SPRINT' && (
+                  <span className="ml-2 text-lg text-white/60">
+                    / {SPRINT_CONFIG.TARGET_DISTANCE}m
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* PENALTY NOTIFICATION ANIMATION */}
           {showPenaltyNotification && gameMode === 'SPRINT' && (
