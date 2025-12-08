@@ -93,7 +93,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
 const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    className="font-russo pointer-events-auto mt-2 w-full cursor-pointer rounded-xl border border-white/10 bg-white/5 py-2 text-sm tracking-[0.15em] text-white/60 uppercase transition-all duration-200 hover:bg-white/10 hover:text-white md:mt-4 md:py-4 md:text-lg"
+    className="font-russo pointer-events-auto mt-2 w-full cursor-pointer rounded-xl border border-white/10 bg-white/20 py-2 text-sm tracking-[0.15em] text-white uppercase transition-all duration-200 hover:bg-white/30 hover:text-white md:mt-4 md:py-4 md:text-lg"
   >
     {label}
   </button>
@@ -290,59 +290,6 @@ export const Menus = () => {
           <GameOver />
           <MenuFooter />
         </>
-      )}
-
-      {/* ABOUT SCREEN */}
-      {uiState === UIState.ABOUT && (
-        <div
-          className="pointer-events-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl border border-white/20 bg-slate-900/80 p-6 text-center shadow-2xl backdrop-blur-md md:gap-6 md:p-8"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-          role="presentation"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold italic drop-shadow-md md:text-5xl">ABOUT</h2>
-            <button
-              onClick={() => useGameStore.getState().setUIState(UIState.MENU)}
-              className="rounded-full bg-white/10 p-2 text-white transition-all hover:bg-white/20 active:scale-95"
-              aria-label="Close About"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 text-left text-white/90 md:gap-4">
-            <p className="text-sm leading-relaxed md:text-lg">
-              <strong className="text-accent-orange">Really Safe Skiing</strong> is a fast-paced
-              skiing game where you navigate down a procedurally generated slope while avoiding
-              obstacles.
-            </p>
-            <div className="mt-2 space-y-1 md:mt-4 md:space-y-2">
-              <h3 className="text-lg font-bold text-white md:text-xl">Features:</h3>
-              <ul className="list-inside list-disc space-y-1 text-sm text-white/80 md:text-base">
-                <li>Three difficulty levels: Chill, Sport, and Extreme</li>
-                <li>Adjustable slope angle from 0° to 70°</li>
-                <li>Real-time physics simulation</li>
-                <li>Procedurally generated terrain</li>
-                <li>Touch controls for mobile devices</li>
-              </ul>
-            </div>
-            <div className="mt-2 border-t border-white/10 pt-2 md:mt-4 md:pt-4">
-              <p className="text-xs text-white/60 md:text-sm">
-                Press <kbd className="rounded bg-white/20 px-2 py-1 font-mono">ESC</kbd> or click
-                outside to return to the menu.
-              </p>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
