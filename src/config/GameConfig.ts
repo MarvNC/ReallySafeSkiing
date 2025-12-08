@@ -9,7 +9,7 @@ export const PHYSICS_CONFIG = {
 
 export const GAME_CONFIG = {
   // Game timer duration in seconds
-  timerDuration: 60.0,
+  timerDuration: 1.0,
   // Crash speed threshold in km/h (converted to m/s for physics)
   crashSpeedThresholdKmh: 50,
   // Reduce obstacle density for a calmer Zen experience (1 = no change)

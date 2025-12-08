@@ -12,7 +12,7 @@ export enum UIState {
 
 export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
 export type GameMode = 'ARCADE' | 'ZEN';
-export type EndReason = 'time' | 'crash';
+export type EndReason = 'time' | 'crash' | 'manual';
 
 interface GameState {
   // Game Flow

@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import type { FC } from 'react';
 
+import { GAME_CONFIG } from '../../config/GameConfig';
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
@@ -137,11 +138,33 @@ const MenuFooter: FC = () => {
 };
 
 export const Menus = () => {
-  const { uiState, menuIndex, distance, topSpeed, setMenuIndex, endReason, gameMode } =
-    useGameStore();
+  const {
+    uiState,
+    menuIndex,
+    distance,
+    topSpeed,
+    setMenuIndex,
+    endReason,
+    gameMode,
+    timeRemaining,
+    timeElapsed,
+  } = useGameStore();
   const isCrashGameOver = endReason === 'crash';
+  const isManualEnd = endReason === 'manual';
   const isCrashTint =
     uiState === UIState.CRASHED || (uiState === UIState.GAME_OVER && isCrashGameOver);
+
+  const formatTime = (value: number) => {
+    const minutes = Math.floor(value / 60);
+    const seconds = Math.floor(value % 60);
+    const milliseconds = Math.floor((value * 100) % 100);
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+  };
+
+  const finalTime =
+    gameMode === 'ZEN' ? timeElapsed : Math.max(0, GAME_CONFIG.timerDuration - timeRemaining);
 
   if (uiState === UIState.PLAYING) return null;
 
@@ -306,10 +329,12 @@ export const Menus = () => {
               'mb-5 text-4xl italic drop-shadow-lg md:text-7xl',
               isCrashGameOver
                 ? 'text-accent-red drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]'
-                : undefined
+                : isManualEnd
+                  ? 'text-cyan-300'
+                  : undefined
             )}
           >
-            {isCrashGameOver ? 'WASTED' : "TIME'S UP!"}
+            {isCrashGameOver ? 'WASTED' : isManualEnd ? 'RUN COMPLETE' : "TIME'S UP!"}
           </h1>
           {isCrashGameOver && (
             <div className="mb-2 text-center text-lg text-white/80 md:mb-4 md:text-xl">
@@ -328,6 +353,7 @@ export const Menus = () => {
             >
               TOP SPEED: {topSpeed} km/h
             </div>
+            <div className="text-xl text-white/80 md:text-2xl">TIME: {formatTime(finalTime)}</div>
             <SetupPanel />
           </div>
           <StartButton label="PLAY AGAIN" onClick={handleStart} gameMode={gameMode} />

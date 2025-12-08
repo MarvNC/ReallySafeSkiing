@@ -483,6 +483,7 @@ export class GameApp {
   private executeMenuOption(): void {
     // Read menuIndex from store to sync with React component clicks
     const storeMenuIndex = useGameStore.getState().menuIndex;
+    const gameMode = useGameStore.getState().gameMode;
     // Sync internal menuIndex for consistency
     this.menuIndex = storeMenuIndex;
 
@@ -493,9 +494,13 @@ export class GameApp {
       case 1: // Restart
         this.startGame(); // Reset everything
         break;
-      case 2: // Back to menu
+      case 2: // Back to menu / End Run
         this.wasCrashedBeforePause = false; // Reset crash flag when returning to menu
-        this.returnToMainMenu();
+        if (gameMode === 'ZEN' && this.gameState === GameState.PAUSED) {
+          this.endGame('manual');
+        } else {
+          this.returnToMainMenu();
+        }
         break;
     }
   }
