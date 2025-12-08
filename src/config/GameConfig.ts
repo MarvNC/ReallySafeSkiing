@@ -25,7 +25,7 @@ export const SPRINT_CONFIG = {
 
 export const ARCADE_CONFIG = {
   DEFAULT_LIVES: 3,
-  COIN_VALUE: 10,
+  COIN_VALUE: 100,
   DISTANCE_SCORE_PER_METER: 1,
   COIN_MULTIPLIER_BONUS: 0.2,
   // Radians per second for rotating collectibles
