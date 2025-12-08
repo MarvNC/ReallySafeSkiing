@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { Flame, Infinity as InfinityIcon } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
@@ -16,56 +17,111 @@ const GameModeToggle: FC = () => {
   const gameMode = useGameStore((state) => state.gameMode);
   const setGameMode = useGameStore((state) => state.setGameMode);
 
-  const handleToggle = (mode: GameMode) => {
-    if (mode !== gameMode) setGameMode(mode);
-  };
-
   return (
-    <div className="flex w-full items-center gap-1 rounded-full border border-white/10 bg-black/40 p-1 shadow-inner shadow-black/40">
-      <button
-        type="button"
-        aria-pressed={gameMode === 'SPRINT'}
-        onClick={() => handleToggle('SPRINT')}
+    <div className="group relative w-full">
+      {/* Ambient Background Glow - shifts color based on mode */}
+      <div
         className={clsx(
-          'flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold tracking-[0.2em] uppercase transition-all md:text-sm',
+          'absolute -inset-1 rounded-full opacity-20 blur-md transition-all duration-700',
+          gameMode === 'SPRINT' ? 'bg-orange-500' : 'bg-cyan-400'
+        )}
+      />
+      {/* The Toggle Container */}
+      <div
+        className={clsx(
+          'relative flex h-12 w-full cursor-pointer items-center rounded-full border p-1 transition-colors duration-500',
           gameMode === 'SPRINT'
-            ? 'bg-accent-orange text-slate-900 shadow-lg shadow-orange-500/40'
-            : 'text-white/60 hover:text-white'
+            ? 'border-orange-500/30 bg-orange-950/40'
+            : 'border-cyan-400/30 bg-cyan-950/40'
         )}
+        onClick={() => setGameMode(gameMode === 'SPRINT' ? 'ZEN' : 'SPRINT')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setGameMode(gameMode === 'SPRINT' ? 'ZEN' : 'SPRINT');
+          }
+        }}
       >
-        Sprint
-      </button>
-      <button
-        type="button"
-        aria-pressed={gameMode === 'ZEN'}
-        onClick={() => handleToggle('ZEN')}
-        className={clsx(
-          'flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold tracking-[0.2em] uppercase transition-all md:text-sm',
-          gameMode === 'ZEN'
-            ? 'bg-cyan-400 text-slate-900 shadow-lg shadow-cyan-400/40'
-            : 'text-white/60 hover:text-white'
-        )}
-      >
-        Zen
-      </button>
+        {/* The Sliding "Puck" */}
+        <div
+          className={clsx(
+            'absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full shadow-lg transition-all duration-500',
+            // Custom spring bezier for that "snappy" feel
+            'ease-[cubic-bezier(0.34,1.56,0.64,1)]',
+            gameMode === 'SPRINT'
+              ? 'left-1 translate-x-0 bg-gradient-to-br from-orange-400 to-red-600 shadow-orange-900/50'
+              : 'left-1 translate-x-full bg-gradient-to-br from-cyan-300 to-blue-500 shadow-cyan-900/50'
+          )}
+        >
+          {/* Shine effect on the puck */}
+          <div className="absolute top-0 right-0 left-0 h-1/2 rounded-t-full bg-white/20" />
+        </div>
+        {/* SPRINT OPTION */}
+        <div className="relative z-10 flex flex-1 items-center justify-center gap-2 text-center">
+          <Flame
+            className={clsx(
+              'h-4 w-4 transition-all duration-300',
+              gameMode === 'SPRINT'
+                ? 'scale-110 text-white drop-shadow-md'
+                : 'scale-90 text-white/40'
+            )}
+          />
+          <span
+            className={clsx(
+              'text-xs font-bold tracking-[0.15em] transition-colors duration-300',
+              gameMode === 'SPRINT' ? 'text-white' : 'text-white/40'
+            )}
+          >
+            SPRINT
+          </span>
+        </div>
+        {/* ZEN OPTION */}
+        <div className="relative z-10 flex flex-1 items-center justify-center gap-2 text-center">
+          <InfinityIcon
+            className={clsx(
+              'h-4 w-4 transition-all duration-300',
+              gameMode === 'ZEN' ? 'scale-110 text-white drop-shadow-md' : 'scale-90 text-white/40'
+            )}
+          />
+          <span
+            className={clsx(
+              'text-xs font-bold tracking-[0.15em] transition-colors duration-300',
+              gameMode === 'ZEN' ? 'text-white' : 'text-white/40'
+            )}
+          >
+            ZEN
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
 
 const SetupPanel: FC = () => (
   // Mobile: p-3. Desktop: p-4.
-  <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-3 text-sm shadow-2xl backdrop-blur-md md:gap-3 md:p-4">
-    <GameModeToggle />
-    {/* Mobile: p-2. Desktop: p-4. */}
-    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-2 md:p-4">
-      <div className="text-xs tracking-widest text-white/70 uppercase">Obstacle Difficulty</div>
+  <div className="pointer-events-auto flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm shadow-2xl backdrop-blur-xl transition-all duration-500 md:p-6">
+    <div className="flex flex-col gap-2">
+      <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
+        Game Mode
+      </div>
+      <GameModeToggle />
+    </div>
+    {/* Separator */}
+    <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    <div className="flex flex-col gap-2">
+      <div className="mb-1 flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
+        <span>Obstacle Density</span>
+        <span className="text-white/30">Trees & Rocks</span>
+      </div>
       <DifficultySelector />
     </div>
-    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-2 md:p-4">
-      <div className="text-xs tracking-widest text-white/70 uppercase">Slope Angle</div>
-      <div className="w-full">
-        <SlopeControl />
+    <div className="flex flex-col gap-2">
+      <div className="mb-1 flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
+        <span>Steepness</span>
+        <span className="text-white/30">Speed & Gravity</span>
       </div>
+      <SlopeControl />
     </div>
     <div className="mt-2 flex items-center justify-center gap-4 border-t border-white/10 pt-2 opacity-80 md:pt-4">
       {/* Desktop controls */}
@@ -105,12 +161,12 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
   return (
     <button
       onClick={onClick}
-      // Mobile: mt-4, py-3, text-lg. Desktop: mt-6, py-4, text-xl.
+      type="button"
       className={clsx(
-        'font-russo pointer-events-auto mt-4 w-full cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg transition-all active:scale-95 md:mt-6 md:py-4 md:text-xl',
-        gameMode === 'ZEN'
-          ? 'bg-cyan-400 shadow-cyan-400/30 hover:bg-cyan-300'
-          : 'bg-accent-orange shadow-orange-500/20 hover:bg-orange-400'
+        'font-russo pointer-events-auto mt-4 w-full cursor-pointer rounded-xl py-4 text-xl tracking-[0.15em] text-white uppercase shadow-2xl transition-all duration-300 hover:-translate-y-1 active:scale-95 md:mt-6',
+        gameMode === 'SPRINT'
+          ? 'bg-gradient-to-br from-orange-400 to-red-600 shadow-orange-500/30 hover:bg-gradient-to-br hover:from-orange-300 hover:to-red-500'
+          : 'bg-gradient-to-br from-cyan-300 to-blue-500 shadow-cyan-400/30 hover:bg-gradient-to-br hover:from-cyan-200 hover:to-blue-400'
       )}
     >
       {label}
@@ -121,8 +177,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
 const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    // Mobile: mt-2, py-2, text-sm. Desktop: mt-4, py-4, text-lg.
-    className="font-russo pointer-events-auto mt-2 w-full cursor-pointer rounded-xl border-2 border-white/20 bg-transparent py-2 text-sm tracking-widest text-white/80 uppercase transition-all hover:border-white/50 hover:bg-white/10 hover:text-white md:mt-4 md:py-4 md:text-lg"
+    className="font-russo pointer-events-auto mt-2 w-full cursor-pointer rounded-xl border border-white/10 bg-white/5 py-2 text-sm tracking-[0.15em] text-white/60 uppercase transition-all duration-200 hover:bg-white/10 hover:text-white md:mt-4 md:py-4 md:text-lg"
   >
     {label}
   </button>
@@ -135,9 +190,9 @@ const MenuFooter: FC = () => {
       href="https://github.com/MarvNC"
       target="_blank"
       rel="noopener noreferrer"
-      className="font-russo pointer-events-auto absolute right-2 bottom-2 z-50 cursor-pointer text-xs tracking-wider text-white/50 transition-colors hover:text-white hover:underline md:text-sm"
+      className="font-russo pointer-events-auto absolute right-4 bottom-4 z-50 flex items-center gap-2 text-xs tracking-wider text-white/30 transition-colors hover:text-white md:text-sm"
     >
-      By MarvNC
+      <span>Created by MarvNC</span>
     </a>
   );
 };
@@ -224,13 +279,12 @@ export const Menus = () => {
   return (
     <div
       className={clsx(
-        'font-russo absolute inset-0 z-50 flex flex-col items-center justify-center text-white',
-        // Add background blur/tint only for non-crash menus, or a red tint for crash
+        'font-russo absolute inset-0 z-50 flex flex-col items-center justify-center overflow-hidden text-white',
         isCrashTint
-          ? 'bg-red-900/30 transition-colors duration-1000'
+          ? 'bg-red-950/40 backdrop-blur-sm transition-colors duration-1000'
           : uiState === UIState.ABOUT
-            ? 'bg-sky-dark/60 backdrop-blur-xl'
-            : 'bg-sky-dark/40 backdrop-blur-sm'
+            ? 'bg-slate-900/80 backdrop-blur-md'
+            : 'bg-slate-900/40 backdrop-blur-sm'
       )}
       onClick={
         uiState === UIState.PAUSED
@@ -248,14 +302,19 @@ export const Menus = () => {
       }
       role={uiState === UIState.PAUSED || uiState === UIState.ABOUT ? 'button' : undefined}
       tabIndex={uiState === UIState.PAUSED || uiState === UIState.ABOUT ? 0 : undefined}
-      aria-label={
-        uiState === UIState.PAUSED
-          ? 'Click outside to resume'
-          : uiState === UIState.ABOUT
-            ? 'Click outside or press ESC to return'
-            : undefined
-      }
     >
+      {/* Background Gradient Blob used for atmosphere */}
+      {!isCrashTint && (
+        <div
+          className={clsx(
+            'pointer-events-none absolute h-[150vh] w-[150vw] opacity-20 transition-colors duration-1000',
+            gameMode === 'ZEN'
+              ? 'bg-[radial-gradient(circle_at_center,_rgba(6,182,212,0.2),_transparent)]'
+              : 'bg-[radial-gradient(circle_at_center,_rgba(249,115,22,0.2),_transparent)]'
+          )}
+        />
+      )}
+
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
         <>
