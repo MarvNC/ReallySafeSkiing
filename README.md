@@ -1,10 +1,16 @@
 <p align="center">
-  <img src="assets/game-logo.png" alt="Really Safe Skiing" width="500" />
+  <a href="https://ski.maarv.dev" target="_blank">
+    <img src="assets/game-logo.png" alt="Really Safe Skiing" width="500" />
+  </a>
 </p>
 
 <p align="center">
   A low-poly, high-speed downhill skiing game where safety is strictly... optional.<br/>
   Dodge trees, rocks, and gravity itself.
+</p>
+
+<p align="center">
+  <strong><a href="https://ski.maarv.dev" target="_blank">🎮 Play Now</a></strong>
 </p>
 
 ## ✨ Features
