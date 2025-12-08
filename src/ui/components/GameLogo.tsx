@@ -1,11 +1,16 @@
 import clsx from 'clsx';
 import type { FC } from 'react';
 
+/**
+ * GameLogo component with consistent proportions at all viewport sizes.
+ * Uses fixed sizing with CSS scale transform for responsive scaling.
+ */
 export const GameLogo: FC<{ className?: string }> = ({ className }) => {
   return (
     <div
       className={clsx(
-        'pointer-events-auto flex flex-col items-center justify-center p-4 select-none',
+        'pointer-events-auto flex flex-col items-center justify-center select-none',
+        'scale-[0.7] md:scale-100',
         className
       )}
     >
@@ -23,18 +28,20 @@ export const GameLogo: FC<{ className?: string }> = ({ className }) => {
           }}
         />
 
-        <h2 className="font-russo relative px-4 py-1 text-2xl tracking-widest text-white uppercase italic text-shadow-sm md:text-3xl lg:text-4xl">
+        {/* Fixed at text-4xl (2.25rem) for consistent proportions */}
+        <h2 className="font-russo relative px-4 py-1 text-4xl tracking-widest text-white uppercase italic text-shadow-sm">
           Really Safe
         </h2>
       </div>
 
       {/* Bottom part: "SKIING" - Fast, cold, sharp */}
-      <div className="relative -mt-2 transition-transform duration-500 hover:scale-105 md:-mt-4">
+      <div className="relative -mt-4 transition-transform duration-500 hover:scale-105">
         {/* Speed lines effect behind */}
         <div className="absolute top-1/2 left-1/2 -z-10 h-full w-[120%] -translate-x-1/2 -translate-y-1/2 skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/5 to-transparent blur-sm" />
 
+        {/* Fixed at text-9xl (8rem) for consistent proportions */}
         <h1
-          className="font-russo relative z-10 text-6xl tracking-tighter uppercase italic md:text-8xl lg:text-9xl"
+          className="font-russo relative z-10 text-9xl tracking-tighter uppercase italic"
           style={{
             transform: 'skewX(-10deg)',
           }}

@@ -166,7 +166,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
       onClick={onClick}
       type="button"
       className={clsx(
-        'font-russo pointer-events-auto mt-4 w-full cursor-pointer rounded-xl py-4 text-xl tracking-[0.15em] text-white uppercase shadow-2xl transition-all duration-300 hover:-translate-y-1 active:scale-95 md:mt-6',
+        'font-russo pointer-events-auto w-full cursor-pointer rounded-xl py-4 text-xl tracking-[0.15em] text-white uppercase shadow-2xl transition-all duration-300 hover:-translate-y-1 active:scale-95',
         gameMode === 'SPRINT'
           ? 'bg-gradient-to-br from-orange-400 to-red-600 shadow-orange-500/30 hover:bg-gradient-to-br hover:from-orange-300 hover:to-red-500'
           : 'bg-gradient-to-br from-cyan-300 to-blue-500 shadow-cyan-400/30 hover:bg-gradient-to-br hover:from-cyan-200 hover:to-blue-400'
@@ -180,7 +180,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
 const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    className="font-russo pointer-events-auto mt-2 w-full cursor-pointer rounded-xl border border-white/10 bg-white/20 py-2 text-sm tracking-[0.15em] text-white uppercase transition-all duration-200 hover:bg-white/30 hover:text-white md:mt-4 md:py-4 md:text-lg"
+    className="font-russo pointer-events-auto w-full cursor-pointer rounded-xl border border-white/10 bg-white/20 py-2 text-sm tracking-[0.15em] text-white uppercase transition-all duration-200 hover:bg-white/30 hover:text-white md:py-4 md:text-lg"
   >
     {label}
   </button>
@@ -303,26 +303,22 @@ export const Menus = () => {
 
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
-        <>
-          <GameLogo className="mb-4" />
-
+        <div className="flex flex-col items-center gap-2">
+          <GameLogo className="md:mb-4" />
           <ContentContainer>
             <SetupPanel />
           </ContentContainer>
-
           <ContentContainer>
             <StartButton label="START RUN" onClick={handleStart} gameMode={gameMode} />
           </ContentContainer>
-
           <ContentContainer>
             <GhostButton
               label="ABOUT"
               onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
             />
           </ContentContainer>
-
           <MenuFooter />
-        </>
+        </div>
       )}
 
       {/* PAUSE MENU */}
