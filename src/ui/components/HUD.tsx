@@ -188,7 +188,8 @@ export const HUD = () => {
     'drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] drop-shadow-[0_0_18px_rgba(0,0,0,0.5)]';
 
   const showCracked = gameMode === 'ARCADE' && lives === 2;
-  const showShattered = gameMode === 'ARCADE' && lives <= 1;
+  // Only show the heavy shattered overlay once the player is out of lives, not while they still have one left.
+  const showShattered = gameMode === 'ARCADE' && lives <= 0;
 
   return (
     <>
