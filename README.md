@@ -1,14 +1,15 @@
 # Really Safe Skiing ⛷️
 
-A fast-paced, 3D procedural skiing game.
+A low-poly, high-speed downhill skiing game where safety is strictly... optional.
+Dodge trees, rocks, and gravity itself.
 
 ## ✨ Features
 
-- **Physics-Based Movement:** Realistic skiing mechanics including carving, braking, and ragdoll crashes using Rapier3D.
-- **Customizable:** Adjust slope angles (0°–70°) and difficulty settings (Chill, Sport, Extreme).
-- **Modern UI:** Clean, responsive HUD and menus built with React and Tailwind.
-- **PWA Support:** Installable as a standalone app on supported devices.
-- **Mobile Ready:** Touch controls for steering and braking.
+- **Physics-Driven Movement:** Momentum, friction, and non-linear air drag simulated via **Rapier3D**.
+- **Infinite Terrain:** Procedurally generated chunks with adaptive obstacles, jumps, and cliffs.
+- **Game Modes:** Race the clock in **Sprint Mode** or ski endlessly in **Zen Mode**.
+- **Responsive Controls:** precise keyboard steering for desktop and intuitive touch zones for mobile.
+- **Visual Polish:** Procedural snow sparkles, speed lines, and crash recovery animations.
 
 ## 🛠️ Tech Stack
 
@@ -50,13 +51,6 @@ This project uses **Bun** for package management and script execution.
 | **Brake (Snowplow)** | `A` + `D` or `←` + `→` | Hold both sides       |
 | **Start / Select**   | `Space` / `Enter`      | Tap Button            |
 | **Pause**            | `Esc`                  | Tap UI Button         |
-
-### Debug Controls
-
-- **`F2`**: Toggle Debug UI (FPS, speed, vectors)
-- **`C`**: Toggle Camera (First-person / Orbit)
-- **`V`**: Toggle Wireframe
-- **`G`**: Toggle Grid
 
 ## 📦 Build
 
