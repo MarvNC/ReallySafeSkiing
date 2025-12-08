@@ -213,9 +213,9 @@ export const OBSTACLE_CONFIG = {
   // Proportions are relative - code will normalize them to percentages
   surfaces: {
     track: {
-      rarity: 15, // Overall rarity (relative - lower = rarer)
-      treeProportion: 1, // Tree proportion when obstacle appears
-      rockProportion: 2, // Rock proportion when obstacle appears
+      rarity: 12, // Overall rarity (relative - lower = rarer)
+      treeProportion: 2, // Tree proportion when obstacle appears
+      rockProportion: 3, // Rock proportion when obstacle appears
       treeSizes: {
         small: 1, // Small tree proportion
         medium: 0, // Medium tree proportion
