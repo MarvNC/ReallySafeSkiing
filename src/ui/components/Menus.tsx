@@ -90,9 +90,7 @@ const AccordionSection: FC<{
           <span className="text-[10px] font-bold tracking-[0.2em] text-white/90 uppercase">
             {title}
           </span>
-          {subtitle && (
-            <span className="text-[10px] text-white/50 uppercase md:text-white/30">{subtitle}</span>
-          )}
+          {subtitle && <span className="text-[10px] text-white/60 uppercase">{subtitle}</span>}
         </div>
         <ChevronDown
           className={clsx(
@@ -126,7 +124,7 @@ const SetupPanel: FC = () => {
     // Mobile: p-3. Desktop: p-4.
     <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm shadow-2xl backdrop-blur-xl transition-all duration-500 md:gap-4 md:p-6">
       <div className="flex flex-col gap-2">
-        <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
+        <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-white/90 uppercase">
           Game Mode
         </div>
         <GameModeToggle />
