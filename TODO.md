@@ -1,1 +1,8 @@
-- Fix FOV making the camera behind terrain on steep slopes at high speeds
+- Remove time and distance from HUD in arcade mode
+- Make arcade mode default
+- Revamp HUD elements for arcade mode
+- Have gemini redesign coin
+- Add score animations for arcade stuff to be more fun whenever we pick up a coin or accumulate airtime
+- Steering 0.7 as effective on one life
+- Limit how long u can brake/wedge
+- Better design for configure run button
