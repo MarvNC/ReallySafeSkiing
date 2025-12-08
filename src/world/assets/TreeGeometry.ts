@@ -8,6 +8,14 @@ export const TREE_TRUNK_RADIUS_TOP = 0.2;
 export const TREE_TRUNK_RADIUS_BOTTOM = 0.3;
 export const TREE_TRUNK_HEIGHT = 1.5;
 
+const TRUNK_SEGMENTS = 6;
+const FOLIAGE_SEGMENTS = 6;
+const TRUNK_RADIUS_JITTER = 0.08;
+const FOLIAGE_RADIUS_JITTER = 0.18;
+const MAX_LAYER_OFFSET_FACTOR = 0.12; // % of layer radius used as lateral offset
+const TIP_SHARPEN = 0.35; // target scale at very top of foliage layers
+const TIP_LIFT_FACTOR = 0.12; // % of layer height to lift the tip
+
 // === Configuration Source of Truth ===
 export const TREE_CONFIG = {
   layerHeight: 1.2,
@@ -31,6 +39,72 @@ export function getTreeHeight(layerCount: number): number {
   return lastLayerY + TREE_CONFIG.layerHeight;
 }
 
+// Simple deterministic PRNG so trees look consistent between runs.
+function makeRng(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+
+/**
+ * Adds slight low-poly irregularities to a circular geometry so trees
+ * feel less uniform while keeping the faceted look.
+ */
+function applyOrganicDistortion(
+  geometry: THREE.BufferGeometry,
+  rng: () => number,
+  options: {
+    radiusJitter: number;
+    lean?: { x: number; z: number };
+    tipSharpen?: number;
+    tipLift?: number;
+  }
+): void {
+  const pos = geometry.attributes.position as THREE.BufferAttribute;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+
+  const height = Math.max(maxY - minY, 0.0001);
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+
+    // 0 (bottom) -> 1 (top)
+    const t = (y - minY) / height;
+    const jitterScale =
+      1 +
+      (rng() - 0.5) *
+        options.radiusJitter *
+        // Keep a bit more volume toward the lower-mid section
+        (0.55 + 0.45 * (1 - t * 0.35));
+
+    const tipStrength = t > 0.65 ? (t - 0.65) / 0.35 : 0;
+    const sharpenScale = options.tipSharpen
+      ? THREE.MathUtils.lerp(1, options.tipSharpen, tipStrength)
+      : 1;
+    const finalScale = jitterScale * sharpenScale;
+
+    const leanX = options.lean?.x ?? 0;
+    const leanZ = options.lean?.z ?? 0;
+
+    const adjustedY = y + (options.tipLift ?? 0) * tipStrength;
+
+    pos.setXYZ(i, x * finalScale + leanX * t, adjustedY, z * finalScale + leanZ * t);
+  }
+
+  pos.needsUpdate = true;
+}
+
 /**
  * Creates a low-poly pine tree geometry with variable layer count.
  * Uses CylinderGeometry for both trunk and foliage layers to achieve the low-poly look.
@@ -42,13 +116,24 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
   const geometries: THREE.BufferGeometry[] = [];
   const geometryInfo: Array<{ geometry: THREE.BufferGeometry; isTrunk: boolean }> = [];
 
+  const random = makeRng(layerCount * 9973 + 17);
+  const treeLean = {
+    x: (random() - 0.5) * 0.16,
+    z: (random() - 0.5) * 0.16,
+  };
+
   // Trunk: cylinder with low radial segments for low-poly look
   const trunkGeo = new THREE.CylinderGeometry(
     TREE_TRUNK_RADIUS_TOP,
     TREE_TRUNK_RADIUS_BOTTOM,
     TREE_TRUNK_HEIGHT,
-    7
+    TRUNK_SEGMENTS
   );
+  applyOrganicDistortion(trunkGeo, random, {
+    radiusJitter: TRUNK_RADIUS_JITTER,
+    lean: treeLean,
+    tipSharpen: 0.9,
+  });
   trunkGeo.translate(0, 0.75, 0); // Move pivot to bottom
   geometries.push(trunkGeo);
   geometryInfo.push({ geometry: trunkGeo, isTrunk: true });
@@ -60,21 +145,33 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
   for (let i = 0; i < layerCount; i++) {
     // Use CylinderGeometry with different top/bottom radius to create cone shape
     const coneGeo = new THREE.CylinderGeometry(
-      currentRadius * 0.5, // Top radius (narrower)
+      currentRadius * 0.52, // Top radius (narrower)
       currentRadius, // Bottom radius (wider)
       TREE_CONFIG.layerHeight, // Height
-      7 // Radial segments (low for low-poly look)
+      FOLIAGE_SEGMENTS // Radial segments (low for low-poly look)
     );
 
+    applyOrganicDistortion(coneGeo, random, {
+      radiusJitter: FOLIAGE_RADIUS_JITTER,
+      lean: treeLean,
+      tipSharpen: TIP_SHARPEN,
+      tipLift: TREE_CONFIG.layerHeight * TIP_LIFT_FACTOR,
+    });
+
+    // Slight per-layer rotation and lateral offset for variation
+    coneGeo.rotateY(random() * Math.PI * 2);
+    const offsetX = (random() - 0.5) * currentRadius * MAX_LAYER_OFFSET_FACTOR;
+    const offsetZ = (random() - 0.5) * currentRadius * MAX_LAYER_OFFSET_FACTOR;
+
     // Position the layer
-    coneGeo.translate(0, currentY + TREE_CONFIG.layerHeight / 2, 0);
+    coneGeo.translate(offsetX, currentY + TREE_CONFIG.layerHeight / 2, offsetZ);
 
     geometries.push(coneGeo);
     geometryInfo.push({ geometry: coneGeo, isTrunk: false });
 
     // Move cursor up using the constant factor
     currentY += TREE_CONFIG.layerHeight * TREE_CONFIG.layerOverlap;
-    currentRadius *= 0.7; // Shrink next layer
+    currentRadius *= 0.68; // Shrink next layer
   }
 
   // Merge into one draw call
