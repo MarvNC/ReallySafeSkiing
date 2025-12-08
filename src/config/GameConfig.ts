@@ -117,7 +117,6 @@ export const PLAYER_CONFIG = {
 
 export const MOUNTAIN_CONFIG = {
   TOTAL_LENGTH: 6000, // Total Z distance of the run
-  START_ALTITUDE: 2000, // Y height at start
   END_ALTITUDE: 0, // Y height at finish
 } as const;
 
