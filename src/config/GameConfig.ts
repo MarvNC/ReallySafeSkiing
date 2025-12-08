@@ -82,6 +82,15 @@ export const PLAYER_CONFIG = {
     // Banking settings
     maxBankAngle: Math.PI / 18, // ~10 degrees of tilt at max steering
     bankSmoothingSpeed: 5.0, // How fast the camera rolls into the turn
+    // Flow state tuning
+    fovMin: 75,
+    fovMax: 95,
+    pitchBase: -0.6,
+    pitchSpeedAdd: -0.1,
+    zOffsetMin: 0,
+    zOffsetMax: 2.0,
+    flowStartKmh: 100,
+    flowMaxKmh: 200,
   },
   hands: {
     leftOffset: new THREE.Vector3(-0.3, -0.3, -0.5),

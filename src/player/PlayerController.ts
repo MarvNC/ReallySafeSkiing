@@ -5,6 +5,7 @@ import { InputManager } from '../core/InputManager';
 import { TerrainManager } from '../world/TerrainManager';
 import { PlayerPhysics } from './PlayerPhysics';
 import { createHandWithPole, createSkiPair } from './SkierAssets';
+import { SnowSpray } from './SnowSpray';
 import { SpeedLines } from './SpeedLines';
 
 type PlayerOptions = {
@@ -25,6 +26,7 @@ export class PlayerController {
   private handRig!: THREE.Group;
 
   private speedLines: SpeedLines;
+  private snowSpray: SnowSpray;
 
   private input: InputManager;
   private terrain: TerrainManager;
@@ -49,7 +51,7 @@ export class PlayerController {
   private currentCameraBank = 0;
 
   // Base camera pitch (vertical tilt) - dynamically adjusted based on slope
-  private basePitch: number = PLAYER_CONFIG.camera.tiltRadians;
+  private basePitch: number = PLAYER_CONFIG.camera.pitchBase ?? PLAYER_CONFIG.camera.tiltRadians;
 
   // Ground alignment state (shared by skis and hands)
   private currentGroundNormal = new THREE.Vector3(0, 1, 0);
@@ -106,6 +108,8 @@ export class PlayerController {
     // Speed Lines
     this.speedLines = new SpeedLines();
     this.camera.add(this.speedLines.mesh);
+    this.snowSpray = new SnowSpray();
+    this.mesh.add(this.snowSpray.mesh);
     this.input = input;
     this.physics = options.playerPhysics;
     this.terrain = options.terrain;
@@ -306,6 +310,26 @@ export class PlayerController {
     const maxSpeedMs = PLAYER_CONFIG.skis.maxSpeedKmh / 3.6;
     const speedRatio = Math.min(1.0, speed / maxSpeedMs); // 0 to 1 based on speed
 
+    const flowStartKmh = PLAYER_CONFIG.camera.flowStartKmh ?? 0;
+    const flowMaxKmh = PLAYER_CONFIG.camera.flowMaxKmh ?? 120;
+    const flowRange = Math.max(1, flowMaxKmh - flowStartKmh);
+    const flowRatio = THREE.MathUtils.clamp((speedKmh - flowStartKmh) / flowRange, 0, 1);
+    const fovLerp = 1.0 - Math.exp(-2.0 * deltaTime);
+    const targetFov = THREE.MathUtils.lerp(
+      PLAYER_CONFIG.camera.fovMin,
+      PLAYER_CONFIG.camera.fovMax,
+      flowRatio
+    );
+    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, fovLerp);
+    this.camera.updateProjectionMatrix();
+
+    const targetZOffset = THREE.MathUtils.lerp(
+      PLAYER_CONFIG.camera.zOffsetMin,
+      PLAYER_CONFIG.camera.zOffsetMax,
+      flowRatio
+    );
+    this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, targetZOffset, fovLerp);
+
     // NEW: Get the smoothed steering value from physics
     const smoothSteering = this.physics.getSteeringValue();
     // smoothSteering is positive for LEFT, negative for RIGHT
@@ -423,9 +447,19 @@ export class PlayerController {
 
     // Apply rotations
     // Keep the existing X tilt (Pitch)
-    this.camera.rotation.x = this.basePitch;
+    const speedPitch = THREE.MathUtils.lerp(0, PLAYER_CONFIG.camera.pitchSpeedAdd, flowRatio);
+    this.camera.rotation.x = this.basePitch + speedPitch;
     // Apply new Z tilt (Roll)
     this.camera.rotation.z = this.currentCameraBank;
+
+    const isTurning = Math.abs(smoothSteering) > 0.1;
+    if ((isTurning || isBraking) && speed > 2.0) {
+      const sprayPos = this.tmpVecA.set(0, -1.5, 1.0);
+      const intensity = Math.abs(smoothSteering) + (isBraking ? 1.0 : 0);
+      const rightDir = this.tmpVecB.copy(this.rightHand.position).normalize();
+      this.snowSpray.emit(sprayPos, rightDir, intensity);
+    }
+    this.snowSpray.update(deltaTime);
 
     // Update Hands (using the existing logic or the refined version below)
     this.updateHands(deltaTime, isBraking, isPoling, time, smoothSteering);
