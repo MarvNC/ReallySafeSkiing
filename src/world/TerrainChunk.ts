@@ -396,7 +396,7 @@ export class TerrainChunk {
       const worldX = point.x + point.rightX * lateralOffset;
       const worldZ = point.z;
       const sample = this.generator.sampleTerrainAt(worldX, worldZ, point);
-      const worldY = sample.height + 0.8;
+      const worldY = sample.height + ARCADE_CONFIG.COIN_HEIGHT_OFFSET;
       const baseRotationY = Math.random() * Math.PI * 2;
 
       dummy.position.set(worldX, worldY, worldZ - startZ);
