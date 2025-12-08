@@ -237,16 +237,15 @@ export const GameOver = () => {
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
               {finishStats.gameMode === 'ARCADE' && (
-                <div className="col-span-2 flex items-center justify-between rounded-3xl border border-amber-200/30 bg-gradient-to-r from-amber-500/30 via-amber-400/20 to-amber-300/20 p-4 shadow-[0_20px_60px_rgba(251,191,36,0.25)] backdrop-blur">
-                  <div className="flex flex-col">
-                    <div className="text-[10px] font-semibold tracking-[0.35em] text-amber-100/80 uppercase">
-                      Score
-                    </div>
-                    <div className="text-4xl font-black tracking-[0.18em] text-white md:text-5xl">
-                      {Math.floor(finishStats.score).toLocaleString()}
-                    </div>
+                <div className="col-span-2 flex flex-col items-center gap-2 text-center">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.35em] text-amber-100/90 uppercase">
+                    <Trophy className="h-4 w-4 text-amber-200" />
+                    Score
                   </div>
-                  <div className="text-xs font-semibold tracking-[0.25em] text-white/70">
+                  <div className="text-4xl font-black tracking-[0.18em] text-white md:text-5xl">
+                    {Math.floor(finishStats.score).toLocaleString()}
+                  </div>
+                  <div className="text-xs font-semibold tracking-[0.2em] text-white/70">
                     Best {Math.floor(finishStats.highScore).toLocaleString()}
                   </div>
                 </div>
