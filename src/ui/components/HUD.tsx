@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { MapPin, Timer } from 'lucide-react';
+import { useEffect } from 'react';
 
 import { SPRINT_CONFIG } from '../../config/GameConfig';
 import { useGameStore } from '../store';
@@ -8,25 +9,38 @@ import { useGameStore } from '../store';
 const MAX_DISPLAY_SPEED_KMH = 200;
 
 export const HUD = () => {
-  const { timeRemaining, timeElapsed, speed, distance, gameMode } = useGameStore();
+  const {
+    timeElapsed,
+    speed,
+    distance,
+    gameMode,
+    showPenaltyNotification,
+    clearPenaltyNotification,
+    penalties,
+  } = useGameStore();
 
-  // Time Formatting: Sprint and Zen count up, old modes count down
-  const timerValue = gameMode === 'ZEN' || gameMode === 'SPRINT' ? timeElapsed : timeRemaining;
+  // Handle penalty notification auto-clear
+  useEffect(() => {
+    if (showPenaltyNotification) {
+      // Auto-clear after animation duration (2.5 seconds)
+      const timer = setTimeout(() => {
+        clearPenaltyNotification();
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showPenaltyNotification, clearPenaltyNotification]);
+
+  // Time Formatting: Sprint and Zen count up
+  const timerValue = timeElapsed;
   const minutes = Math.floor(timerValue / 60);
   const seconds = Math.floor(timerValue % 60);
   const milliseconds = Math.floor((timerValue * 100) % 100);
   const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
 
   // Logic
-  const isUrgent =
-    gameMode !== 'SPRINT' && gameMode !== 'ZEN' && timeRemaining <= 10 && timeRemaining > 0;
   const speedKmh = Math.floor(speed * 3.6);
   // Cap the bar at 100% width, but let the number go higher
   const speedPercent = Math.min(100, (speedKmh / MAX_DISPLAY_SPEED_KMH) * 100);
-
-  // Sprint mode progress calculation
-  const sprintProgress =
-    gameMode === 'SPRINT' ? Math.min(1, Math.max(0, distance / SPRINT_CONFIG.TARGET_DISTANCE)) : 0;
 
   // Helper for heavy text shadow to ensure readability on snow
   const heavyShadow = 'drop-shadow-[2px_2px_0_rgba(0,0,0,0.75)]';
@@ -39,32 +53,26 @@ export const HUD = () => {
         <div
           className={clsx(
             'flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/40 px-5 py-2 backdrop-blur-md transition-all',
-            isUrgent && 'border-accent-red/50 animate-pulse bg-red-900/40'
+            showPenaltyNotification &&
+              gameMode === 'SPRINT' &&
+              'border-accent-red/80 animate-pulse bg-red-900/60'
           )}
         >
           <Timer
             className={clsx(
-              'h-6 w-6',
-              isUrgent
+              'h-6 w-6 transition-colors duration-300',
+              showPenaltyNotification && gameMode === 'SPRINT'
                 ? 'text-accent-red'
                 : gameMode === 'ZEN'
                   ? 'text-cyan-300'
-                  : gameMode === 'SPRINT'
-                    ? 'text-accent-orange'
-                    : 'text-sky-300'
+                  : 'text-accent-orange'
             )}
           />
           <div
             className={clsx(
-              'text-4xl font-bold tracking-wider tabular-nums',
+              'text-4xl font-bold tracking-wider tabular-nums transition-colors duration-300',
               heavyShadow,
-              isUrgent
-                ? 'text-accent-red'
-                : gameMode === 'ZEN'
-                  ? 'text-white'
-                  : gameMode === 'SPRINT'
-                    ? 'text-white'
-                    : 'text-white'
+              showPenaltyNotification && gameMode === 'SPRINT' ? 'text-accent-red' : 'text-white'
             )}
           >
             {timeStr}
@@ -82,13 +90,24 @@ export const HUD = () => {
           </div>
         </div>
 
-        {/* SPRINT PROGRESS BAR */}
-        {gameMode === 'SPRINT' && (
-          <div className="relative mt-2 h-3 w-80 overflow-hidden rounded-full border border-white/20 bg-black/50 backdrop-blur-sm">
-            <div
-              className="to-accent-orange h-full bg-gradient-to-r from-sky-400 via-white transition-all duration-300 ease-out"
-              style={{ width: `${sprintProgress * 100}%` }}
-            />
+        {/* PENALTY NOTIFICATION ANIMATION */}
+        {showPenaltyNotification && gameMode === 'SPRINT' && (
+          <div
+            key={`penalty-${penalties}`}
+            className="absolute top-24 left-0 z-50"
+            style={{
+              animation: 'penaltyFloat 2.5s ease-out forwards',
+            }}
+          >
+            <div className="border-accent-red/80 flex items-center gap-2 rounded-full border-2 bg-red-900/90 px-6 py-3 shadow-lg shadow-red-500/50 backdrop-blur-md">
+              <span className="text-accent-red text-2xl font-bold drop-shadow-[0_0_8px_rgba(217,75,61,0.8)]">
+                +{SPRINT_CONFIG.PENALTY_SECONDS}
+                <span className="text-base font-normal opacity-75">s</span>
+              </span>
+              <span className="text-lg font-semibold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]">
+                PENALTY
+              </span>
+            </div>
           </div>
         )}
       </div>

@@ -26,6 +26,7 @@ interface GameState {
   timeElapsed: number;
   topSpeed: number;
   penalties: number; // Number of penalties incurred (crashes)
+  showPenaltyNotification: boolean; // Flag to show penalty animation
 
   // Menu Navigation
   menuIndex: number; // 0: Resume, 1: Restart, 2: Back to menu, 3: About
@@ -50,6 +51,8 @@ interface GameState {
   setDifficulty: (difficulty: Difficulty) => void;
   setGameMode: (mode: GameMode) => void;
   addPenalty: (seconds: number) => void;
+  triggerPenaltyNotification: () => void;
+  clearPenaltyNotification: () => void;
 }
 
 // Create store with subscription capability (useful if GameApp needs to react to UI changes)
@@ -63,6 +66,7 @@ export const useGameStore = create<GameState>()(
     timeElapsed: 0,
     topSpeed: 0,
     penalties: 0,
+    showPenaltyNotification: false,
     menuIndex: 0,
     slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
@@ -87,5 +91,7 @@ export const useGameStore = create<GameState>()(
         timeElapsed: state.timeElapsed + seconds,
         penalties: state.penalties + 1,
       })),
+    triggerPenaltyNotification: () => set({ showPenaltyNotification: true }),
+    clearPenaltyNotification: () => set({ showPenaltyNotification: false }),
   }))
 );

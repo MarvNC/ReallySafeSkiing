@@ -1,7 +1,6 @@
 import clsx from 'clsx';
 import type { FC } from 'react';
 
-import { GAME_CONFIG } from '../../config/GameConfig';
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
@@ -146,7 +145,6 @@ export const Menus = () => {
     setMenuIndex,
     endReason,
     gameMode,
-    timeRemaining,
     timeElapsed,
     penalties,
   } = useGameStore();
@@ -165,12 +163,7 @@ export const Menus = () => {
       .padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
   };
 
-  const finalTime =
-    gameMode === 'ZEN'
-      ? timeElapsed
-      : gameMode === 'SPRINT'
-        ? timeElapsed // Sprint mode uses elapsed time (includes penalties)
-        : Math.max(0, GAME_CONFIG.timerDuration - timeRemaining);
+  const finalTime = timeElapsed; // Both Sprint and Zen modes use elapsed time
 
   if (uiState === UIState.PLAYING) return null;
 

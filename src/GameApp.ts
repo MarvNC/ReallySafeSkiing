@@ -56,7 +56,6 @@ export class GameApp {
 
   // 2. Game Logic Variables
   private gameState: GameState = GameState.MENU;
-  private timeRemaining: number = GAME_CONFIG.timerDuration;
   private timeElapsed = 0;
   private startPosition: THREE.Vector3 = new THREE.Vector3();
   private topSpeed: number = 0; // Track top speed in km/h
@@ -390,7 +389,6 @@ export class GameApp {
     );
 
     // Reset timers/UI
-    this.timeRemaining = GAME_CONFIG.timerDuration;
     this.timeElapsed = 0;
     this.topSpeed = 0;
 
@@ -400,7 +398,7 @@ export class GameApp {
     useGameStore.getState().setEndReason(null);
     // Reset penalties - use zustand's set function pattern
     useGameStore.setState({ penalties: 0 });
-    useGameStore.getState().updateStats(0, 0, this.timeRemaining, this.timeElapsed);
+    useGameStore.getState().updateStats(0, 0, 0, this.timeElapsed);
 
     // Reset clock
     this.clock.stop();
@@ -418,7 +416,7 @@ export class GameApp {
     const currentPos = this.playerPhysics.getPosition();
     const distance = Math.abs(currentPos.z - this.startPosition.z);
 
-    useGameStore.getState().updateStats(0, distance, this.timeRemaining, this.timeElapsed);
+    useGameStore.getState().updateStats(0, distance, 0, this.timeElapsed);
     useGameStore.getState().setTopSpeed(this.topSpeed);
     useGameStore.getState().setEndReason(reason);
 
@@ -529,7 +527,7 @@ export class GameApp {
     const distance = Math.abs(currentPos.z - this.startPosition.z);
 
     // Update store (React will handle the rendering)
-    useGameStore.getState().updateStats(speed, distance, this.timeRemaining, this.timeElapsed);
+    useGameStore.getState().updateStats(speed, distance, 0, this.timeElapsed);
   }
 
   private triggerCrashSequence(): void {
@@ -609,8 +607,8 @@ export class GameApp {
     this.gameState = GameState.PLAYING;
     useGameStore.getState().setUIState(UIState.PLAYING);
 
-    // Optional: Could trigger a "Penalty" floating text here
-    console.log(`Penalty! +${SPRINT_CONFIG.PENALTY_SECONDS}s`);
+    // 6. Trigger penalty notification animation
+    useGameStore.getState().triggerPenaltyNotification();
   }
 
   private setupMouseLook(): void {
@@ -698,14 +696,8 @@ export class GameApp {
         }
       });
 
-      // Timer logic: Sprint mode counts up, Zen mode counts up, old Arcade mode counted down
-      const isSprintMode = gameMode === 'SPRINT';
-      if (isZenMode || isSprintMode) {
-        this.timeElapsed += gameDelta;
-      } else {
-        // Legacy timer countdown (if any other modes exist)
-        this.timeRemaining = Math.max(0, this.timeRemaining - gameDelta);
-      }
+      // Timer logic: Both Sprint and Zen modes count up
+      this.timeElapsed += gameDelta;
 
       if (!this.useDebugCamera) {
         this.player.update(gameDelta);
@@ -715,15 +707,13 @@ export class GameApp {
 
       this.updateHUD();
 
-      // Win condition: Sprint mode checks distance, old mode checks time
-      if (isSprintMode) {
+      // Win condition: Sprint mode checks distance
+      if (gameMode === 'SPRINT') {
         const currentPos = this.playerPhysics.getPosition();
         const distance = Math.abs(currentPos.z - this.startPosition.z);
         if (distance >= SPRINT_CONFIG.TARGET_DISTANCE) {
           this.endGame('complete');
         }
-      } else if (!isZenMode && this.timeRemaining <= 0) {
-        this.endGame('time');
       }
 
       this.terrainManager.update(this.playerPhysics.getPosition());
@@ -750,12 +740,7 @@ export class GameApp {
       this.player.setCrashCameraValues(easeProgress);
 
       // 5. Keep Timer Running
-      const isSprintMode = gameMode === 'SPRINT';
-      if (isZenMode || isSprintMode) {
-        this.timeElapsed += gameDelta;
-      } else {
-        this.timeRemaining = Math.max(0, this.timeRemaining - gameDelta); // Slow-mo means game timer slows too
-      }
+      this.timeElapsed += gameDelta;
       this.updateHUD();
 
       // 6. End Crash Sequence

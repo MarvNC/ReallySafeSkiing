@@ -20,6 +20,25 @@
   }
 }
 
+@keyframes penaltyFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(-30px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+}
+
 :root {
   font-family: 'Russo One', sans-serif;
   background: radial-gradient(circle at 20% 20%, #b7e9ff 0%, #8bd1ff 25%, #fef7ee 100%);
