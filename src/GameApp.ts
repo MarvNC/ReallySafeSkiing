@@ -43,6 +43,7 @@ export class GameApp {
   private debugCamera?: THREE.PerspectiveCamera;
   private activeCamera?: THREE.PerspectiveCamera;
   private useDebugCamera = false;
+  private isDebugMode = false;
   private grid?: THREE.GridHelper;
   private debugUI?: DebugUI;
   private debugHelpers?: DebugHelpers;
@@ -259,48 +260,13 @@ export class GameApp {
 
     // Camera toggle
     this.input.on(Action.ToggleCamera, (_action, phase) => {
-      if (phase !== 'pressed' || !this.player) return;
-      this.useDebugCamera = !this.useDebugCamera;
-      this.activeCamera = this.useDebugCamera ? this.debugCamera : this.player.camera;
+      if (phase !== 'pressed' || !this.player || !this.debugCamera) return;
+      if (!this.isDebugMode) return;
 
-      if (this.useDebugCamera && this.debugCamera) {
-        // Position debug camera at player position
-        const playerWorldPos = new THREE.Vector3();
-        this.player.mesh.getWorldPosition(playerWorldPos);
-        this.debugCamera.position.copy(playerWorldPos);
-
-        // Match player's camera rotation
-        const playerCameraRotation = new THREE.Euler().setFromQuaternion(
-          this.player.camera.quaternion
-        );
-        this.euler.set(playerCameraRotation.x, playerCameraRotation.y, 0);
-        this.debugCamera.rotation.set(this.euler.x, this.euler.y, this.euler.z);
-
-        // Request pointer lock for mouse look
-        this.renderer.domElement.requestPointerLock();
-
-        // Bind space to DebugMoveUp for debug camera
-        // Also bind W/ArrowUp to Forward for debug camera movement
-        if (this.input) {
-          this.input.unbindKey(' ');
-          this.input.bindKey(' ', Action.DebugMoveUp);
-          this.input.bindKey('w', Action.Forward);
-          this.input.bindKey('arrowup', Action.Forward);
-        }
+      if (this.useDebugCamera) {
+        this.deactivateDebugCamera();
       } else {
-        // Release pointer lock when switching back
-        if (document.pointerLockElement === this.renderer.domElement) {
-          document.exitPointerLock();
-        }
-
-        // Bind space back to Start action
-        // Also restore W/ArrowUp bindings based on game state
-        if (this.input) {
-          this.input.unbindKey(' ');
-          this.input.bindKey(' ', Action.Start);
-          // Restore bindings based on current game state
-          this.updateKeyBindingsForGameState();
-        }
+        this.activateDebugCamera();
       }
 
       console.info(`Camera toggled to ${this.useDebugCamera ? 'debug free' : 'first-person'}`);
@@ -309,6 +275,7 @@ export class GameApp {
     // Terrain wireframe
     this.input.on(Action.ToggleWireframe, (_action, phase) => {
       if (phase !== 'pressed' || !this.terrainManager) return;
+      if (!this.isDebugMode) return;
       const isWireframe = this.terrainManager.toggleWireframe();
       console.info(`Slope wireframe ${isWireframe ? 'on' : 'off'}`);
     });
@@ -316,6 +283,7 @@ export class GameApp {
     // Grid helper visibility
     this.input.on(Action.ToggleGrid, (_action, phase) => {
       if (phase !== 'pressed' || !this.grid) return;
+      if (!this.isDebugMode) return;
       this.grid.visible = !this.grid.visible;
       console.info(`Grid ${this.grid.visible ? 'visible' : 'hidden'}`);
     });
@@ -323,9 +291,8 @@ export class GameApp {
     // Debug UI and helpers visibility
     this.input.on(Action.ToggleDebugUi, (_action, phase) => {
       if (phase !== 'pressed') return;
-      const isVisible = this.debugUI?.toggle() ?? false;
-      this.debugHelpers?.setVisible(isVisible);
-      console.info(`Debug info ${isVisible ? 'visible' : 'hidden'}`);
+      this.setDebugMode(!this.isDebugMode);
+      console.info(`Debug mode ${this.isDebugMode ? 'enabled' : 'disabled'}`);
     });
 
     // Set initial key bindings for menu state
@@ -352,6 +319,70 @@ export class GameApp {
       this.input.bindKey('arrowup', Action.MenuUp);
       this.input.bindKey('s', Action.MenuDown);
       this.input.bindKey('arrowdown', Action.MenuDown);
+    }
+  }
+
+  private activateDebugCamera(): void {
+    if (!this.debugCamera || !this.player || !this.input) return;
+
+    // Position debug camera at player position
+    const playerWorldPos = new THREE.Vector3();
+    this.player.mesh.getWorldPosition(playerWorldPos);
+    this.debugCamera.position.copy(playerWorldPos);
+
+    // Match player's camera rotation
+    const playerCameraRotation = new THREE.Euler().setFromQuaternion(this.player.camera.quaternion);
+    this.euler.set(playerCameraRotation.x, playerCameraRotation.y, 0);
+    this.debugCamera.rotation.set(this.euler.x, this.euler.y, this.euler.z);
+
+    // Request pointer lock for mouse look
+    this.renderer.domElement.requestPointerLock();
+
+    // Bind space to DebugMoveUp for debug camera
+    // Also bind W/ArrowUp to Forward for debug camera movement
+    this.input.unbindKey(' ');
+    this.input.bindKey(' ', Action.DebugMoveUp);
+    this.input.bindKey('w', Action.Forward);
+    this.input.bindKey('arrowup', Action.Forward);
+
+    this.useDebugCamera = true;
+    this.activeCamera = this.debugCamera;
+  }
+
+  private deactivateDebugCamera(): void {
+    if (document.pointerLockElement === this.renderer.domElement) {
+      document.exitPointerLock();
+    }
+
+    if (this.input) {
+      this.input.unbindKey(' ');
+      this.input.bindKey(' ', Action.Start);
+      // Restore bindings based on current game state
+      this.updateKeyBindingsForGameState();
+    }
+
+    this.useDebugCamera = false;
+
+    if (this.player) {
+      this.activeCamera = this.player.camera;
+    }
+  }
+
+  private setDebugMode(enabled: boolean): void {
+    if (enabled && (!this.debugUI || !this.debugHelpers)) {
+      return;
+    }
+
+    this.isDebugMode = enabled;
+    this.debugUI?.setVisible(enabled);
+    this.debugHelpers?.setVisible(enabled);
+
+    if (!enabled) {
+      this.deactivateDebugCamera();
+      if (this.grid) {
+        this.grid.visible = false;
+      }
+      this.terrainManager?.setWireframe(false);
     }
   }
 
@@ -765,7 +796,7 @@ export class GameApp {
     }
 
     // Update debug camera movement
-    if (this.useDebugCamera && this.debugCamera && this.input) {
+    if (this.isDebugMode && this.useDebugCamera && this.debugCamera && this.input) {
       const moveVector = new THREE.Vector3();
       const forward = new THREE.Vector3(0, 0, -1);
       const right = new THREE.Vector3(1, 0, 0);
