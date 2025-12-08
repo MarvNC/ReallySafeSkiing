@@ -1,5 +1,5 @@
 import { SPRINT_CONFIG } from '../config/GameConfig';
-import type { GameMode } from '../ui/store';
+import type { Difficulty, GameMode } from '../ui/store';
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | 'D';
 
@@ -8,6 +8,16 @@ const SPRINT_GRADE_THRESHOLDS: Record<Exclude<Grade, 'D'>, number> = {
   A: 140,
   B: 170,
   C: 210,
+};
+
+type PersonalBestContext = {
+  mode: GameMode;
+  difficulty: Difficulty;
+  slopeAngle: number;
+};
+
+type PersonalBestOptions = {
+  includeLegacy?: boolean;
 };
 
 const getStorage = () => {
@@ -19,7 +29,13 @@ const getStorage = () => {
   }
 };
 
-const getPBKey = (mode: GameMode) => `rss_pb_${mode.toLowerCase()}`;
+const normalizeSlopeAngle = (slopeAngle: number) =>
+  Math.round(Math.max(0, Math.min(90, slopeAngle)));
+
+const getPBKey = ({ mode, difficulty, slopeAngle }: PersonalBestContext) =>
+  `rss_pb_${mode.toLowerCase()}_${difficulty.toLowerCase()}_slope${normalizeSlopeAngle(slopeAngle)}`;
+
+const getLegacyPBKey = (mode: GameMode) => `rss_pb_${mode.toLowerCase()}`;
 
 export const calculateGrade = (timeSeconds: number, penalties: number): Grade => {
   const penaltyWeightSeconds = SPRINT_CONFIG.PENALTY_SECONDS * 0.5;
@@ -32,11 +48,15 @@ export const calculateGrade = (timeSeconds: number, penalties: number): Grade =>
   return 'D';
 };
 
-export const savePersonalBest = (mode: GameMode, score: number, betterIsLower = true): boolean => {
+export const savePersonalBest = (
+  context: PersonalBestContext,
+  score: number,
+  betterIsLower = true
+): boolean => {
   const storage = getStorage();
   if (!storage) return false;
 
-  const key = getPBKey(mode);
+  const key = getPBKey(context);
   let currentScore: number | null = null;
   try {
     const currentValue = storage.getItem(key);
@@ -60,19 +80,33 @@ export const savePersonalBest = (mode: GameMode, score: number, betterIsLower = 
   return false;
 };
 
-export const getPersonalBest = (mode: GameMode): number | null => {
+export const getPersonalBest = (
+  context: PersonalBestContext,
+  options: PersonalBestOptions = {}
+): number | null => {
   const storage = getStorage();
   if (!storage) return null;
 
-  let raw: string | null;
-  try {
-    raw = storage.getItem(getPBKey(mode));
-  } catch {
-    return null;
+  const readScore = (key: string): number | null => {
+    let raw: string | null;
+    try {
+      raw = storage.getItem(key);
+    } catch {
+      return null;
+    }
+
+    if (!raw) return null;
+
+    const parsed = Number.parseFloat(raw);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const scopedScore = readScore(getPBKey(context));
+  if (scopedScore !== null) return scopedScore;
+
+  if (options.includeLegacy) {
+    return readScore(getLegacyPBKey(context.mode));
   }
 
-  if (!raw) return null;
-
-  const parsed = Number.parseFloat(raw);
-  return Number.isNaN(parsed) ? null : parsed;
+  return null;
 };

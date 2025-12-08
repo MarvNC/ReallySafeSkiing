@@ -10,7 +10,7 @@ import {
   type Grade,
   savePersonalBest,
 } from '../../utils/scoreSystem';
-import { EndReason, GameMode, useGameStore } from '../store';
+import { Difficulty, EndReason, GameMode, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
 import { GameModeToggle } from './GameModeToggle';
 import { SlopeControl } from './SlopeControl';
@@ -49,6 +49,8 @@ type FinishStats = {
   topSpeed: number;
   penalties: number;
   endReason: EndReason | null;
+  difficulty: Difficulty;
+  slopeAngle: number;
 };
 
 type ResultMeta = {
@@ -69,6 +71,8 @@ export const GameOver = () => {
       topSpeed: state.topSpeed,
       penalties: state.penalties,
       endReason: state.endReason,
+      difficulty: state.difficulty,
+      slopeAngle: state.slopeAngle,
     };
   }
 
@@ -78,7 +82,13 @@ export const GameOver = () => {
   if (!resultMetaRef.current) {
     const sprintComplete =
       finishStats.gameMode === 'SPRINT' && finishStats.endReason === 'complete';
-    const storedBest = sprintComplete ? getPersonalBest('SPRINT') : null;
+    const storedBest = sprintComplete
+      ? getPersonalBest({
+          mode: finishStats.gameMode,
+          difficulty: finishStats.difficulty,
+          slopeAngle: finishStats.slopeAngle,
+        })
+      : null;
     const newRecord =
       sprintComplete && (storedBest === null || finishStats.timeElapsed < storedBest);
 
@@ -111,7 +121,15 @@ export const GameOver = () => {
 
   useEffect(() => {
     if (sprintComplete && isNewRecord) {
-      savePersonalBest('SPRINT', finishStats.timeElapsed, true);
+      savePersonalBest(
+        {
+          mode: finishStats.gameMode,
+          difficulty: finishStats.difficulty,
+          slopeAngle: finishStats.slopeAngle,
+        },
+        finishStats.timeElapsed,
+        true
+      );
     }
   }, [sprintComplete, isNewRecord, finishStats.timeElapsed]);
 
