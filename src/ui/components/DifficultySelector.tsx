@@ -6,14 +6,14 @@ import type { Difficulty } from '../store';
 import { useGameStore } from '../store';
 import { SelectionTile } from './SelectionTile';
 
-type DifficultyOption = {
+export type DifficultyOption = {
   value: Difficulty;
   icon: ComponentType<{ className?: string }>;
   glowClass: string;
   iconClass: string;
 };
 
-const OPTIONS: DifficultyOption[] = [
+export const DIFFICULTY_OPTIONS: DifficultyOption[] = [
   {
     value: 'CHILL',
     icon: Snowflake,
@@ -40,7 +40,7 @@ export const DifficultySelector = () => {
   return (
     <div className="flex flex-col gap-4 text-white">
       <div className="grid grid-cols-3 gap-3">
-        {OPTIONS.map((option) => {
+        {DIFFICULTY_OPTIONS.map((option) => {
           const Icon = option.icon;
           const isActive = difficulty === option.value;
 

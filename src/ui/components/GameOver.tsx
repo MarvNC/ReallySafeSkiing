@@ -11,9 +11,9 @@ import {
   savePersonalBest,
 } from '../../utils/scoreSystem';
 import { Difficulty, EndReason, GameMode, useGameStore } from '../store';
-import { DifficultySelector } from './DifficultySelector';
+import { DIFFICULTY_OPTIONS, DifficultySelector } from './DifficultySelector';
 import { GameModeToggle } from './GameModeToggle';
-import { SlopeControl } from './SlopeControl';
+import { SLOPE_LEVELS, SlopeControl } from './SlopeControl';
 
 const formatTime = (value: number) => {
   const minutes = Math.floor(value / 60);
@@ -34,13 +34,20 @@ type StatCardProps = {
 };
 
 const StatCard = ({ icon: Icon, label, value, accentClass, detail }: StatCardProps) => (
-  <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-4 text-center shadow-inner shadow-black/30 backdrop-blur-md">
+  <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-inner shadow-black/30 backdrop-blur-md">
     <Icon className={clsx('h-5 w-5', accentClass)} />
     <div className="text-2xl font-black tracking-wide md:text-3xl">{value}</div>
     <div className="text-[10px] font-semibold tracking-[0.3em] text-white/70">{label}</div>
     {detail && <div className="text-xs text-white/60">{detail}</div>}
   </div>
 );
+
+const getSlopeDescriptor = (angle: number) =>
+  SLOPE_LEVELS.reduce((closest, current) => {
+    const currentDiff = Math.abs(angle - current.angle);
+    const closestDiff = Math.abs(angle - closest.angle);
+    return currentDiff < closestDiff ? current : closest;
+  });
 
 type FinishStats = {
   gameMode: GameMode;
@@ -156,7 +163,7 @@ export const GameOver = () => {
   };
 
   return (
-    <div className="pointer-events-auto flex w-full flex-col items-center gap-6 px-4 text-white md:px-0">
+    <div className="pointer-events-auto flex w-full flex-col items-center gap-3 px-4 text-white md:px-0">
       <div className="text-center">
         <div className="mb-2 text-xs tracking-[0.5em] text-white/50">
           {finishStats.gameMode} MODE • FINAL REPORT
@@ -216,15 +223,15 @@ export const GameOver = () => {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <StatCard
                 icon={Zap}
                 label="TOP SPEED"
                 value={`${Math.round(finishStats.topSpeed)} KM/H`}
                 accentClass="text-accent-orange"
               />
-              <div className="relative flex flex-col items-center justify-center rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/0 px-4 py-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <div className="relative flex flex-col items-center justify-center rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/0 p-3 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
                 <Clock className="text-accent-orange mb-2 h-6 w-6" />
                 <div className="text-3xl font-black tracking-wide md:text-4xl">
                   {formatTime(finishStats.timeElapsed)}
@@ -248,6 +255,42 @@ export const GameOver = () => {
                 value={`${Math.floor(finishStats.distance)} M`}
                 accentClass="text-sky-300"
               />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
+                  {(() => {
+                    const activeDifficulty = DIFFICULTY_OPTIONS.find(
+                      (option) => option.value === finishStats.difficulty
+                    );
+                    if (!activeDifficulty) return null;
+                    const Icon = activeDifficulty.icon;
+                    return (
+                      <>
+                        <Icon className={clsx('h-5 w-5', activeDifficulty.iconClass)} />
+                        <div className="text-lg font-black tracking-wide text-white">
+                          {activeDifficulty.value}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
+                  {(() => {
+                    const activeSlope = getSlopeDescriptor(finishStats.slopeAngle);
+                    return (
+                      <>
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          {activeSlope.renderIcon(true)}
+                        </div>
+                        <div>
+                          <div className="text-lg font-black tracking-wide text-white">
+                            {Math.round(finishStats.slopeAngle)}°
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
 
             <button

@@ -3,14 +3,14 @@ import clsx from 'clsx';
 import { useGameStore } from '../store';
 import { SelectionTile } from './SelectionTile';
 
-type SlopeLevel = {
+export type SlopeLevel = {
   angle: number;
   label: string;
   glowClass: string;
   renderIcon: (isActive: boolean) => React.ReactNode;
 };
 
-const SLOPE_LEVELS: SlopeLevel[] = [
+export const SLOPE_LEVELS: SlopeLevel[] = [
   {
     angle: 15,
     label: 'BEGINNER',
