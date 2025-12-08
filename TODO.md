@@ -1,10 +1,8 @@
-- Make skis rotate with terrain
 - Fix tree tops
-- BETTER LIGHTING, sparkly snow, etc
 - animations when carving / snow animations
 - FOV warp at speed
 - Zoom out camera more?
 - Blur at distance
 - SFX
 - Music
-- Remove slope selector, make it just allow player to choose 60 45 22.5.
+- Infinite terrain

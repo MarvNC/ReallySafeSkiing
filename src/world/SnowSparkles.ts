@@ -161,6 +161,28 @@ gl_PointSize = size * aSize;
     this.points.visible = visible;
   }
 
+  reset(camera: THREE.Camera, sunDir: THREE.Vector3): void {
+    camera.getWorldPosition(this.tmpCamPos);
+    this.tmpForward.set(0, 0, -1).applyQuaternion(camera.quaternion).setY(0);
+    if (this.tmpForward.lengthSq() < 1e-4) {
+      this.tmpForward.set(0, 0, -1);
+    } else {
+      this.tmpForward.normalize();
+    }
+
+    this.tmpSunDir.copy(sunDir).normalize().multiplyScalar(-1);
+
+    for (let i = 0; i < this.count; i++) {
+      this.respawnSparkle(i, this.tmpCamPos, this.tmpForward);
+    }
+
+    this.updateColorBuffer(0.016, this.tmpForward, this.tmpSunDir);
+
+    (this.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    (this.geometry.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+    (this.geometry.getAttribute('aSize') as THREE.BufferAttribute).needsUpdate = true;
+  }
+
   private respawnSparkle(index: number, cameraPos: THREE.Vector3, forward: THREE.Vector3): void {
     const angleOffset = (Math.random() - 0.5) * this.forwardArc;
     this.yawQuat.setFromAxisAngle(this.up, angleOffset);

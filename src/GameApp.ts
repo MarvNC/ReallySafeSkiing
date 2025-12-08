@@ -365,6 +365,10 @@ export class GameApp {
     this.player.mesh.position.copy(this.startPosition);
     this.player.mesh.quaternion.set(0, 0, 0, 1);
     this.player.resetCamera();
+    this.snowSparkles?.reset(
+      this.player.camera,
+      this.lighting?.getSunDirection() ?? LIGHTING_CONFIG.sun.direction
+    );
 
     // Reset timers/UI
     this.timeRemaining = GAME_CONFIG.timerDuration;
