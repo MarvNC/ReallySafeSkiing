@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Logo Render</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: transparent;
+        font-family: 'Russo One', sans-serif;
+      }
+
+      /* Logo Container - matches: flex flex-col items-center justify-center p-4 select-none */
+      #logo-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem; /* p-4 */
+        user-select: none;
+      }
+
+      /* Top part: "REALLY SAFE" */
+      /* matches: relative z-100 -rotate-2 transform */
+      .top-part {
+        position: relative;
+        z-index: 100;
+        transform: rotate(-2deg);
+      }
+
+      /* matches: absolute -inset-1 skew-x-[-10deg] bg-yellow-500 shadow-[4px_4px_0px_rgba(0,0,0,0.3)] */
+      .top-part .bg-yellow {
+        position: absolute;
+        inset: -0.25rem; /* -inset-1 = -0.25rem */
+        transform: skewX(-10deg);
+        background-color: #eab308; /* yellow-500 */
+        box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+      }
+
+      /* matches: absolute -inset-1 translate-x-[2px] translate-y-[2px] skew-x-[-10deg] bg-orange-600 */
+      .top-part .bg-orange {
+        position: absolute;
+        inset: -0.25rem;
+        transform: translateX(2px) translateY(2px) skewX(-10deg);
+        background-color: #ea580c; /* orange-600 */
+      }
+
+      /* matches: absolute -inset-1 skew-x-[-10deg] opacity-20 mix-blend-overlay + inline style */
+      .top-part .stripes {
+        position: absolute;
+        inset: -0.25rem;
+        transform: skewX(-10deg);
+        opacity: 0.2;
+        mix-blend-mode: overlay;
+        background-image: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 10px,
+          #000 10px,
+          #000 20px
+        );
+      }
+
+      /* matches: font-russo relative px-4 py-1 text-2xl md:text-3xl lg:text-4xl tracking-widest text-white uppercase italic text-shadow-sm */
+      /* Using lg breakpoint: text-4xl = 2.25rem */
+      .top-part h2 {
+        position: relative;
+        padding: 0.25rem 1rem; /* py-1 px-4 */
+        font-family: 'Russo One', sans-serif;
+        font-size: 2.25rem; /* lg:text-4xl */
+        letter-spacing: 0.1em; /* tracking-widest */
+        text-transform: uppercase;
+        font-style: italic;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* text-shadow-sm approximation */
+      }
+
+      /* Bottom part: "SKIING" */
+      /* matches: relative -mt-2 md:-mt-4 */
+      /* Using md+ breakpoint: -mt-4 = -1rem */
+      .bottom-part {
+        position: relative;
+        margin-top: -1rem; /* md:-mt-4 */
+      }
+
+      /* matches: absolute top-1/2 left-1/2 -z-10 h-full w-[120%] -translate-x-1/2 -translate-y-1/2 skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/5 to-transparent blur-sm */
+      .bottom-part .speed-lines-bg {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        z-index: -10;
+        height: 100%;
+        width: 120%;
+        transform: translateX(-50%) translateY(-50%) skewX(-20deg);
+        background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.05), transparent);
+        filter: blur(2px);
+      }
+
+      /* matches: font-russo relative z-10 text-6xl md:text-8xl lg:text-9xl tracking-tighter uppercase italic + inline skewX */
+      /* Using lg breakpoint: text-9xl = 8rem */
+      .bottom-part h1 {
+        position: relative;
+        z-index: 10;
+        font-family: 'Russo One', sans-serif;
+        font-size: 8rem; /* lg:text-9xl */
+        letter-spacing: -0.05em; /* tracking-tighter */
+        text-transform: uppercase;
+        font-style: italic;
+        transform: skewX(-10deg);
+        line-height: 1;
+      }
+
+      /* matches: bg-gradient-to-b from-white via-sky-100 to-sky-400 bg-clip-text text-transparent drop-shadow-xl + inline filter */
+      .bottom-part h1 span {
+        background: linear-gradient(to bottom, white, #e0f2fe, #38bdf8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0px 4px 0px rgba(0, 40, 80, 0.4));
+      }
+
+      /* matches: absolute top-1/2 -left-8 h-[2px] w-full -skew-x-[45deg] bg-white/20 */
+      .bottom-part .speed-line-1 {
+        position: absolute;
+        top: 50%;
+        left: -2rem;
+        height: 2px;
+        width: 100%;
+        transform: skewX(-45deg);
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* matches: absolute top-2/3 -right-8 h-[2px] w-full -skew-x-[45deg] bg-white/20 */
+      .bottom-part .speed-line-2 {
+        position: absolute;
+        top: 66.67%;
+        right: -2rem;
+        height: 2px;
+        width: 100%;
+        transform: skewX(-45deg);
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* matches: absolute top-1/2 left-1/2 -z-20 -translate-x-1/2 -translate-y-1/2 scale-150 opacity-10 */
+      .mountain-bg {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        z-index: -20;
+        transform: translateX(-50%) translateY(-50%) scale(1.5);
+        opacity: 0.1;
+      }
+
+      /* matches: mt-2 flex justify-center gap-1 opacity-60 */
+      .bottom-accents {
+        margin-top: 0.5rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.25rem;
+        opacity: 0.6;
+      }
+
+      /* matches: h-1 w-8 skew-x-[-45deg] bg-sky-300 */
+      .bottom-accents .accent-bar {
+        height: 0.25rem;
+        width: 2rem;
+        transform: skewX(-45deg);
+        background-color: #7dd3fc; /* sky-300 */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="logo-container">
+      <!-- Top part: "REALLY SAFE" -->
+      <div class="top-part">
+        <div class="bg-yellow"></div>
+        <div class="bg-orange"></div>
+        <div class="stripes"></div>
+        <h2>Really Safe</h2>
+      </div>
+
+      <!-- Bottom part: "SKIING" -->
+      <div class="bottom-part">
+        <div class="speed-lines-bg"></div>
+
+        <h1>
+          <span>Skiing</span>
+          <div class="speed-line-1"></div>
+          <div class="speed-line-2"></div>
+        </h1>
+
+        <!-- Low Poly Mountain Graphic -->
+        <div class="mountain-bg">
+          <svg width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M100 0 L200 100 L0 100 Z" fill="white" />
+            <path d="M100 0 L150 100 L50 100 Z" fill="#87ceeb" opacity="0.5" />
+          </svg>
+        </div>
+
+        <!-- Bottom Accents -->
+        <div class="bottom-accents">
+          <div class="accent-bar"></div>
+          <div class="accent-bar"></div>
+          <div class="accent-bar"></div>
+          <div class="accent-bar"></div>
+          <div class="accent-bar"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,7 +1,11 @@
-# Really Safe Skiing ⛷️
+<p align="center">
+  <img src="assets/game-logo.png" alt="Really Safe Skiing" width="500" />
+</p>
 
-A low-poly, high-speed downhill skiing game where safety is strictly... optional.
-Dodge trees, rocks, and gravity itself.
+<p align="center">
+  A low-poly, high-speed downhill skiing game where safety is strictly... optional.<br/>
+  Dodge trees, rocks, and gravity itself.
+</p>
 
 ## ✨ Features
 
