@@ -330,7 +330,8 @@ export const HUD = () => {
                 {[0, 1, 2].map((idx) => {
                   const remaining = lives - idx;
                   const isLost = remaining <= 0;
-                  const isFragile = remaining === 1;
+                  // Only show the fragile (yellow) state when the player is on their very last life.
+                  const isFragile = remaining === 1 && lives <= 1;
                   const state: HeartState = isLost ? 'lost' : isFragile ? 'fragile' : 'full';
                   const isShattering = isLost && lostHeartIndex === idx && lifeToast;
 
