@@ -154,34 +154,6 @@ const SetupPanel: FC = () => {
       >
         <SlopeControl />
       </AccordionSection>
-
-      <div className="text-s flex items-center justify-center gap-4 border-t border-white/10 pt-2 pt-3 text-white opacity-80">
-        {/* Desktop controls */}
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-            A
-          </span>
-          <span className="tracking-widest">/</span>
-          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-            D
-          </span>
-          <span className="tracking-widest">STEER</span>
-          <span className="mx-1 tracking-widest">|</span>
-          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-            A
-          </span>
-          <span className="tracking-widest">+</span>
-          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-            D
-          </span>
-          <span className="tracking-widest">TO WEDGE</span>
-        </div>
-        {/* Mobile controls */}
-        <div className="flex flex-col items-center gap-1 text-center text-xs tracking-widest md:hidden">
-          <div>TAP LEFT AND RIGHT SIDES TO STEER</div>
-          <div>TAP BOTH SIDES TO WEDGE</div>
-        </div>
-      </div>
     </div>
   );
 };
