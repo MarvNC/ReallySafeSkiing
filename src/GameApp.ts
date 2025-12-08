@@ -682,15 +682,23 @@ export class GameApp {
       return;
     }
 
-    if (this.playerPhysics.isAirborne()) {
-      // Use config-driven rate so short hops still reward progress
-      const increment = ARCADE_CONFIG.AIR_MULTIPLIER_PER_SECOND * gameDelta;
-      this.airTimeAccumulator += increment;
+    const airborneTime = this.playerPhysics.getAirborneTime();
+    const minAirSeconds = ARCADE_CONFIG.AIR_MULTIPLIER_MIN_SECONDS;
+    const eligible = this.playerPhysics.isAirborne() && airborneTime >= minAirSeconds;
 
-      if (this.airTimeAccumulator >= 0.001) {
-        const next = Number((store.multiplier + this.airTimeAccumulator).toFixed(2));
-        store.setMultiplier(next);
-        this.airTimeAccumulator = 0;
+    if (eligible) {
+      this.airTimeAccumulator += gameDelta;
+      const interval = ARCADE_CONFIG.AIR_MULTIPLIER_INTERVAL_SECONDS;
+
+      if (interval > 0) {
+        const incrementsEarned = Math.floor(this.airTimeAccumulator / interval);
+
+        if (incrementsEarned > 0) {
+          const bonus = incrementsEarned * ARCADE_CONFIG.AIR_MULTIPLIER_INCREMENT;
+          const next = Number((store.multiplier + bonus).toFixed(2));
+          store.setMultiplier(next);
+          this.airTimeAccumulator -= incrementsEarned * interval;
+        }
       }
     } else {
       this.airTimeAccumulator = 0;
@@ -826,7 +834,6 @@ export class GameApp {
       this.arcadeInvulnerability = Math.max(0, this.arcadeInvulnerability - realDelta);
     }
     this.updateArcadeHandling();
-    this.updateAirMultiplier(gameDelta);
 
     // Keep sun/shadows following the rider
     if (this.playerPhysics) {
@@ -887,6 +894,7 @@ export class GameApp {
         this.player.syncFromPhysics();
       }
 
+      this.updateAirMultiplier(gameDelta);
       this.updateHUD(gameMode === 'ARCADE');
 
       // Win condition: Sprint mode checks distance

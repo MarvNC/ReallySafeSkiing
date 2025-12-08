@@ -35,7 +35,7 @@ export class PlayerPhysics {
   private readonly upDir = new THREE.Vector3(0, 1, 0);
   private timeSinceGroundContact = Number.POSITIVE_INFINITY;
   private readonly groundContactMemorySeconds = PLAYER_CONFIG.physics.groundContactMemorySeconds;
-  private recentlyGrounded = true;
+  private isGrounded = false;
 
   private yaw = 0;
   // New crash state
@@ -143,10 +143,16 @@ export class PlayerPhysics {
     let grounded = false;
 
     this.world.contactPairsWith(this.collider, (other) => {
+      if (grounded) return;
       const membership = other.collisionGroups() & 0xffff;
-      if ((membership & PhysicsLayer.World) !== 0) {
-        grounded = true;
-      }
+      if ((membership & PhysicsLayer.World) === 0) return;
+
+      // Confirm actual contact (not just proximity) using the narrow phase manifolds
+      this.world.narrowPhase.contactPair(this.collider.handle, other.handle, (manifold) => {
+        if (manifold.numContacts() > 0) {
+          grounded = true;
+        }
+      });
     });
 
     if (grounded) {
@@ -154,6 +160,7 @@ export class PlayerPhysics {
     } else {
       this.timeSinceGroundContact += deltaSeconds;
     }
+    this.isGrounded = grounded;
 
     return grounded;
   }
@@ -167,8 +174,12 @@ export class PlayerPhysics {
     this.lateralGripScale = lateralGripScale;
   }
 
+  getAirborneTime(): number {
+    return this.isGrounded ? 0 : this.timeSinceGroundContact;
+  }
+
   isAirborne(): boolean {
-    return !this.recentlyGrounded;
+    return !this.isGrounded;
   }
 
   applyControls(input: InputManager, deltaSeconds: number): void {
@@ -244,7 +255,6 @@ export class PlayerPhysics {
     // Track ground contact time to determine if we should apply ski forces
     this.updateGroundContact(deltaSeconds);
     const hasRecentGroundContact = this.hasRecentGroundContact();
-    this.recentlyGrounded = hasRecentGroundContact;
 
     // 4. Project Velocity
     const forwardSpeed = this.currentVel.dot(this.forwardDir);
