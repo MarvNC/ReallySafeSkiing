@@ -7,16 +7,17 @@ import { useGameStore } from '../store';
 const MAX_DISPLAY_SPEED_KMH = 200;
 
 export const HUD = () => {
-  const { timeRemaining, speed, distance } = useGameStore();
+  const { timeRemaining, timeElapsed, speed, distance, gameMode } = useGameStore();
 
   // Time Formatting
-  const minutes = Math.floor(timeRemaining / 60);
-  const seconds = Math.floor(timeRemaining % 60);
-  const milliseconds = Math.floor((timeRemaining * 100) % 100);
+  const timerValue = gameMode === 'ZEN' ? timeElapsed : timeRemaining;
+  const minutes = Math.floor(timerValue / 60);
+  const seconds = Math.floor(timerValue % 60);
+  const milliseconds = Math.floor((timerValue * 100) % 100);
   const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
 
   // Logic
-  const isUrgent = timeRemaining <= 10 && timeRemaining > 0;
+  const isUrgent = gameMode === 'ARCADE' && timeRemaining <= 10 && timeRemaining > 0;
   const speedKmh = Math.floor(speed * 3.6);
   // Cap the bar at 100% width, but let the number go higher
   const speedPercent = Math.min(100, (speedKmh / MAX_DISPLAY_SPEED_KMH) * 100);
@@ -35,12 +36,17 @@ export const HUD = () => {
             isUrgent && 'border-accent-red/50 animate-pulse bg-red-900/40'
           )}
         >
-          <Timer className={clsx('h-6 w-6', isUrgent ? 'text-accent-red' : 'text-sky-300')} />
+          <Timer
+            className={clsx(
+              'h-6 w-6',
+              isUrgent ? 'text-accent-red' : gameMode === 'ZEN' ? 'text-cyan-300' : 'text-sky-300'
+            )}
+          />
           <div
             className={clsx(
               'text-4xl font-bold tracking-wider tabular-nums',
               heavyShadow,
-              isUrgent ? 'text-accent-red' : 'text-white'
+              isUrgent ? 'text-accent-red' : gameMode === 'ZEN' ? 'text-white' : 'text-white'
             )}
           >
             {timeStr}

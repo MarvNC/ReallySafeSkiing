@@ -2,13 +2,54 @@ import clsx from 'clsx';
 import type { FC } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
-import { UIState, useGameStore } from '../store';
+import { GameMode, UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
 import { SlopeControl } from './SlopeControl';
+
+const GameModeToggle: FC = () => {
+  const gameMode = useGameStore((state) => state.gameMode);
+  const setGameMode = useGameStore((state) => state.setGameMode);
+
+  const handleToggle = (mode: GameMode) => {
+    if (mode !== gameMode) setGameMode(mode);
+  };
+
+  return (
+    <div className="flex w-full items-center gap-1 rounded-full border border-white/10 bg-black/40 p-1 shadow-inner shadow-black/40">
+      <button
+        type="button"
+        aria-pressed={gameMode === 'ARCADE'}
+        onClick={() => handleToggle('ARCADE')}
+        className={clsx(
+          'flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold tracking-[0.2em] uppercase transition-all md:text-sm',
+          gameMode === 'ARCADE'
+            ? 'bg-accent-orange text-slate-900 shadow-lg shadow-orange-500/40'
+            : 'text-white/60 hover:text-white'
+        )}
+      >
+        Timed
+      </button>
+      <button
+        type="button"
+        aria-pressed={gameMode === 'ZEN'}
+        onClick={() => handleToggle('ZEN')}
+        className={clsx(
+          'flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold tracking-[0.2em] uppercase transition-all md:text-sm',
+          gameMode === 'ZEN'
+            ? 'bg-cyan-400 text-slate-900 shadow-lg shadow-cyan-400/40'
+            : 'text-white/60 hover:text-white'
+        )}
+      >
+        Infinite
+      </button>
+    </div>
+  );
+};
 
 const SetupPanel: FC = () => (
   // Mobile: p-3, max-w-sm. Desktop: p-4, max-w-xl.
   <div className="pointer-events-auto flex w-full max-w-sm flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-3 text-sm shadow-2xl backdrop-blur-md md:max-w-xl md:gap-3 md:p-4">
+    <GameModeToggle />
     {/* Mobile: p-2. Desktop: p-4. */}
     <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-2 md:p-4">
       <div className="text-xs tracking-widest text-white/70 uppercase">Obstacle Difficulty</div>
@@ -50,15 +91,26 @@ const SetupPanel: FC = () => (
   </div>
 );
 
-const StartButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
-  <button
-    onClick={onClick}
-    // Mobile: mt-4, py-3, text-lg. Desktop: mt-6, py-4, text-xl.
-    className="bg-accent-orange font-russo pointer-events-auto mt-4 w-full max-w-sm cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-400 active:scale-95 md:mt-6 md:max-w-3xl md:py-4 md:text-xl"
-  >
-    {label}
-  </button>
-);
+const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }> = ({
+  label,
+  onClick,
+  gameMode,
+}) => {
+  return (
+    <button
+      onClick={onClick}
+      // Mobile: mt-4, py-3, text-lg. Desktop: mt-6, py-4, text-xl.
+      className={clsx(
+        'font-russo pointer-events-auto mt-4 w-full max-w-sm cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg transition-all active:scale-95 md:mt-6 md:max-w-3xl md:py-4 md:text-xl',
+        gameMode === 'ZEN'
+          ? 'bg-cyan-400 shadow-cyan-400/30 hover:bg-cyan-300'
+          : 'bg-accent-orange shadow-orange-500/20 hover:bg-orange-400'
+      )}
+    >
+      {label}
+    </button>
+  );
+};
 
 const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
@@ -85,7 +137,8 @@ const MenuFooter: FC = () => {
 };
 
 export const Menus = () => {
-  const { uiState, menuIndex, distance, topSpeed, setMenuIndex, endReason } = useGameStore();
+  const { uiState, menuIndex, distance, topSpeed, setMenuIndex, endReason, gameMode } =
+    useGameStore();
   const isCrashGameOver = endReason === 'crash';
   const isCrashTint =
     uiState === UIState.CRASHED || (uiState === UIState.GAME_OVER && isCrashGameOver);
@@ -185,7 +238,7 @@ export const Menus = () => {
 
           <SetupPanel />
 
-          <StartButton label="START RUN" onClick={handleStart} />
+          <StartButton label="START RUN" onClick={handleStart} gameMode={gameMode} />
 
           <GhostButton
             label="ABOUT"
@@ -206,26 +259,28 @@ export const Menus = () => {
             onKeyDown={(e) => e.stopPropagation()}
             role="presentation"
           >
-            {['RESUME', 'RESTART', 'BACK TO MENU'].map((item, idx) => (
-              <button
-                key={item}
-                onClick={() => handleMenuClick(idx)}
-                className={clsx(
-                  'flex cursor-pointer items-center justify-center gap-4 p-2 text-2xl transition-all md:text-3xl',
-                  menuIndex === idx
-                    ? 'scale-110 font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]'
-                    : 'text-sky-300 hover:scale-105 hover:text-white'
-                )}
-              >
-                {menuIndex === idx && (
-                  <div className="border-l-accent-orange h-0 w-0 border-y-[10px] border-l-[15px] border-y-transparent" />
-                )}
-                {item}
-                {menuIndex === idx && (
-                  <div className="border-r-accent-orange h-0 w-0 border-y-[10px] border-r-[15px] border-y-transparent" />
-                )}
-              </button>
-            ))}
+            {['RESUME', 'RESTART', gameMode === 'ZEN' ? 'END RUN' : 'BACK TO MENU'].map(
+              (item, idx) => (
+                <button
+                  key={item}
+                  onClick={() => handleMenuClick(idx)}
+                  className={clsx(
+                    'flex cursor-pointer items-center justify-center gap-4 p-2 text-2xl transition-all md:text-3xl',
+                    menuIndex === idx
+                      ? 'scale-110 font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]'
+                      : 'text-sky-300 hover:scale-105 hover:text-white'
+                  )}
+                >
+                  {menuIndex === idx && (
+                    <div className="border-l-accent-orange h-0 w-0 border-y-[10px] border-l-[15px] border-y-transparent" />
+                  )}
+                  {item}
+                  {menuIndex === idx && (
+                    <div className="border-r-accent-orange h-0 w-0 border-y-[10px] border-r-[15px] border-y-transparent" />
+                  )}
+                </button>
+              )
+            )}
           </div>
           <MenuFooter />
         </>
@@ -275,7 +330,7 @@ export const Menus = () => {
             </div>
             <SetupPanel />
           </div>
-          <StartButton label="PLAY AGAIN" onClick={handleStart} />
+          <StartButton label="PLAY AGAIN" onClick={handleStart} gameMode={gameMode} />
           <MenuFooter />
         </>
       )}

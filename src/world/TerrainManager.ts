@@ -34,22 +34,24 @@ export class TerrainManager {
     scene: THREE.Scene,
     physics?: PhysicsWorld,
     slopeAngle: number = 20,
-    difficulty: Difficulty = 'SPORT'
+    difficulty: Difficulty = 'SPORT',
+    modeObstacleMultiplier: number = 1
   ) {
     this.scene = scene;
     this.physics = physics;
     this.generator = new TerrainGenerator();
-    this.regenerate(slopeAngle, difficulty);
+    this.regenerate(slopeAngle, difficulty, modeObstacleMultiplier);
   }
 
-  regenerate(slopeAngle: number, difficulty: Difficulty): void {
+  regenerate(slopeAngle: number, difficulty: Difficulty, obstacleModeMultiplier: number = 1): void {
     this.disposeChunks();
     this.sampleIndex = 0;
     this.allPoints.length = 0;
     this.chunkPointCounts.length = 0;
     this.startAltitude = this.getStartAltitudeFromSlope(slopeAngle);
     this.slopeTangent = Math.tan(THREE.MathUtils.degToRad(Math.max(0, Math.min(70, slopeAngle))));
-    this.obstacleMultiplier = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
+    const baseObstacleDensity = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
+    this.obstacleMultiplier = baseObstacleDensity * obstacleModeMultiplier;
     this.trackObstaclesEnabled = difficulty !== 'CHILL';
 
     const initialChunks = this.chunksAhead + this.chunksBehind + 2;

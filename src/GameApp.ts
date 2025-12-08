@@ -8,7 +8,7 @@ import { DebugUI } from './debug/DebugUI';
 import { PhysicsWorld } from './physics/PhysicsWorld';
 import { PlayerController } from './player/PlayerController';
 import { PlayerPhysics } from './player/PlayerPhysics';
-import { EndReason, UIState, useGameStore } from './ui/store';
+import { EndReason, GameMode, UIState, useGameStore } from './ui/store';
 import { BackgroundEnvironment } from './world/BackgroundEnvironment';
 import { SnowSparkles } from './world/SnowSparkles';
 import { TerrainManager } from './world/TerrainManager';
@@ -51,6 +51,7 @@ export class GameApp {
   // 2. Game Logic Variables
   private gameState: GameState = GameState.MENU;
   private timeRemaining: number = GAME_CONFIG.timerDuration;
+  private timeElapsed = 0;
   private startPosition: THREE.Vector3 = new THREE.Vector3();
   private topSpeed: number = 0; // Track top speed in km/h
 
@@ -107,10 +108,17 @@ export class GameApp {
     this.physics = new PhysicsWorld();
     await this.physics.init();
 
-    const { slopeAngle, difficulty } = useGameStore.getState();
+    const { slopeAngle, difficulty, gameMode } = useGameStore.getState();
+    const obstacleMultiplier = this.getModeObstacleMultiplier(gameMode);
 
     // 1. Create Terrain Manager (generates the world)
-    this.terrainManager = new TerrainManager(this.scene, this.physics, slopeAngle, difficulty);
+    this.terrainManager = new TerrainManager(
+      this.scene,
+      this.physics,
+      slopeAngle,
+      difficulty,
+      obstacleMultiplier
+    );
 
     this.snowSparkles = new SnowSparkles(this.terrainManager);
     this.scene.add(this.snowSparkles.points);
@@ -342,8 +350,13 @@ export class GameApp {
     }
   }
 
+  private getModeObstacleMultiplier(mode: GameMode): number {
+    return mode === 'ZEN' ? (GAME_CONFIG.zenObstacleDensityMultiplier ?? 1) : 1;
+  }
+
   private startGame() {
-    const { slopeAngle, difficulty } = useGameStore.getState();
+    const { slopeAngle, difficulty, gameMode } = useGameStore.getState();
+    const obstacleMultiplier = this.getModeObstacleMultiplier(gameMode);
 
     // Full reset so restart behaves like a fresh page load
     this.timeScale = 1;
@@ -354,7 +367,7 @@ export class GameApp {
     this.gameState = GameState.PLAYING;
 
     // Rebuild world
-    this.terrainManager.regenerate(slopeAngle, difficulty);
+    this.terrainManager.regenerate(slopeAngle, difficulty, obstacleMultiplier);
     this.recalculateStartPosition();
 
     // Reset player + physics
@@ -372,13 +385,14 @@ export class GameApp {
 
     // Reset timers/UI
     this.timeRemaining = GAME_CONFIG.timerDuration;
+    this.timeElapsed = 0;
     this.topSpeed = 0;
 
     useGameStore.getState().setMenuIndex(0);
     useGameStore.getState().setUIState(UIState.PLAYING);
     useGameStore.getState().setTopSpeed(0);
     useGameStore.getState().setEndReason(null);
-    useGameStore.getState().updateStats(0, 0, this.timeRemaining);
+    useGameStore.getState().updateStats(0, 0, this.timeRemaining, this.timeElapsed);
 
     // Reset clock
     this.clock.stop();
@@ -396,7 +410,7 @@ export class GameApp {
     const currentPos = this.playerPhysics.getPosition();
     const distance = Math.abs(currentPos.z - this.startPosition.z);
 
-    useGameStore.getState().updateStats(0, distance, this.timeRemaining);
+    useGameStore.getState().updateStats(0, distance, this.timeRemaining, this.timeElapsed);
     useGameStore.getState().setTopSpeed(this.topSpeed);
     useGameStore.getState().setEndReason(reason);
 
@@ -502,7 +516,7 @@ export class GameApp {
     const distance = Math.abs(currentPos.z - this.startPosition.z);
 
     // Update store (React will handle the rendering)
-    useGameStore.getState().updateStats(speed, distance, this.timeRemaining);
+    useGameStore.getState().updateStats(speed, distance, this.timeRemaining, this.timeElapsed);
   }
 
   private triggerCrashSequence(): void {
@@ -573,6 +587,8 @@ export class GameApp {
 
     // 2. Calculate Game Delta (Slow-mo)
     const gameDelta = realDelta * this.timeScale;
+    const gameMode = useGameStore.getState().gameMode;
+    const isZenMode = gameMode === 'ZEN';
     const activeCamera = this.activeCamera ?? this.player.camera;
 
     // Keep sun/shadows following the rider
@@ -594,6 +610,7 @@ export class GameApp {
       this.physics.step(gameDelta, (handle1, handle2) => {
         // We only care about collisions if we are NOT already crashed
         if (!this.player || !this.playerPhysics) return;
+        if (isZenMode) return;
 
         const playerHandle = this.playerPhysics.getColliderHandle();
         const speed = this.playerPhysics.getSpeed();
@@ -614,7 +631,11 @@ export class GameApp {
         }
       });
 
-      this.timeRemaining -= gameDelta;
+      if (isZenMode) {
+        this.timeElapsed += gameDelta;
+      } else {
+        this.timeRemaining = Math.max(0, this.timeRemaining - gameDelta);
+      }
 
       if (!this.useDebugCamera) {
         this.player.update(gameDelta);
@@ -624,8 +645,7 @@ export class GameApp {
 
       this.updateHUD();
 
-      if (this.timeRemaining <= 0) {
-        this.timeRemaining = 0;
+      if (!isZenMode && this.timeRemaining <= 0) {
         this.endGame('time');
       }
 
@@ -652,8 +672,12 @@ export class GameApp {
       const easeProgress = 1 - Math.pow(1 - progress, 3);
       this.player.setCrashCameraValues(easeProgress);
 
-      // 5. Keep Timer Running (as requested)
-      this.timeRemaining -= gameDelta; // Slow-mo means game timer slows too
+      // 5. Keep Timer Running
+      if (isZenMode) {
+        this.timeElapsed += gameDelta;
+      } else {
+        this.timeRemaining = Math.max(0, this.timeRemaining - gameDelta); // Slow-mo means game timer slows too
+      }
       this.updateHUD();
 
       // 6. End Crash Sequence

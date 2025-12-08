@@ -12,6 +12,8 @@ export const GAME_CONFIG = {
   timerDuration: 60.0,
   // Crash speed threshold in km/h (converted to m/s for physics)
   crashSpeedThresholdKmh: 50,
+  // Reduce obstacle density for a calmer Zen experience (1 = no change)
+  zenObstacleDensityMultiplier: 0.7,
 } as const;
 
 const isLowPreset =

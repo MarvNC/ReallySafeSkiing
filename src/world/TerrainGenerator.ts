@@ -296,8 +296,4 @@ export class TerrainGenerator {
     const sOffset = dx * point.forwardX + dz * point.forwardZ;
     return { t, s: point.s + sOffset };
   }
-
-  private clamp01(value: number): number {
-    return Math.max(0, Math.min(1, value));
-  }
 }

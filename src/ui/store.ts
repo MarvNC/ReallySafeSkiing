@@ -11,6 +11,7 @@ export enum UIState {
 }
 
 export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
+export type GameMode = 'ARCADE' | 'ZEN';
 export type EndReason = 'time' | 'crash';
 
 interface GameState {
@@ -22,6 +23,7 @@ interface GameState {
   speed: number;
   distance: number;
   timeRemaining: number;
+  timeElapsed: number;
   topSpeed: number;
 
   // Menu Navigation
@@ -30,15 +32,22 @@ interface GameState {
   // Gameplay customization
   slopeAngle: number;
   difficulty: Difficulty;
+  gameMode: GameMode;
 
   // Actions (Callable from React or GameApp)
   setUIState: (state: UIState) => void;
   setEndReason: (reason: EndReason | null) => void;
-  updateStats: (speed: number, distance: number, time: number) => void;
+  updateStats: (
+    speed: number,
+    distance: number,
+    timeRemaining: number,
+    timeElapsed?: number
+  ) => void;
   setTopSpeed: (speed: number) => void;
   setMenuIndex: (index: number) => void;
   setSlopeAngle: (angle: number) => void;
   setDifficulty: (difficulty: Difficulty) => void;
+  setGameMode: (mode: GameMode) => void;
 }
 
 // Create store with subscription capability (useful if GameApp needs to react to UI changes)
@@ -49,17 +58,26 @@ export const useGameStore = create<GameState>()(
     speed: 0,
     distance: 0,
     timeRemaining: 60,
+    timeElapsed: 0,
     topSpeed: 0,
     menuIndex: 0,
     slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
+    gameMode: 'ARCADE',
 
     setUIState: (uiState) => set({ uiState }),
     setEndReason: (endReason) => set({ endReason }),
-    updateStats: (speed, distance, timeRemaining) => set({ speed, distance, timeRemaining }),
+    updateStats: (speed, distance, timeRemaining, timeElapsed) =>
+      set({
+        speed,
+        distance,
+        timeRemaining,
+        ...(timeElapsed !== undefined ? { timeElapsed } : {}),
+      }),
     setTopSpeed: (topSpeed) => set({ topSpeed }),
     setMenuIndex: (menuIndex) => set({ menuIndex }),
     setSlopeAngle: (angle) => set({ slopeAngle: Math.max(0, Math.min(70, angle)) }),
     setDifficulty: (difficulty) => set({ difficulty }),
+    setGameMode: (mode) => set({ gameMode: mode }),
   }))
 );
