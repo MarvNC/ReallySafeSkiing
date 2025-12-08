@@ -16,7 +16,7 @@ export const GAME_CONFIG = {
 
 export const SPRINT_CONFIG = {
   // Target distance to complete the sprint (in meters)
-  TARGET_DISTANCE: 200,
+  TARGET_DISTANCE: 2000,
   // Time penalty for crashing (in seconds)
   PENALTY_SECONDS: 20,
   // Crash sequence duration (in seconds)
