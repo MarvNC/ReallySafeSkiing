@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { ChevronDown, Home, LogOut, Play, RotateCcw } from 'lucide-react';
-import { type FC, type ReactNode, useEffect, useState } from 'react';
+import { type FC, type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
@@ -30,6 +30,63 @@ const ContentContainer: FC<{ children: ReactNode; className?: string }> = ({
   children,
   className,
 }) => <div className={clsx('w-full max-w-sm px-4 md:max-w-xl md:px-0', className)}>{children}</div>;
+
+// Automatically scales its children down if they exceed the viewport height
+const ResponsiveWrapper: FC<{ children: ReactNode; className?: string }> = ({
+  children,
+  className,
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const calculateScale = () => {
+      if (!contentRef.current) return;
+
+      const windowHeight = window.innerHeight;
+      const contentHeight = contentRef.current.scrollHeight;
+      // Reserve some padding (e.g., 60px) for margins/footer so it doesn't touch edges
+      const availableHeight = windowHeight - 80;
+
+      if (contentHeight > availableHeight && availableHeight > 0) {
+        // Scale down to fit
+        setScale(availableHeight / contentHeight);
+      } else {
+        // Reset to normal size if it fits
+        setScale(1);
+      }
+    };
+
+    // 1. Measure initially and on window resize
+    window.addEventListener('resize', calculateScale);
+    calculateScale();
+
+    // 2. Measure whenever content size changes (e.g., opening an accordion)
+    const observer = new ResizeObserver(calculateScale);
+    if (contentRef.current) {
+      observer.observe(contentRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', calculateScale);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div
+      className={clsx(
+        'flex flex-col items-center justify-center transition-transform duration-200 ease-out will-change-transform',
+        className
+      )}
+      style={{ transform: `scale(${scale})` }}
+    >
+      <div ref={contentRef} className="flex w-full flex-col items-center">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 const KeyPill: FC<{ label: string; large?: boolean }> = ({ label, large = false }) => (
   <span
@@ -310,7 +367,7 @@ export const Menus = () => {
 
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
-        <div className="flex flex-col items-center gap-2">
+        <ResponsiveWrapper className="gap-2">
           <GameLogo className="md:mb-4" />
           <ContentContainer>
             <SetupPanel />
@@ -324,9 +381,11 @@ export const Menus = () => {
               onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
             />
           </ContentContainer>
-          <MenuFooter />
-        </div>
+        </ResponsiveWrapper>
       )}
+
+      {/* Footer is typically absolute positioned and should remain outside scaling flow */}
+      {uiState === UIState.MENU && <MenuFooter />}
 
       {/* PAUSE MENU */}
       {uiState === UIState.PAUSED && (
@@ -397,7 +456,10 @@ export const Menus = () => {
       {/* GAME OVER */}
       {uiState === UIState.GAME_OVER && (
         <>
-          <GameOver />
+          {/* Also wrap Game Over to prevent cut-off on small screens */}
+          <ResponsiveWrapper>
+            <GameOver />
+          </ResponsiveWrapper>
           <MenuFooter />
         </>
       )}
