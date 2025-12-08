@@ -15,7 +15,7 @@ import type { PathPoint } from './WorldState';
 export class TerrainManager {
   private readonly chunks: TerrainChunk[] = [];
   private readonly chunkPointCounts: number[] = [];
-  private readonly generator: TerrainGenerator;
+  private generator: TerrainGenerator;
   private wireframe = false;
   private readonly allPoints: PathPoint[] = [];
   private readonly scene: THREE.Scene;
@@ -52,6 +52,7 @@ export class TerrainManager {
     coinsEnabled: boolean = this.coinsEnabled
   ): void {
     this.disposeChunks();
+    this.generator = new TerrainGenerator(); // Create new generator with new noise seed
     this.sampleIndex = 0;
     this.allPoints.length = 0;
     this.chunkPointCounts.length = 0;
