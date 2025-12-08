@@ -118,7 +118,7 @@ export const PLAYER_CONFIG = {
 } as const;
 
 export const MOUNTAIN_CONFIG = {
-  TOTAL_LENGTH: 500, // Virtual shaping length for slope/noise (run is infinite)
+  TOTAL_LENGTH: 2500, // Virtual shaping length for slope/noise (run is infinite)
   END_ALTITUDE: 0, // Baseline altitude reference (legacy)
 } as const;
 
