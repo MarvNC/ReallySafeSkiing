@@ -4,6 +4,7 @@ Please run the following commands after completing your work to ensure code qual
 
 - `bun run lint:fix`
 - `bun run format`
+- `bun run fix` (runs both of previous)
 - `bun run typecheck` (run this instead of building)
 
 Always use context7 when I need code generation, setup or configuration steps, or

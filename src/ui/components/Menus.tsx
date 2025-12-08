@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Home, LogOut, Play, RotateCcw } from 'lucide-react';
 import { type FC, type ReactNode, useEffect, useState } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
@@ -16,18 +16,14 @@ const triggerDelayedAction = (action: Action, delay = 50) => {
 };
 
 const getPauseMenuItems = (gameMode: GameMode) =>
-  ['RESUME', 'RESTART', gameMode === 'ZEN' ? 'END RUN' : 'BACK TO MENU'] as const;
-
-const SelectionArrow: FC<{ direction: 'left' | 'right' }> = ({ direction }) => (
-  <div
-    className={clsx(
-      'h-0 w-0 border-y-10 border-y-transparent',
-      direction === 'left'
-        ? 'border-l-accent-orange border-l-15'
-        : 'border-r-accent-orange border-r-15'
-    )}
-  />
-);
+  [
+    { label: 'RESUME', icon: Play },
+    { label: 'RESTART', icon: RotateCcw },
+    {
+      label: gameMode === 'ZEN' ? 'END RUN' : 'BACK TO MENU',
+      icon: gameMode === 'ZEN' ? LogOut : Home,
+    },
+  ] as const;
 
 // Consistent content container for width constraints and mobile padding
 const ContentContainer: FC<{ children: ReactNode; className?: string }> = ({
@@ -361,36 +357,41 @@ export const Menus = () => {
 
       {/* PAUSE MENU */}
       {uiState === UIState.PAUSED && (
-        <>
-          <h1 className="mb-8 text-5xl italic drop-shadow-lg md:text-7xl">PAUSED</h1>
+        <div className="flex flex-col items-center justify-center p-4">
           <div
-            className="pointer-events-auto flex min-w-[300px] flex-col gap-4 text-center"
+            className="pointer-events-auto flex w-full max-w-sm min-w-[320px] flex-col gap-6 rounded-2xl border border-white/10 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl md:min-w-[400px]"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
             role="presentation"
           >
-            {getPauseMenuItems(gameMode).map((item, idx) => {
-              const isSelected = menuIndex === idx;
-              return (
-                <button
-                  key={item}
-                  onClick={() => handleMenuClick(idx)}
-                  className={clsx(
-                    'flex cursor-pointer items-center justify-center gap-4 p-2 text-2xl transition-all md:text-3xl',
-                    isSelected
-                      ? 'scale-110 font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]'
-                      : 'text-sky-300 hover:scale-105 hover:text-white'
-                  )}
-                >
-                  {isSelected && <SelectionArrow direction="left" />}
-                  {item}
-                  {isSelected && <SelectionArrow direction="right" />}
-                </button>
-              );
-            })}
+            <h2 className="text-center text-3xl font-bold tracking-[0.2em] text-white uppercase drop-shadow-md">
+              Paused
+            </h2>
+
+            <div className="flex flex-col gap-3">
+              {getPauseMenuItems(gameMode).map((item, idx) => {
+                const isSelected = menuIndex === idx;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    onClick={() => handleMenuClick(idx)}
+                    className={clsx(
+                      'flex w-full items-center justify-center gap-3 rounded-xl border py-4 text-sm font-bold tracking-[0.15em] uppercase transition-all duration-200',
+                      isSelected
+                        ? 'scale-105 border-white bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.3)]'
+                        : 'border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <MenuFooter />
-        </>
+        </div>
       )}
 
       {/* WASTED OVERLAY */}
