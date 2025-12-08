@@ -11,9 +11,30 @@
 
 - **Physics-Driven Movement:** Momentum, friction, and non-linear air drag simulated via **Rapier3D**.
 - **Infinite Terrain:** Procedurally generated chunks with adaptive obstacles, jumps, and cliffs.
-- **Game Modes:** Race the clock in **Sprint Mode** or ski endlessly in **Zen Mode**.
-- **Responsive Controls:** precise keyboard steering for desktop and intuitive touch zones for mobile.
-- **Visual Polish:** Procedural snow sparkles, speed lines, and crash recovery animations.
+- **Responsive Controls:** Precise keyboard steering for desktop and intuitive touch zones for mobile.
+
+## 🎮 Game Modes
+
+### 🔥 Sprint
+
+**Race against the clock.** Reach the 2000m finish line as fast as possible.
+
+- **Rules:** Crashing doesn't end the run, but adds a **+20s penalty** to your final time.
+- **Goal:** Set a new Personal Best (PB) and achieve an 'S' rank by optimizing your line.
+
+### 🪙 Arcade
+
+**Chase the High Score.** A classic survival challenge with health and scoring.
+
+- **Scoring:** Earn points for distance, collecting **Coins**, and gaining **Airtime** (which boosts your score multiplier).
+- **Health:** You start with **3 Lives**. Glancing blows chip away armor, while high-speed impacts are fatal.
+
+### ♾️ Zen
+
+**Endless Relaxation.** Infinite terrain with no pressure.
+
+- **No stress:** Crashing is **disabled**.
+- **Rules:** No timer, no score, no game over. Just ski forever until you decide to stop.
 
 ## 🛠️ Tech Stack
 
