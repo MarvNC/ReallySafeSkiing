@@ -189,8 +189,6 @@ export const Menus = () => {
             onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
           />
 
-          <div className="mt-2 text-sm opacity-60 md:hidden">TOUCH CONTROLS ENABLED</div>
-
           <MenuFooter />
         </>
       )}
