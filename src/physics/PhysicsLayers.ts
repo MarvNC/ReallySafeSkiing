@@ -2,6 +2,7 @@ export const PhysicsLayer = {
   Player: 0b0000000000000001,
   World: 0b0000000000000010,
   Obstacle: 0b0000000000000100, // Trees/Rocks
+  Collectible: 0b0000000000001000,
 } as const;
 
 export type PhysicsLayer = (typeof PhysicsLayer)[keyof typeof PhysicsLayer];

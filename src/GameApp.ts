@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import {
+  ARCADE_CONFIG,
   GAME_CONFIG,
   GRAPHICS_PRESET,
   LIGHTING_CONFIG,
@@ -61,6 +62,10 @@ export class GameApp {
   private timeElapsed = 0;
   private startPosition: THREE.Vector3 = new THREE.Vector3();
   private topSpeed: number = 0; // Track top speed in km/h
+  private lastDistance = 0;
+  private arcadeInvulnerability = 0;
+  private tmpVecA = new THREE.Vector3();
+  private tmpVecB = new THREE.Vector3();
 
   // Crash sequence variables
   private timeScale = 1.0;
@@ -117,6 +122,7 @@ export class GameApp {
 
     const { slopeAngle, difficulty, gameMode } = useGameStore.getState();
     const obstacleMultiplier = this.getModeObstacleMultiplier(gameMode);
+    const coinsEnabled = gameMode === 'ARCADE';
 
     // 1. Create Terrain Manager (generates the world)
     this.terrainManager = new TerrainManager(
@@ -124,7 +130,8 @@ export class GameApp {
       this.physics,
       slopeAngle,
       difficulty,
-      obstacleMultiplier
+      obstacleMultiplier,
+      coinsEnabled
     );
 
     this.snowSparkles = new SnowSparkles(this.terrainManager);
@@ -397,6 +404,7 @@ export class GameApp {
     const { slopeAngle, difficulty, gameMode, hasStartedOnce } = useGameStore.getState();
     const obstacleMultiplier = this.getModeObstacleMultiplier(gameMode);
     const shouldPauseForFirstRun = !hasStartedOnce;
+    const coinsEnabled = gameMode === 'ARCADE';
 
     useGameStore.getState().setHasStartedOnce(true);
 
@@ -407,9 +415,11 @@ export class GameApp {
     this.isAboutOpen = false;
     this.menuIndex = 0;
     this.gameState = shouldPauseForFirstRun ? GameState.READY : GameState.PLAYING;
+    this.lastDistance = 0;
+    this.arcadeInvulnerability = 0;
 
     // Rebuild world
-    this.terrainManager.regenerate(slopeAngle, difficulty, obstacleMultiplier);
+    this.terrainManager.regenerate(slopeAngle, difficulty, obstacleMultiplier, coinsEnabled);
     this.recalculateStartPosition();
 
     // Reset player + physics
@@ -438,6 +448,9 @@ export class GameApp {
     // Reset penalties - use zustand's set function pattern
     useGameStore.setState({ penalties: 0 });
     useGameStore.getState().updateStats(0, 0, 0, this.timeElapsed);
+    if (gameMode === 'ARCADE') {
+      useGameStore.getState().resetArcadeRun();
+    }
 
     // Reset clock
     this.clock.stop();
@@ -559,7 +572,7 @@ export class GameApp {
     }
   }
 
-  private updateHUD() {
+  private updateHUD(gameDelta?: number, enableArcadeScoring: boolean = false) {
     // Get velocity and calculate speed
     const vel = this.playerPhysics.getVelocity();
     const speed = vel.length();
@@ -573,9 +586,90 @@ export class GameApp {
     // Calculate distance
     const currentPos = this.playerPhysics.getPosition();
     const distance = Math.abs(currentPos.z - this.startPosition.z);
+    const distanceDelta = Math.max(0, distance - this.lastDistance);
+    this.lastDistance = distance;
 
     // Update store (React will handle the rendering)
-    useGameStore.getState().updateStats(speed, distance, 0, this.timeElapsed);
+    const store = useGameStore.getState();
+    store.updateStats(speed, distance, 0, this.timeElapsed);
+
+    if (enableArcadeScoring && store.gameMode === 'ARCADE') {
+      const baseScore = distanceDelta * ARCADE_CONFIG.DISTANCE_SCORE_PER_METER * store.multiplier;
+      if (baseScore > 0) {
+        store.addScore(baseScore);
+      }
+
+      if (gameDelta !== undefined && this.playerPhysics.isAirborne()) {
+        const nextMult = store.multiplier + ARCADE_CONFIG.AIR_MULTIPLIER_PER_SECOND * gameDelta;
+        if (nextMult > store.multiplier) {
+          store.setMultiplier(Number(nextMult.toFixed(2)));
+        }
+      }
+    }
+  }
+
+  private handleCoinPickup(): void {
+    const store = useGameStore.getState();
+    if (store.gameMode !== 'ARCADE') return;
+
+    store.addCoin(1);
+    store.addScore(ARCADE_CONFIG.COIN_VALUE * store.multiplier);
+    store.setMultiplier(
+      Number((store.multiplier + ARCADE_CONFIG.COIN_MULTIPLIER_BONUS).toFixed(2))
+    );
+  }
+
+  private handleArcadeCollision(otherHandle: number, speed: number): void {
+    if (this.arcadeInvulnerability > 0) return;
+    const store = useGameStore.getState();
+    const speedKmh = speed * 3.6;
+
+    let headOn = false;
+    const collider = this.physics.getCollider(otherHandle);
+    if (collider) {
+      const playerPos = this.playerPhysics.getPosition(this.tmpVecA);
+      const target = collider.translation();
+      this.tmpVecB
+        .set(target.x - playerPos.x, target.y - playerPos.y, target.z - playerPos.z)
+        .normalize();
+      const velocityDir = this.playerPhysics.getVelocity(this.tmpVecA).normalize();
+      if (velocityDir.lengthSq() > 0) {
+        headOn = velocityDir.dot(this.tmpVecB) > 0.65;
+      }
+    }
+
+    if (speedKmh >= ARCADE_CONFIG.DEATH_THRESHOLD_KMH && headOn) {
+      this.triggerCrashSequence();
+      return;
+    }
+
+    if (speedKmh >= ARCADE_CONFIG.DAMAGE_THRESHOLD_KMH) {
+      store.loseLife(1);
+      this.arcadeInvulnerability = ARCADE_CONFIG.INVULNERABILITY_SECONDS;
+      if (useGameStore.getState().lives <= 0) {
+        this.triggerCrashSequence();
+      }
+    }
+  }
+
+  private updateArcadeHandling(): void {
+    if (!this.playerPhysics) return;
+    const { gameMode, lives } = useGameStore.getState();
+    if (gameMode !== 'ARCADE') {
+      this.playerPhysics.setHandlingModifiers(0, 1);
+      return;
+    }
+
+    if (lives <= 1) {
+      this.playerPhysics.setHandlingModifiers(
+        ARCADE_CONFIG.STEER_NOISE_CRITICAL,
+        ARCADE_CONFIG.LATERAL_FRICTION_CRITICAL
+      );
+    } else if (lives === 2) {
+      this.playerPhysics.setHandlingModifiers(ARCADE_CONFIG.STEER_NOISE_DAMAGED, 1);
+    } else {
+      this.playerPhysics.setHandlingModifiers(0, 1);
+    }
   }
 
   private triggerCrashSequence(): void {
@@ -703,6 +797,10 @@ export class GameApp {
     const gameMode = useGameStore.getState().gameMode;
     const isZenMode = gameMode === 'ZEN';
     const activeCamera = this.activeCamera ?? this.player.camera;
+    if (this.arcadeInvulnerability > 0) {
+      this.arcadeInvulnerability = Math.max(0, this.arcadeInvulnerability - realDelta);
+    }
+    this.updateArcadeHandling();
 
     // Keep sun/shadows following the rider
     if (this.playerPhysics) {
@@ -724,6 +822,7 @@ export class GameApp {
         // We only care about collisions if we are NOT already crashed
         if (!this.player || !this.playerPhysics) return;
         if (isZenMode) return;
+        const isArcadeMode = gameMode === 'ARCADE';
 
         const playerHandle = this.playerPhysics.getColliderHandle();
         const speed = this.playerPhysics.getSpeed();
@@ -732,11 +831,20 @@ export class GameApp {
         if (handle1 === playerHandle || handle2 === playerHandle) {
           const otherHandle = handle1 === playerHandle ? handle2 : handle1;
 
+          if (isArcadeMode && this.physics.isCollectible(otherHandle)) {
+            if (this.terrainManager.handleCoinCollision(otherHandle)) {
+              this.handleCoinPickup();
+            }
+            return;
+          }
+
           // Check if the other object is an obstacle
           if (this.physics.isObstacle(otherHandle)) {
             // Check speed (convert km/h to m/s for comparison)
             const crashThresholdMs = GAME_CONFIG.crashSpeedThresholdKmh / 3.6;
-            if (speed > crashThresholdMs) {
+            if (isArcadeMode) {
+              this.handleArcadeCollision(otherHandle, speed);
+            } else if (speed > crashThresholdMs) {
               console.log('CRASH! Speed:', speed * 3.6, 'km/h');
               this.triggerCrashSequence();
             }
@@ -753,7 +861,7 @@ export class GameApp {
         this.player.syncFromPhysics();
       }
 
-      this.updateHUD();
+      this.updateHUD(gameDelta, gameMode === 'ARCADE');
 
       // Win condition: Sprint mode checks distance
       if (gameMode === 'SPRINT') {

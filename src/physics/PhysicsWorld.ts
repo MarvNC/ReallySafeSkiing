@@ -66,6 +66,18 @@ export class PhysicsWorld {
     return (groups & 0xffff) === PhysicsLayer.Obstacle;
   }
 
+  isCollectible(handle: number): boolean {
+    if (!this.world) return false;
+    const collider = this.world.getCollider(handle);
+    const groups = collider.collisionGroups();
+    return (groups & 0xffff) === PhysicsLayer.Collectible;
+  }
+
+  getCollider(handle: number): RAPIER.Collider | null {
+    if (!this.world) return null;
+    return this.world.getCollider(handle) ?? null;
+  }
+
   dispose(): void {
     if (!this.world) return;
     this.world.free();

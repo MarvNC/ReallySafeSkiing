@@ -23,6 +23,24 @@ export const SPRINT_CONFIG = {
   CRASH_DURATION: 2.0,
 } as const;
 
+export const ARCADE_CONFIG = {
+  DEFAULT_LIVES: 3,
+  COIN_VALUE: 10,
+  DISTANCE_SCORE_PER_METER: 1,
+  COIN_MULTIPLIER_BONUS: 0.1,
+  AIR_MULTIPLIER_PER_SECOND: 0.1,
+  INVULNERABILITY_SECONDS: 2,
+  DAMAGE_THRESHOLD_KMH: 25,
+  DEATH_THRESHOLD_KMH: 80,
+  COIN_RADIUS: 0.6,
+  COINS_PER_ARC: 8,
+  ARCS_PER_CHUNK: 2,
+  COIN_ARC_HEIGHT_RANGE: { min: 2, max: 5 },
+  STEER_NOISE_DAMAGED: 0.05,
+  STEER_NOISE_CRITICAL: 0.2,
+  LATERAL_FRICTION_CRITICAL: 0.7,
+} as const;
+
 const isLowPreset =
   typeof navigator !== 'undefined' &&
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

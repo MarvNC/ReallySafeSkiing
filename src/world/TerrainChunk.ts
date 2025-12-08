@@ -1,11 +1,16 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 
-import { OBSTACLE_CONFIG, TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import {
+  ARCADE_CONFIG,
+  OBSTACLE_CONFIG,
+  TERRAIN_CONFIG,
+  TERRAIN_DIMENSIONS,
+} from '../config/GameConfig';
 import { COLOR_PALETTE } from '../constants/colors';
 import { makeCollisionGroups, PhysicsLayer } from '../physics/PhysicsLayers';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
-import { getRockGeometry } from './AssetFactory';
+import { getCoinGeometry, getRockGeometry } from './AssetFactory';
 import { getDeadTreeGeometry } from './assets/DeadTreeGeometry';
 import {
   createTreeGeometry,
@@ -48,9 +53,15 @@ export class TerrainChunk {
   private treeGeometries: Record<TreeArchetype, THREE.BufferGeometry>;
   private deadTreeGeometry: THREE.BufferGeometry;
   private rockGeometry: THREE.BufferGeometry;
+  private coinMesh: THREE.InstancedMesh | null = null;
+  private coinGeometry: THREE.BufferGeometry;
+  private coinMaterial: THREE.MeshStandardMaterial;
+  private coinColliders: RAPIER.Collider[] = [];
+  private coinHandleToIndex: Map<number, number> = new Map();
   private treeMaterial: THREE.MeshStandardMaterial;
   private deadTreeMaterial: THREE.MeshStandardMaterial;
   private rockMaterial: THREE.MeshStandardMaterial;
+  private readonly maxCoins: number;
 
   readonly width = CHUNK_WIDTH;
   readonly length = CHUNK_LENGTH;
@@ -69,12 +80,14 @@ export class TerrainChunk {
   private readonly maxRocks: number;
   private readonly obstacleDensityMultiplier: number;
   private readonly trackObstaclesEnabled: boolean;
+  private readonly coinsEnabled: boolean;
 
   constructor(
     points: PathPoint[],
     generator: TerrainGenerator,
     obstacleDensityMultiplier: number,
     trackObstaclesEnabled: boolean = true,
+    coinsEnabled: boolean = false,
     physics?: PhysicsWorld
   ) {
     this.generator = generator;
@@ -83,10 +96,12 @@ export class TerrainChunk {
     this.physics = physics;
     this.obstacleDensityMultiplier = obstacleDensityMultiplier;
     this.trackObstaclesEnabled = trackObstaclesEnabled;
+    this.coinsEnabled = coinsEnabled;
     this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * obstacleDensityMultiplier);
     this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity);
     this.maxDeadTrees = Math.ceil(this.obstacleCapacity * 0.1);
     this.maxRocks = this.obstacleCapacity;
+    this.maxCoins = ARCADE_CONFIG.COINS_PER_ARC * ARCADE_CONFIG.ARCS_PER_CHUNK;
 
     // Initialize Group
     this.group = new THREE.Group();
@@ -111,6 +126,7 @@ export class TerrainChunk {
     // Initialize obstacle geometries and materials
     this.rockGeometry = getRockGeometry();
     this.deadTreeGeometry = getDeadTreeGeometry();
+    this.coinGeometry = getCoinGeometry();
 
     // Create tree geometries for each archetype
     this.treeGeometries = {
@@ -123,6 +139,12 @@ export class TerrainChunk {
     this.treeMaterial = materials.tree;
     this.deadTreeMaterial = materials.deadTree;
     this.rockMaterial = materials.rock;
+    this.coinMaterial = new THREE.MeshStandardMaterial({
+      color: '#facc15',
+      emissive: '#f59e0b',
+      metalness: 0.5,
+      roughness: 0.3,
+    });
 
     // Initialize InstancedMeshes for tree buckets
     this.treeBuckets = {
@@ -166,6 +188,13 @@ export class TerrainChunk {
     this.rockMesh.receiveShadow = true;
 
     this.group.add(this.rockMesh);
+
+    // Coins (Arcade mode collectibles)
+    this.coinMesh = new THREE.InstancedMesh(this.coinGeometry, this.coinMaterial, this.maxCoins);
+    this.coinMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.coinMesh.castShadow = false;
+    this.coinMesh.receiveShadow = false;
+    this.group.add(this.coinMesh);
 
     // Build the chunk from the provided points
     this.buildFromPoints();
@@ -258,6 +287,7 @@ export class TerrainChunk {
 
     // --- 2. Scatter Obstacles ---
     this.scatterObstacles(points, startZ, this.physics);
+    this.scatterCoins(points, startZ, this.physics);
 
     if (this.physics) {
       this.createTerrainCollider(snowPos, startZ);
@@ -327,6 +357,89 @@ export class TerrainChunk {
       noiseThresholds: adjustedNoiseThresholds,
       rockProbability,
     };
+  }
+
+  private scatterCoins(points: PathPoint[], startZ: number, physics?: PhysicsWorld): void {
+    if (!this.coinMesh) return;
+    if (!this.coinsEnabled) {
+      this.coinMesh.count = 0;
+      this.coinHandleToIndex.clear();
+      this.coinColliders = [];
+      return;
+    }
+    const world = physics?.getWorld();
+    const dummy = new THREE.Object3D();
+    let coinIndex = 0;
+
+    this.coinHandleToIndex.clear();
+    this.coinColliders = [];
+
+    for (let arc = 0; arc < ARCADE_CONFIG.ARCS_PER_CHUNK && coinIndex < this.maxCoins; arc++) {
+      const coinsPerArc = ARCADE_CONFIG.COINS_PER_ARC;
+      const availableStart = Math.max(0, points.length - coinsPerArc - 1);
+      const arcStartIndex = availableStart > 0 ? Math.floor(Math.random() * availableStart) : 0;
+      const lateralOffset = (Math.random() - 0.5) * (CHUNK_WIDTH * 0.35);
+      const arcHeight =
+        ARCADE_CONFIG.COIN_ARC_HEIGHT_RANGE.min +
+        Math.random() *
+          (ARCADE_CONFIG.COIN_ARC_HEIGHT_RANGE.max - ARCADE_CONFIG.COIN_ARC_HEIGHT_RANGE.min);
+
+      for (let i = 0; i < coinsPerArc && coinIndex < this.maxCoins; i++) {
+        const point = points[Math.min(points.length - 1, arcStartIndex + i)];
+        const t = coinsPerArc > 1 ? i / (coinsPerArc - 1) : 0.5;
+        const heightOffset = Math.sin(Math.PI * t) * arcHeight;
+        const worldX = point.x + point.rightX * lateralOffset;
+        const worldZ = point.z;
+        const worldY = point.y + heightOffset + 1;
+
+        dummy.position.set(worldX, worldY, worldZ - startZ);
+        dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+        dummy.scale.setScalar(1);
+        dummy.updateMatrix();
+
+        this.coinMesh.setMatrixAt(coinIndex, dummy.matrix);
+
+        if (world) {
+          const colliderDesc = RAPIER.ColliderDesc.ball(ARCADE_CONFIG.COIN_RADIUS)
+            .setSensor(true)
+            .setTranslation(worldX, worldY, worldZ)
+            .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Collectible, PhysicsLayer.Player))
+            .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+          const collider = world.createCollider(colliderDesc);
+          this.coinColliders.push(collider);
+          this.coinHandleToIndex.set(collider.handle, coinIndex);
+        }
+
+        coinIndex++;
+      }
+    }
+
+    this.coinMesh.count = coinIndex;
+    this.coinMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  tryCollectCoin(handle: number): boolean {
+    if (!this.coinMesh) return false;
+    const index = this.coinHandleToIndex.get(handle);
+    if (index === undefined) return false;
+
+    // Remove collider to prevent re-triggering
+    if (this.physics) {
+      const world = this.physics.getWorld();
+      const collider = world.getCollider(handle);
+      if (collider) {
+        world.removeCollider(collider, true);
+      }
+    }
+    this.coinHandleToIndex.delete(handle);
+
+    const dummy = new THREE.Object3D();
+    dummy.scale.setScalar(0);
+    dummy.updateMatrix();
+    this.coinMesh.setMatrixAt(index, dummy.matrix);
+    this.coinMesh.instanceMatrix.needsUpdate = true;
+
+    return true;
   }
 
   /**
@@ -642,6 +755,9 @@ export class TerrainChunk {
       this.obstacleBodies.forEach((body) => world.removeRigidBody(body));
       this.obstacleColliders = [];
       this.obstacleBodies = [];
+      this.coinColliders.forEach((collider) => world.removeCollider(collider, true));
+      this.coinColliders = [];
+      this.coinHandleToIndex.clear();
     }
 
     // Dispose geometries (materials are shared and owned by TerrainMaterials)
@@ -649,6 +765,8 @@ export class TerrainChunk {
     Object.values(this.treeGeometries).forEach((geo) => geo.dispose());
     this.deadTreeGeometry.dispose();
     this.rockGeometry.dispose();
+    this.coinGeometry.dispose();
+    this.coinMaterial.dispose();
   }
 
   private createTerrainCollider(snowPos: THREE.BufferAttribute, startZ: number): void {

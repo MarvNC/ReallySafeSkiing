@@ -35,6 +35,7 @@ export class PlayerPhysics {
   private readonly upDir = new THREE.Vector3(0, 1, 0);
   private timeSinceGroundContact = Number.POSITIVE_INFINITY;
   private readonly groundContactMemorySeconds = PLAYER_CONFIG.physics.groundContactMemorySeconds;
+  private recentlyGrounded = true;
 
   private yaw = 0;
   // New crash state
@@ -43,6 +44,8 @@ export class PlayerPhysics {
   private _isPushing = false;
   // NEW: Track the smoothed steering value (-1.0 to 1.0)
   private currentSteering = 0;
+  private steerNoiseAmplitude = 0;
+  private lateralGripScale = 1;
   private debugState: PlayerPhysicsDebugState = {
     yaw: 0,
     isAwake: false,
@@ -78,7 +81,10 @@ export class PlayerPhysics {
       .setMass(PLAYER_CONFIG.physics.mass)
       .setCollisionGroups(
         // Collide with World AND Obstacle
-        makeCollisionGroups(PhysicsLayer.Player, PhysicsLayer.World | PhysicsLayer.Obstacle)
+        makeCollisionGroups(
+          PhysicsLayer.Player,
+          PhysicsLayer.World | PhysicsLayer.Obstacle | PhysicsLayer.Collectible
+        )
       )
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS) // Listen for events
       .setFriction(PLAYER_CONFIG.physics.friction)
@@ -156,6 +162,15 @@ export class PlayerPhysics {
     return this.timeSinceGroundContact <= this.groundContactMemorySeconds;
   }
 
+  setHandlingModifiers(noiseAmplitude: number, lateralGripScale: number): void {
+    this.steerNoiseAmplitude = noiseAmplitude;
+    this.lateralGripScale = lateralGripScale;
+  }
+
+  isAirborne(): boolean {
+    return !this.recentlyGrounded;
+  }
+
   applyControls(input: InputManager, deltaSeconds: number): void {
     // If crashed, stop processing inputs but allow physics engine to move the body
     if (this.isCrashed) {
@@ -177,6 +192,10 @@ export class PlayerPhysics {
     let targetSteer = 0;
     if (steerLeft) targetSteer += 1;
     if (steerRight) targetSteer -= 1;
+    if (this.steerNoiseAmplitude > 0) {
+      targetSteer += this.steerNoiseAmplitude * (Math.random() * 2 - 1);
+      targetSteer = THREE.MathUtils.clamp(targetSteer, -1, 1);
+    }
 
     // 3. SMOOTHING LOGIC (The new "Analog" feel)
     // If we are providing input, move towards that input at 'accel' speed
@@ -225,6 +244,7 @@ export class PlayerPhysics {
     // Track ground contact time to determine if we should apply ski forces
     this.updateGroundContact(deltaSeconds);
     const hasRecentGroundContact = this.hasRecentGroundContact();
+    this.recentlyGrounded = hasRecentGroundContact;
 
     // 4. Project Velocity
     const forwardSpeed = this.currentVel.dot(this.forwardDir);
@@ -241,7 +261,7 @@ export class PlayerPhysics {
 
     if (hasRecentGroundContact) {
       // Lateral Friction (Drift control from ski edge)
-      lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction;
+      lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction * this.lateralGripScale;
 
       // Forward snow friction (roughly linear in speed)
       forwardForce = -forwardSpeed * PLAYER_CONFIG.physics.forwardFriction;

@@ -20,6 +20,7 @@ export class TerrainManager {
   private readonly allPoints: PathPoint[] = [];
   private readonly scene: THREE.Scene;
   private readonly physics?: PhysicsWorld;
+  private coinsEnabled = false;
   private startAltitude: number = 0;
   private slopeTangent: number = 0;
   private readonly chunkSegments = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS;
@@ -35,19 +36,26 @@ export class TerrainManager {
     physics?: PhysicsWorld,
     slopeAngle: number = 20,
     difficulty: Difficulty = 'SPORT',
-    modeObstacleMultiplier: number = 1
+    modeObstacleMultiplier: number = 1,
+    coinsEnabled: boolean = false
   ) {
     this.scene = scene;
     this.physics = physics;
     this.generator = new TerrainGenerator();
-    this.regenerate(slopeAngle, difficulty, modeObstacleMultiplier);
+    this.regenerate(slopeAngle, difficulty, modeObstacleMultiplier, coinsEnabled);
   }
 
-  regenerate(slopeAngle: number, difficulty: Difficulty, obstacleModeMultiplier: number = 1): void {
+  regenerate(
+    slopeAngle: number,
+    difficulty: Difficulty,
+    obstacleModeMultiplier: number = 1,
+    coinsEnabled: boolean = this.coinsEnabled
+  ): void {
     this.disposeChunks();
     this.sampleIndex = 0;
     this.allPoints.length = 0;
     this.chunkPointCounts.length = 0;
+    this.coinsEnabled = coinsEnabled;
     this.startAltitude = this.getStartAltitudeFromSlope(slopeAngle);
     this.slopeTangent = Math.tan(THREE.MathUtils.degToRad(Math.max(0, Math.min(70, slopeAngle))));
     const baseObstacleDensity = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
@@ -88,6 +96,7 @@ export class TerrainManager {
       this.generator,
       this.obstacleMultiplier,
       this.trackObstaclesEnabled,
+      this.coinsEnabled,
       this.physics
     );
     if (this.wireframe) {
@@ -171,6 +180,13 @@ export class TerrainManager {
   toggleWireframe(): boolean {
     this.setWireframe(!this.wireframe);
     return this.wireframe;
+  }
+
+  handleCoinCollision(handle: number): boolean {
+    for (const chunk of this.chunks) {
+      if (chunk.tryCollectCoin(handle)) return true;
+    }
+    return false;
   }
 
   getClosestPathPoint(worldZ: number): PathPoint | undefined {

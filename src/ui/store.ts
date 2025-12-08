@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
+import { ARCADE_CONFIG } from '../config/GameConfig';
+
 export enum UIState {
   MENU,
   FIRST_RUN,
@@ -12,7 +14,7 @@ export enum UIState {
 }
 
 export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
-export type GameMode = 'SPRINT' | 'ZEN';
+export type GameMode = 'SPRINT' | 'ZEN' | 'ARCADE';
 export type EndReason = 'time' | 'crash' | 'manual' | 'complete';
 
 interface GameState {
@@ -38,6 +40,13 @@ interface GameState {
   difficulty: Difficulty;
   gameMode: GameMode;
 
+  // Arcade mode state
+  score: number;
+  highScore: number;
+  coins: number;
+  lives: number;
+  multiplier: number;
+
   // Actions (Callable from React or GameApp)
   setUIState: (state: UIState) => void;
   setEndReason: (reason: EndReason | null) => void;
@@ -53,10 +62,35 @@ interface GameState {
   setSlopeAngle: (angle: number) => void;
   setDifficulty: (difficulty: Difficulty) => void;
   setGameMode: (mode: GameMode) => void;
+  resetArcadeRun: () => void;
+  addScore: (amount: number) => void;
+  addCoin: (amount?: number) => void;
+  setMultiplier: (multiplier: number) => void;
+  loseLife: (amount?: number) => void;
+  setHighScore: (score: number) => void;
   addPenalty: (seconds: number) => void;
   triggerPenaltyNotification: () => void;
   clearPenaltyNotification: () => void;
 }
+
+const ARCADE_DEFAULT_LIVES = ARCADE_CONFIG.DEFAULT_LIVES;
+const ARCADE_DEFAULT_MULTIPLIER = 1;
+
+const getStoredHighScore = (): number => {
+  if (typeof window === 'undefined') return 0;
+  const stored = window.localStorage.getItem('arcadeHighScore');
+  const parsed = stored ? Number(stored) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const persistHighScore = (score: number) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('arcadeHighScore', score.toString());
+  } catch (err) {
+    console.warn('Failed to persist arcade high score', err);
+  }
+};
 
 // Create store with subscription capability (useful if GameApp needs to react to UI changes)
 export const useGameStore = create<GameState>()(
@@ -75,6 +109,11 @@ export const useGameStore = create<GameState>()(
     slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
     gameMode: 'SPRINT',
+    score: 0,
+    highScore: getStoredHighScore(),
+    coins: 0,
+    lives: ARCADE_DEFAULT_LIVES,
+    multiplier: ARCADE_DEFAULT_MULTIPLIER,
 
     setUIState: (uiState) => set({ uiState }),
     setEndReason: (endReason) => set({ endReason }),
@@ -91,6 +130,47 @@ export const useGameStore = create<GameState>()(
     setSlopeAngle: (angle) => set({ slopeAngle: Math.max(0, Math.min(70, angle)) }),
     setDifficulty: (difficulty) => set({ difficulty }),
     setGameMode: (mode) => set({ gameMode: mode }),
+    resetArcadeRun: () =>
+      set((state) => ({
+        score: 0,
+        coins: 0,
+        lives: ARCADE_DEFAULT_LIVES,
+        multiplier: ARCADE_DEFAULT_MULTIPLIER,
+        highScore: state.highScore ?? 0,
+      })),
+    addScore: (amount) =>
+      set((state) => {
+        const nextScore = Math.max(0, state.score + amount);
+        const newHigh = Math.max(state.highScore, nextScore);
+        if (newHigh > state.highScore) {
+          persistHighScore(newHigh);
+        }
+        return {
+          score: nextScore,
+          highScore: newHigh,
+        };
+      }),
+    addCoin: (amount = 1) =>
+      set((state) => ({
+        coins: state.coins + amount,
+      })),
+    setMultiplier: (multiplier) => set({ multiplier }),
+    loseLife: (amount = 1) =>
+      set((state) => {
+        const nextLives = Math.max(0, state.lives - amount);
+        return {
+          lives: nextLives,
+          multiplier: ARCADE_DEFAULT_MULTIPLIER,
+        };
+      }),
+    setHighScore: (score) =>
+      set((state) => {
+        const newHigh = Math.max(score, state.highScore);
+        if (newHigh > state.highScore) {
+          persistHighScore(newHigh);
+        }
+        return { highScore: newHigh };
+      }),
     addPenalty: (seconds) =>
       set((state) => ({
         timeElapsed: state.timeElapsed + seconds,

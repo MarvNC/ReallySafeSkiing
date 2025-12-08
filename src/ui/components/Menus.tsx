@@ -20,8 +20,8 @@ const getPauseMenuItems = (gameMode: GameMode) =>
     { label: 'RESUME', icon: Play },
     { label: 'RESTART', icon: RotateCcw },
     {
-      label: gameMode === 'ZEN' ? 'END RUN' : 'BACK TO MENU',
-      icon: gameMode === 'ZEN' ? LogOut : Home,
+      label: gameMode === 'SPRINT' ? 'BACK TO MENU' : 'END RUN',
+      icon: gameMode === 'SPRINT' ? Home : LogOut,
     },
   ] as const;
 
@@ -161,15 +161,20 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
   onClick,
   gameMode,
 }) => {
+  const gradient =
+    gameMode === 'SPRINT'
+      ? 'from-orange-400 to-red-600 shadow-orange-500/30 hover:from-orange-300 hover:to-red-500'
+      : gameMode === 'ARCADE'
+        ? 'from-amber-300 to-amber-500 shadow-amber-400/40 hover:from-amber-200 hover:to-amber-500'
+        : 'from-cyan-300 to-blue-500 shadow-cyan-400/30 hover:from-cyan-200 hover:to-blue-400';
+
   return (
     <button
       onClick={onClick}
       type="button"
       className={clsx(
-        'font-russo pointer-events-auto w-full cursor-pointer rounded-xl py-4 text-xl tracking-[0.15em] text-white uppercase shadow-2xl transition-all duration-300 hover:-translate-y-1 active:scale-95',
-        gameMode === 'SPRINT'
-          ? 'bg-gradient-to-br from-orange-400 to-red-600 shadow-orange-500/30 hover:bg-gradient-to-br hover:from-orange-300 hover:to-red-500'
-          : 'bg-gradient-to-br from-cyan-300 to-blue-500 shadow-cyan-400/30 hover:bg-gradient-to-br hover:from-cyan-200 hover:to-blue-400'
+        'font-russo pointer-events-auto w-full cursor-pointer rounded-xl bg-gradient-to-br py-4 text-xl tracking-[0.15em] text-white uppercase shadow-2xl transition-all duration-300 hover:-translate-y-1 active:scale-95',
+        gradient
       )}
     >
       {label}
@@ -289,7 +294,9 @@ export const Menus = () => {
             'pointer-events-none absolute h-[150vh] w-[150vw] opacity-20 transition-colors duration-1000',
             gameMode === 'ZEN'
               ? 'bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.2),transparent)]'
-              : 'bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.2),transparent)]'
+              : gameMode === 'ARCADE'
+                ? 'bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.2),transparent)]'
+                : 'bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.2),transparent)]'
           )}
         />
       )}
