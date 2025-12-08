@@ -231,6 +231,7 @@ export const HUD = () => {
                   )}
                 >
                   <span className="align-baseline text-lg sm:text-xl">x</span>
+                  <span className="ml-1 align-baseline tabular-nums">{multiplier.toFixed(1)}</span>
                 </span>
                 <span
                   className={clsx(
