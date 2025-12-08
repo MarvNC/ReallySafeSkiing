@@ -5,6 +5,13 @@ import { createRoot } from 'react-dom/client';
 import { GameApp } from './GameApp';
 import { UIOverlay } from './ui/components/UIOverlay';
 
+// Disable Right Click Context Menu
+document.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  return false;
+});
+// ---------------------------------------------
+
 // 1. Setup DOM
 const appElement = document.querySelector<HTMLDivElement>('#app');
 if (!appElement) {
