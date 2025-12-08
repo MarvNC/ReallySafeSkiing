@@ -27,7 +27,7 @@ export const ARCADE_CONFIG = {
   DEFAULT_LIVES: 3,
   COIN_VALUE: 100,
   DISTANCE_SCORE_PER_METER: 1,
-  COIN_MULTIPLIER_BONUS: 0.2,
+  COIN_MULTIPLIER_BONUS: 0.5,
   // Radians per second for rotating collectibles
   COIN_ROTATION_SPEED: Math.PI * 0.5,
   AIR_MULTIPLIER_INCREMENT: 0.1,
