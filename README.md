@@ -42,6 +42,15 @@
 - **No stress:** Crashing is **disabled**.
 - **Rules:** No timer, no score, no game over. Just ski forever until you decide to stop.
 
+## 🎮 Controls
+
+| Action               | Keyboard               | Touch (Mobile)        |
+| :------------------- | :--------------------- | :-------------------- |
+| **Steer**            | `A` / `D` or `←` / `→` | Tap Left / Right side |
+| **Brake (Snowplow)** | `A` + `D` or `←` + `→` | Hold both sides       |
+| **Start / Select**   | `Space` / `Enter`      | Tap Button            |
+| **Pause**            | `Esc`                  | Tap UI Button         |
+
 ## 🛠️ Tech Stack
 
 - **Runtime:** [Bun](https://bun.sh)
@@ -51,9 +60,11 @@
 - **Styling:** [Tailwind CSS](https://tailwindcss.com)
 - **State:** [Zustand](https://github.com/pmndrs/zustand)
 
-## 🚀 Getting Started
+## 🚀 Development
 
 This project uses **Bun** for package management and script execution.
+
+### ⚙️ Setup
 
 1.  **Install dependencies:**
 
@@ -74,16 +85,7 @@ This project uses **Bun** for package management and script execution.
     bun run format
     ```
 
-## 🎮 Controls
-
-| Action               | Keyboard               | Touch (Mobile)        |
-| :------------------- | :--------------------- | :-------------------- |
-| **Steer**            | `A` / `D` or `←` / `→` | Tap Left / Right side |
-| **Brake (Snowplow)** | `A` + `D` or `←` + `→` | Hold both sides       |
-| **Start / Select**   | `Space` / `Enter`      | Tap Button            |
-| **Pause**            | `Esc`                  | Tap UI Button         |
-
-## 📦 Build
+### 📦 Build
 
 To create a production build:
 
