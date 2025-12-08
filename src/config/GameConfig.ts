@@ -162,6 +162,13 @@ export const TERRAIN_CONFIG = {
   MOGUL_SCALE: 0.2,
   MOGUL_HEIGHT: 0.7, // Reduced from 1.0 to make ground less bumpy
   ANGLE_INTERPOLATION: 0.15, // How quickly the path follows the target angle
+  // Procedural jump generation
+  JUMP_DISTANCE_MEAN: 250,
+  JUMP_DISTANCE_STD: 200,
+  JUMP_DISTANCE_MAX: 500,
+  JUMP_LENGTH_RANGE: { min: 20, max: 40 },
+  JUMP_HEIGHT_RANGE: { min: 4, max: 10 },
+  JUMP_WIDTH_FRACTION: 0.5, // Portion of rideable width affected by a jump (0-1)
   CANYON_FLOOR_OFFSET: 20, // Additional width beyond track for canyon floor
   CANYON_HEIGHT: 25, // The max height of the cliff
   WALL_WIDTH: 12, // How wide the slope is horizontally

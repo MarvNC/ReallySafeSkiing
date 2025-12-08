@@ -1,2 +1,2 @@
-- animations when carving / snow animations
-- Blur at distance
+- Revamp pause menu to be in line with rest of game styling.
+- Optimize main menu for mobile UI - hide options selections behind toggle dropdown, you can only have one option toggle open at a time.

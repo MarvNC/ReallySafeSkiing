@@ -11,6 +11,10 @@ const { CHUNK_LENGTH, CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
  */
 export class TerrainGenerator {
   private readonly noise2D: NoiseFunction2D;
+  private readonly jumpStarts: number[] = [];
+  private readonly jumpLengths: number[] = [];
+  private readonly jumpHeights: number[] = [];
+  private lastJumpLookupIndex = 0;
 
   constructor(noise2D: NoiseFunction2D = createNoise2D()) {
     this.noise2D = noise2D;
@@ -18,6 +22,109 @@ export class TerrainGenerator {
 
   sampleNoise(x: number, y: number): number {
     return this.noise2D(x, y);
+  }
+
+  private hash01(value: number): number {
+    const seed = (value * 9301 + 49297) % 233280;
+    return seed / 233280;
+  }
+
+  private sampleNormal(seedA: number, seedB: number): number {
+    const u1 = Math.max(1e-6, this.hash01(seedA));
+    const u2 = this.hash01(seedB);
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  private sampleJumpSpacing(index: number): number {
+    const { JUMP_DISTANCE_MEAN, JUMP_DISTANCE_STD, JUMP_DISTANCE_MAX, SEGMENT_LENGTH } =
+      TERRAIN_CONFIG;
+    const minSpacing = Math.max(SEGMENT_LENGTH, 20);
+    const normal = this.sampleNormal(index * 2, index * 2 + 1);
+    const raw = JUMP_DISTANCE_MEAN + normal * JUMP_DISTANCE_STD;
+    const clamped = Math.min(JUMP_DISTANCE_MAX, Math.max(minSpacing, raw));
+    return clamped;
+  }
+
+  private ensureJumpsCoverS(s: number): void {
+    const { JUMP_DISTANCE_MAX, JUMP_LENGTH_RANGE, JUMP_HEIGHT_RANGE } = TERRAIN_CONFIG;
+
+    if (this.jumpStarts.length === 0) {
+      const firstStart = this.sampleJumpSpacing(0);
+      const firstLength =
+        JUMP_LENGTH_RANGE.min +
+        this.hash01(1000) * (JUMP_LENGTH_RANGE.max - JUMP_LENGTH_RANGE.min);
+      const firstHeight =
+        JUMP_HEIGHT_RANGE.min +
+        this.hash01(1001) * (JUMP_HEIGHT_RANGE.max - JUMP_HEIGHT_RANGE.min);
+      this.jumpStarts.push(firstStart);
+      this.jumpLengths.push(firstLength);
+      this.jumpHeights.push(firstHeight);
+    }
+
+    while (this.jumpStarts[this.jumpStarts.length - 1] < s + JUMP_DISTANCE_MAX) {
+      const idx = this.jumpStarts.length;
+      const prevStart = this.jumpStarts[idx - 1];
+      const spacing = this.sampleJumpSpacing(idx);
+      const start = prevStart + spacing;
+
+      const length =
+        JUMP_LENGTH_RANGE.min +
+        this.hash01(idx * 10 + 3) * (JUMP_LENGTH_RANGE.max - JUMP_LENGTH_RANGE.min);
+      const height =
+        JUMP_HEIGHT_RANGE.min +
+        this.hash01(idx * 10 + 4) * (JUMP_HEIGHT_RANGE.max - JUMP_HEIGHT_RANGE.min);
+
+      this.jumpStarts.push(start);
+      this.jumpLengths.push(length);
+      this.jumpHeights.push(height);
+    }
+  }
+
+  private getJumpHeightOffset(
+    s: number
+  ): { offset: number; index: number | null; start: number; length: number } {
+    this.ensureJumpsCoverS(s);
+
+    let idx = this.lastJumpLookupIndex;
+
+    // Move forward to the containing/next jump
+    while (
+      idx < this.jumpStarts.length - 1 &&
+      s >= this.jumpStarts[idx] + this.jumpLengths[idx]
+    ) {
+      idx++;
+    }
+
+    // Move backward if we've gone before the cached index
+    while (idx > 0 && s < this.jumpStarts[idx]) {
+      idx--;
+    }
+
+    this.lastJumpLookupIndex = idx;
+
+    const start = this.jumpStarts[idx];
+    const length = this.jumpLengths[idx];
+    const height = this.jumpHeights[idx];
+
+    if (s < start || s > start + length) {
+      return { offset: 0, index: null, start, length };
+    }
+
+    const progress = (s - start) / length;
+    const rampPhase = 0.7;
+
+    let offset: number;
+    if (progress < rampPhase) {
+      const t = progress / rampPhase;
+      const eased = t * t * (3 - 2 * t); // smoothstep
+      offset = eased * height;
+    } else {
+      const lipT = (progress - rampPhase) / (1 - rampPhase);
+      const lipCurve = 1 - Math.pow(1 - lipT, 3);
+      offset = lipCurve * height;
+    }
+
+    return { offset, index: idx, start, length };
   }
 
   private getTrackWidth(z: number): number {
@@ -89,7 +196,32 @@ export class TerrainGenerator {
     }
 
     const baseHeight = point.y + bankingOffset;
-    const height = baseHeight + moguls + extraHeight;
+    let height = baseHeight + moguls + extraHeight;
+
+    // Limit jumps to a lateral band (configurable fraction of rideable width) with random center per jump
+    const jump = this.getJumpHeightOffset(s);
+    const jumpHeight = jump.offset;
+    if (jumpHeight > 0 && jump.index !== null && (kind === SurfaceKind.Track || kind === SurfaceKind.Bank)) {
+      const usableHalfWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+      const usableWidth = usableHalfWidth * 2;
+      const rawFraction = TERRAIN_CONFIG.JUMP_WIDTH_FRACTION ?? 0.5;
+      const bandFraction = Math.max(0.05, Math.min(1, rawFraction));
+      const bandWidth = usableWidth * bandFraction;
+      const halfBand = bandWidth / 2;
+
+      const centerSeed = this.hash01(jump.index * 10 + 5);
+      const maxCenterOffset = Math.max(0, usableHalfWidth - halfBand);
+      const centerOffset = (centerSeed - 0.5) * 2 * maxCenterOffset;
+
+      const lateralDist = Math.abs(t - centerOffset);
+      let lateralFactor = 0;
+      if (halfBand > 0 && lateralDist < halfBand) {
+        const edgeT = lateralDist / halfBand;
+        lateralFactor = 1 - edgeT * edgeT * (3 - 2 * edgeT); // smoothstep falloff to edges
+      }
+
+      height += jumpHeight * lateralFactor;
+    }
     const isWall = kind === SurfaceKind.WallVertical;
 
     return {
