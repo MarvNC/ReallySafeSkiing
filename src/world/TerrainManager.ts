@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 
-import { DIFFICULTY_SETTINGS, MOUNTAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import {
+  DIFFICULTY_SETTINGS,
+  MOUNTAIN_CONFIG,
+  TERRAIN_CONFIG,
+  TERRAIN_DIMENSIONS,
+} from '../config/GameConfig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { Difficulty } from '../ui/store';
 import { TerrainChunk } from './TerrainChunk';
@@ -9,13 +14,21 @@ import type { PathPoint } from './WorldState';
 
 export class TerrainManager {
   private readonly chunks: TerrainChunk[] = [];
+  private readonly chunkPointCounts: number[] = [];
   private readonly generator: TerrainGenerator;
   private wireframe = false;
   private readonly allPoints: PathPoint[] = [];
-  private finishLine?: THREE.Mesh;
   private readonly scene: THREE.Scene;
   private readonly physics?: PhysicsWorld;
   private startAltitude: number = 0;
+  private slopeTangent: number = 0;
+  private readonly chunkSegments = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS;
+  private readonly chunkLength = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS * TERRAIN_CONFIG.SEGMENT_LENGTH;
+  private sampleIndex = 0;
+  private obstacleMultiplier = 1;
+  private trackObstaclesEnabled = true;
+  private readonly chunksAhead = 6;
+  private readonly chunksBehind = 2;
 
   constructor(
     scene: THREE.Scene,
@@ -29,54 +42,98 @@ export class TerrainManager {
     this.regenerate(slopeAngle, difficulty);
   }
 
-  private createFinishLine(scene: THREE.Scene, point: PathPoint): void {
-    // Create a red arch/box as finish line
-    const finishGeometry = new THREE.BoxGeometry(point.width * 1.5, 20, 2);
-    const finishMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    this.finishLine = new THREE.Mesh(finishGeometry, finishMaterial);
-    this.finishLine.position.set(point.x, point.y + 10, point.z);
-    this.finishLine.castShadow = true;
-    this.finishLine.receiveShadow = true;
-    scene.add(this.finishLine);
-  }
-
   regenerate(slopeAngle: number, difficulty: Difficulty): void {
     this.disposeChunks();
-    const startAltitude = this.getStartAltitudeFromSlope(slopeAngle);
-    this.startAltitude = startAltitude;
+    this.sampleIndex = 0;
+    this.allPoints.length = 0;
+    this.chunkPointCounts.length = 0;
+    this.startAltitude = this.getStartAltitudeFromSlope(slopeAngle);
+    this.slopeTangent = Math.tan(THREE.MathUtils.degToRad(Math.max(0, Math.min(70, slopeAngle))));
+    this.obstacleMultiplier = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
+    this.trackObstaclesEnabled = difficulty !== 'CHILL';
 
-    const points = this.generator.generatePathSegment(
-      0,
-      MOUNTAIN_CONFIG.TOTAL_LENGTH,
-      startAltitude
-    );
-    this.allPoints.splice(0, this.allPoints.length, ...points);
-
-    const obstacleMultiplier = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
-
-    const { CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
-    for (let i = 0; i < this.allPoints.length; i += CHUNK_SEGMENTS) {
-      const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
-      if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
-
-      const chunk = new TerrainChunk(
-        chunkPoints,
-        this.generator,
-        obstacleMultiplier,
-        difficulty !== 'CHILL',
-        this.physics
-      );
-      this.chunks.push(chunk);
-      this.scene.add(chunk.group);
+    const initialChunks = this.chunksAhead + this.chunksBehind + 2;
+    for (let i = 0; i < initialChunks; i++) {
+      this.appendChunk();
     }
 
     if (this.wireframe) {
       this.chunks.forEach((chunk) => chunk.setWireframe(true));
     }
+  }
+
+  private appendChunk(): void {
+    const smoothingTail = this.allPoints.slice(
+      Math.max(0, this.allPoints.length - (this.chunkSegments + 1))
+    );
+    const points = this.generator.generatePathSegment(
+      this.sampleIndex,
+      this.chunkSegments,
+      this.startAltitude,
+      this.slopeTangent,
+      smoothingTail
+    );
+
+    if (points.length < 2) return;
 
     if (this.allPoints.length > 0) {
       const lastPoint = this.allPoints[this.allPoints.length - 1];
-      this.createFinishLine(this.scene, lastPoint);
+      points[0] = lastPoint;
+    }
+
+    const chunk = new TerrainChunk(
+      points,
+      this.generator,
+      this.obstacleMultiplier,
+      this.trackObstaclesEnabled,
+      this.physics
+    );
+    if (this.wireframe) {
+      chunk.setWireframe(true);
+    }
+    this.chunks.push(chunk);
+    this.chunkPointCounts.push(points.length);
+    this.allPoints.push(...points);
+    this.scene.add(chunk.group);
+
+    this.sampleIndex += this.chunkSegments;
+  }
+
+  private ensureChunksAhead(playerZ: number): void {
+    if (this.chunks.length === 0) {
+      this.appendChunk();
+    }
+
+    let lastChunk = this.chunks[this.chunks.length - 1];
+    let lastEndZ = lastChunk.startZ - this.chunkLength;
+    let distanceAhead = playerZ - lastEndZ;
+    const requiredAhead = this.chunkLength * this.chunksAhead;
+
+    while (distanceAhead < requiredAhead) {
+      this.appendChunk();
+      lastChunk = this.chunks[this.chunks.length - 1];
+      lastEndZ = lastChunk.startZ - this.chunkLength;
+      distanceAhead = playerZ - lastEndZ;
+    }
+  }
+
+  private removeOldChunks(playerZ: number): void {
+    const removalDistance = this.chunkLength * this.chunksBehind;
+    while (this.chunks.length > this.chunksBehind + 1) {
+      const firstChunk = this.chunks[0];
+      if (playerZ < firstChunk.startZ - removalDistance) {
+        const removedChunk = this.chunks.shift();
+        const removedCount = this.chunkPointCounts.shift();
+        if (removedChunk) {
+          this.scene.remove(removedChunk.group);
+          removedChunk.dispose();
+        }
+        if (removedCount !== undefined) {
+          this.allPoints.splice(0, removedCount);
+        }
+      } else {
+        break;
+      }
     }
   }
 
@@ -92,22 +149,16 @@ export class TerrainManager {
       chunk.dispose();
     });
     this.chunks.length = 0;
-
-    if (this.finishLine) {
-      this.scene.remove(this.finishLine);
-      this.finishLine.geometry.dispose();
-      if (Array.isArray(this.finishLine.material)) {
-        this.finishLine.material.forEach((mat) => mat.dispose());
-      } else {
-        this.finishLine.material.dispose();
-      }
-      this.finishLine = undefined;
-    }
+    this.chunkPointCounts.length = 0;
+    this.allPoints.length = 0;
   }
 
   update(playerPosition?: THREE.Vector3): void {
-    // Streaming not implemented yet; keep signature ready for future use.
-    void playerPosition;
+    if (!playerPosition) return;
+
+    const playerZ = playerPosition.z;
+    this.ensureChunksAhead(playerZ);
+    this.removeOldChunks(playerZ);
   }
 
   setWireframe(enabled: boolean): void {

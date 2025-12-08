@@ -103,9 +103,10 @@ export class TerrainGenerator {
   }
 
   generatePathSegment(
-    startZ: number,
-    length: number,
-    startAltitude: number,
+    startIndex: number,
+    segmentCount: number,
+    baseAltitude: number,
+    slopeTangent: number,
     previousPoints: PathPoint[] = []
   ): PathPoint[] {
     const {
@@ -120,22 +121,25 @@ export class TerrainGenerator {
       SMOOTHING_WINDOW,
       BANKING_STRENGTH,
     } = TERRAIN_CONFIG;
-    const { TOTAL_LENGTH, END_ALTITUDE } = MOUNTAIN_CONFIG;
+    const { TOTAL_LENGTH } = MOUNTAIN_CONFIG;
 
-    const numPoints = Math.ceil(length / SEGMENT_LENGTH) + 1;
+    const segmentLength = SEGMENT_LENGTH;
+    const numPoints = segmentCount + 1;
     const rawPoints: Array<{ x: number; y: number; z: number }> = [];
-    const startX = 0;
+    const startDistance = startIndex * segmentLength;
+    const virtualRunSamples = TOTAL_LENGTH / segmentLength;
 
     for (let i = 0; i < numPoints; i++) {
-      const progress = numPoints === 1 ? 0 : i / (numPoints - 1);
-      const currentZ = startZ - progress * length;
-      const noiseValue = this.noise2D(i * NOISE_SCALE, 0);
+      const globalIndex = startIndex + i;
+      const distanceAlong = startDistance + i * segmentLength;
+      const currentZ = -distanceAlong;
+      const progress = virtualRunSamples > 0 ? globalIndex / virtualRunSamples : 0;
+      const noiseValue = this.noise2D(globalIndex * NOISE_SCALE, 0);
       const lateralNoise = noiseValue * AMPLITUDE;
       const meander1 = Math.sin(progress * Math.PI * 2 * MEANDER1_FREQ) * AMPLITUDE * 0.3;
       const meander2 = Math.sin(progress * Math.PI * 2 * MEANDER2_FREQ + 1) * AMPLITUDE * 0.2;
-      const x = startX + lateralNoise + meander1 + meander2;
-      const globalProgress = this.clamp01(-currentZ / TOTAL_LENGTH);
-      const y = startAltitude + (END_ALTITUDE - startAltitude) * globalProgress;
+      const x = lateralNoise + meander1 + meander2;
+      const y = baseAltitude - distanceAlong * slopeTangent;
 
       rawPoints.push({ x, y, z: currentZ });
     }
@@ -159,7 +163,9 @@ export class TerrainGenerator {
     }
 
     const newPoints: PathPoint[] = [];
-    let cumulativeS = previousPoints.length ? previousPoints[previousPoints.length - 1].s : 0;
+    let cumulativeS = previousPoints.length
+      ? previousPoints[previousPoints.length - 1].s
+      : startDistance;
 
     for (let i = 0; i < rawPoints.length; i++) {
       const combinedIndex = previousPoints.length + i;
@@ -168,7 +174,7 @@ export class TerrainGenerator {
       const z = combinedPoints[combinedIndex].z;
 
       let directionX = 0;
-      let directionZ = -SEGMENT_LENGTH;
+      let directionZ = -segmentLength;
 
       if (combinedIndex > 0) {
         directionX = x - smoothedX[combinedIndex - 1];
@@ -178,15 +184,15 @@ export class TerrainGenerator {
         directionZ = combinedPoints[combinedIndex + 1].z - z;
       }
 
-      let segmentLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
-      if (segmentLength === 0) {
-        segmentLength = SEGMENT_LENGTH;
+      let stepLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
+      if (stepLength === 0) {
+        stepLength = segmentLength;
         directionX = 0;
-        directionZ = -SEGMENT_LENGTH;
+        directionZ = -segmentLength;
       }
 
       if (combinedIndex > 0) {
-        cumulativeS += segmentLength;
+        cumulativeS += stepLength;
       }
 
       const angle = Math.atan2(directionX, -directionZ);
@@ -196,7 +202,7 @@ export class TerrainGenerator {
       const rightZ = -forwardX;
 
       const widthNoise = this.noise2D(z * WIDTH_NOISE_SCALE, 100);
-      const segmentProgress = this.clamp01((startZ - z) / length);
+      const segmentProgress = segmentCount > 0 ? i / segmentCount : 0;
       const widthProgressFactor = 1 + Math.sin(segmentProgress * Math.PI - Math.PI / 2) * 0.2;
       const width =
         WIDTH_BASE * (1 + widthNoise * WIDTH_VARIATION) * Math.max(0.5, widthProgressFactor);
