@@ -29,7 +29,10 @@ export class SunEffects {
   update(camera: THREE.Camera): void {
     if (!this.halo.parent) return;
 
-    this.tmpToSun.setFromMatrixPosition(this.halo.parent.matrixWorld).sub(camera.position).normalize();
+    this.tmpToSun
+      .setFromMatrixPosition(this.halo.parent.matrixWorld)
+      .sub(camera.position)
+      .normalize();
     this.tmpViewDir.set(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
 
     const facing = Math.max(0.0, this.tmpToSun.dot(this.tmpViewDir));
