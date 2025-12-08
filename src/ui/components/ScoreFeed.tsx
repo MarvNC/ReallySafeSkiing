@@ -23,6 +23,11 @@ const palette = {
     tag: 'bg-rose-500/20 border-rose-200/70 text-rose-50',
     glow: 'drop-shadow-[0_0_18px_rgba(244,63,94,0.45)]',
   },
+  speed: {
+    text: 'text-sky-100',
+    tag: 'bg-sky-500/20 border-sky-200/70 text-sky-50',
+    glow: 'drop-shadow-[0_0_18px_rgba(59,130,246,0.45)]',
+  },
 } as const;
 
 export const ScoreFeed = () => {

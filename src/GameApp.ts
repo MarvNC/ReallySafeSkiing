@@ -65,6 +65,7 @@ export class GameApp {
   private lastDistance = 0;
   private arcadeInvulnerability = 0;
   private airTimeAccumulator = 0;
+  private speedBonusPopupTimer = 0;
   private tmpVecA = new THREE.Vector3();
   private tmpVecB = new THREE.Vector3();
   private lifeShakeTime = 0;
@@ -587,7 +588,7 @@ export class GameApp {
     }
   }
 
-  private updateHUD(enableArcadeScoring: boolean = false) {
+  private updateHUD(deltaSeconds: number, enableArcadeScoring: boolean = false) {
     // Get velocity and calculate speed
     const vel = this.playerPhysics.getVelocity();
     const speed = vel.length();
@@ -609,10 +610,32 @@ export class GameApp {
     store.updateStats(speed, distance, 0, this.timeElapsed);
 
     if (enableArcadeScoring && store.gameMode === 'ARCADE') {
-      const baseScore = distanceDelta * ARCADE_CONFIG.DISTANCE_SCORE_PER_METER * store.multiplier;
-      if (baseScore > 0) {
-        store.addScore(baseScore);
+      const currentMultiplier = store.multiplier;
+      let activeMultiplier = currentMultiplier;
+      const distanceScore =
+        distanceDelta * ARCADE_CONFIG.DISTANCE_SCORE_PER_METER * currentMultiplier;
+
+      let speedBonus = 0;
+      if (speedKmh > ARCADE_CONFIG.SPEED_BONUS_THRESHOLD_KMH) {
+        speedBonus = ARCADE_CONFIG.SPEED_BONUS_POINTS_PER_SECOND * currentMultiplier * deltaSeconds;
+
+        const multiplierGain = ARCADE_CONFIG.SPEED_BONUS_MULTIPLIER_PER_SECOND * deltaSeconds;
+        if (multiplierGain > 0) {
+          activeMultiplier = Number((currentMultiplier + multiplierGain).toFixed(2));
+          store.setMultiplier(activeMultiplier);
+        }
+
+        this.maybeTriggerSpeedBonusPopup(deltaSeconds, activeMultiplier, store);
+      } else {
+        this.speedBonusPopupTimer = 0;
       }
+
+      const totalScore = distanceScore + speedBonus;
+      if (totalScore > 0) {
+        store.addScore(totalScore);
+      }
+    } else {
+      this.speedBonusPopupTimer = 0;
     }
   }
 
@@ -735,6 +758,30 @@ export class GameApp {
     } else {
       this.airTimeAccumulator = 0;
     }
+  }
+
+  private maybeTriggerSpeedBonusPopup(
+    deltaSeconds: number,
+    multiplier: number,
+    store: ReturnType<typeof useGameStore.getState>
+  ): void {
+    const interval = ARCADE_CONFIG.SPEED_BONUS_POPUP_INTERVAL_SECONDS ?? 1;
+    if (interval <= 0) return;
+
+    this.speedBonusPopupTimer += deltaSeconds;
+    const completedIntervals = Math.floor(this.speedBonusPopupTimer / interval);
+    if (completedIntervals <= 0) return;
+
+    this.speedBonusPopupTimer -= completedIntervals * interval;
+    const popupValue =
+      ARCADE_CONFIG.SPEED_BONUS_POINTS_PER_SECOND * multiplier * interval * completedIntervals;
+
+    store.triggerScorePopup({
+      value: popupValue,
+      text: `SPEED BONUS +${Math.round(popupValue)}`,
+      multiplier,
+      type: 'speed',
+    });
   }
 
   private triggerCrashSequence(): void {
@@ -956,7 +1003,7 @@ export class GameApp {
       }
 
       this.updateAirMultiplier(gameDelta);
-      this.updateHUD(gameMode === 'ARCADE');
+      this.updateHUD(gameDelta, gameMode === 'ARCADE');
 
       // Win condition: Sprint mode checks distance
       if (gameMode === 'SPRINT') {
@@ -992,7 +1039,7 @@ export class GameApp {
 
       // 5. Keep Timer Running
       this.timeElapsed += gameDelta;
-      this.updateHUD();
+      this.updateHUD(gameDelta);
 
       // 6. End Crash Sequence
       if (this.crashTimer >= this.CRASH_DURATION) {
