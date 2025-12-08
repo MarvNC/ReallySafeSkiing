@@ -1,17 +1,21 @@
-import { Github } from 'lucide-react';
+import { Github, X } from 'lucide-react';
+import React from 'react';
 
-import { Action, InputManager } from '../../core/InputManager';
 import { UIState, useGameStore } from '../store';
+import { GameLogo } from './GameLogo';
 
 export const About = () => {
-  const { uiState } = useGameStore();
+  const { uiState, setUIState } = useGameStore();
 
   if (uiState !== UIState.ABOUT) return null;
 
+  const handleClose = () => {
+    setUIState(UIState.MENU);
+  };
+
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only close if clicking the backdrop, not the content box
     if (e.target === e.currentTarget) {
-      InputManager.instance?.triggerAction(Action.Pause);
+      handleClose();
     }
   };
 
@@ -19,77 +23,94 @@ export const About = () => {
     if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (e.key === 'Escape' || e.target === e.currentTarget) {
-        InputManager.instance?.triggerAction(Action.Pause);
+        handleClose();
       }
     }
   };
 
+  const techStack = [
+    { name: 'Three.js', url: 'https://threejs.org' },
+    { name: 'Rapier', url: 'https://rapier.rs' },
+    { name: 'TypeScript', url: 'https://www.typescriptlang.org' },
+    { name: 'React', url: 'https://reactjs.org' },
+    { name: 'Tailwind', url: 'https://tailwindcss.com' },
+    { name: 'Zustand', url: 'https://github.com/pmndrs/zustand' },
+    { name: 'Vite', url: 'https://vitejs.dev' },
+    { name: 'Bun', url: 'https://bun.sh' },
+  ];
+
   return (
     <div
-      className="bg-sky-dark/90 font-russo pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center text-white backdrop-blur-lg"
+      className="font-russo pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/80 text-white backdrop-blur-md"
       onClick={handleBackdropClick}
       onKeyDown={handleBackdropKeyDown}
       role="button"
       tabIndex={0}
       aria-label="Click outside to close"
     >
-      {/* <h1 className="mb-5 text-7xl italic drop-shadow-lg">SYSTEM INFO</h1> */}
-
       <div
-        className="border-sky mb-10 max-w-2xl -skew-x-3 transform rounded-md border-2 bg-black/50 p-10 text-center shadow-[0_0_20px_rgba(135,206,235,0.2)]"
+        className="relative flex w-full max-w-sm flex-col gap-6 rounded-2xl border border-white/10 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl md:max-w-xl"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="skew-x-3 transform">
-          <div className="font-russo mb-5 text-3xl tracking-wider text-white shadow-[2px_2px_0px_#ff6b35]">
-            Really Safe Skiing
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 rounded-full p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Close"
+        >
+          <X className="h-6 w-6" />
+        </button>
+
+        <div className="flex flex-col items-center gap-2">
+          <GameLogo className="scale-75 md:scale-90" />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="text-center">
+            <h3 className="mb-4 text-sm font-bold tracking-[0.2em] text-white/50 uppercase">
+              Powered By
+            </h3>
+            <div className="flex flex-wrap justify-center gap-2">
+              {techStack.map((tech) => (
+                <a
+                  key={tech.name}
+                  href={tech.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold tracking-wider text-white transition-all hover:bg-white/20 hover:text-sky-300 hover:shadow-[0_0_15px_rgba(135,206,235,0.2)] md:text-sm"
+                >
+                  {tech.name}
+                </a>
+              ))}
+            </div>
           </div>
 
-          <span className="text-accent-orange mb-2.5 block text-xs font-bold tracking-[3px]">
-            Powered By
-          </span>
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-          <div className="mb-8 flex flex-wrap justify-center gap-4">
-            {[
-              { name: 'Three.js', url: 'https://threejs.org' },
-              { name: 'Rapier', url: 'https://rapier.rs' },
-              { name: 'TypeScript', url: 'https://www.typescriptlang.org' },
-              { name: 'React', url: 'https://reactjs.org' },
-              { name: 'Tailwind', url: 'https://tailwindcss.com' },
-              { name: 'Zustand', url: 'https://github.com/pmndrs/zustand' },
-              { name: 'Vite', url: 'https://vitejs.dev' },
-              { name: 'Bun', url: 'https://bun.sh' },
-            ].map((tech) => (
-              <a
-                key={tech.name}
-                href={tech.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-sky/10 border-sky text-sky hover:bg-sky border px-2.5 py-1.5 text-sm font-bold transition-colors hover:text-black"
-              >
-                {tech.name}
-              </a>
-            ))}
-          </div>
-
-          <div className="font-russo flex items-center justify-center gap-2 border-t border-white/20 pt-5 text-lg text-white">
-            CREATED BY{' '}
+          <div className="flex flex-col items-center gap-4 text-center">
+            <h3 className="text-sm font-bold tracking-[0.2em] text-white/50 uppercase">
+              Created By
+            </h3>
             <a
               href="https://github.com/MarvNC"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent-orange hover:bg-accent-orange relative flex items-center gap-2 px-1.5 py-0.5 transition-all hover:text-black hover:shadow-[0_0_15px_#ff6b35]"
+              className="group hover:border-accent-orange/50 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 transition-all hover:bg-white/10"
             >
-              <Github className="h-5 w-5" />
-              MarvNC
+              <Github className="group-hover:text-accent-orange h-6 w-6 text-white/70 transition-colors" />
+              <span className="text-lg tracking-widest text-white group-hover:text-white">
+                MarvNC
+              </span>
             </a>
           </div>
         </div>
-      </div>
 
-      <div className="animate-blink text-sky font-russo text-base uppercase opacity-80">
-        PRESS ESC TO RETURN
+        <button
+          onClick={handleClose}
+          className="mt-2 w-full rounded-xl border border-white/10 bg-white/10 py-3 text-sm tracking-[0.15em] text-white/70 uppercase transition-all hover:bg-white/20 hover:text-white"
+        >
+          Back to Menu
+        </button>
       </div>
     </div>
   );

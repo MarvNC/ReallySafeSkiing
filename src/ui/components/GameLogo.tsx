@@ -3,9 +3,14 @@ import type { FC } from 'react';
 
 export const GameLogo: FC<{ className?: string }> = ({ className }) => {
   return (
-    <div className={clsx('flex flex-col items-center justify-center p-4 select-none', className)}>
+    <div
+      className={clsx(
+        'pointer-events-auto flex flex-col items-center justify-center p-4 select-none',
+        className
+      )}
+    >
       {/* Top part: "REALLY SAFE" - stylized like a warning label tape */}
-      <div className="relative z-10 -rotate-2 transform transition-transform duration-500 hover:scale-105 hover:rotate-0">
+      <div className="relative z-100 -rotate-2 transform transition-transform duration-500 hover:scale-105 hover:rotate-0">
         <div className="absolute -inset-1 skew-x-[-10deg] bg-yellow-500 shadow-[4px_4px_0px_rgba(0,0,0,0.3)]" />
         <div className="absolute -inset-1 translate-x-[2px] translate-y-[2px] skew-x-[-10deg] bg-orange-600" />
 
