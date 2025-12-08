@@ -108,7 +108,7 @@ export const useGameStore = create<GameState>()(
     menuIndex: 0,
     slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
-    gameMode: 'SPRINT',
+    gameMode: 'ARCADE',
     score: 0,
     highScore: getStoredHighScore(),
     coins: 0,
