@@ -68,11 +68,13 @@ export class TerrainChunk {
   private readonly maxDeadTrees: number;
   private readonly maxRocks: number;
   private readonly obstacleDensityMultiplier: number;
+  private readonly trackObstaclesEnabled: boolean;
 
   constructor(
     points: PathPoint[],
     generator: TerrainGenerator,
     obstacleDensityMultiplier: number,
+    trackObstaclesEnabled: boolean = true,
     physics?: PhysicsWorld
   ) {
     this.generator = generator;
@@ -80,6 +82,7 @@ export class TerrainChunk {
     this.currentZ = points.length > 0 ? points[0].z : 0;
     this.physics = physics;
     this.obstacleDensityMultiplier = obstacleDensityMultiplier;
+    this.trackObstaclesEnabled = trackObstaclesEnabled;
     this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * obstacleDensityMultiplier);
     this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity);
     this.maxDeadTrees = Math.ceil(this.obstacleCapacity * 0.1);
@@ -277,7 +280,10 @@ export class TerrainChunk {
   /**
    * Calculate obstacle probabilities from config
    */
-  private calculateObstacleProbabilities(surfaceType: 'track' | 'bank' | 'cliff' | 'plateau') {
+  private calculateObstacleProbabilities(
+    surfaceType: 'track' | 'bank' | 'cliff' | 'plateau',
+    densityScale: number = this.obstacleDensityMultiplier
+  ) {
     const config = OBSTACLE_CONFIG.surfaces[surfaceType];
 
     // Normalize tree/rock/deadTree proportions (for track which doesn't use noise)
@@ -293,13 +299,11 @@ export class TerrainChunk {
     // Calculate base rarity (convert to a reasonable probability per grid point)
     // Higher rarity = more likely to spawn obstacles
     // Multiply by obstacleDensityMultiplier to scale rarity based on difficulty
-    const baseRarity = (config.rarity / 100) * this.obstacleDensityMultiplier; // Scale down for reasonable probabilities
+    const baseRarity = (config.rarity / 100) * densityScale; // Scale down for reasonable probabilities
 
     // Multiply rockProbability by density multiplier for consistency
     const rockProbability =
-      'rockProbability' in config
-        ? config.rockProbability * this.obstacleDensityMultiplier
-        : undefined;
+      'rockProbability' in config ? config.rockProbability * densityScale : undefined;
 
     // Multiply noise threshold probabilities by density multiplier
     let adjustedNoiseThresholds:
@@ -311,9 +315,7 @@ export class TerrainChunk {
         adjustedNoiseThresholds[key] = {
           ...threshold,
           probability:
-            threshold.probability !== undefined
-              ? threshold.probability * this.obstacleDensityMultiplier
-              : undefined,
+            threshold.probability !== undefined ? threshold.probability * densityScale : undefined,
         };
       }
     }
@@ -400,7 +402,7 @@ export class TerrainChunk {
 
     // Pre-calculate probabilities for each surface type
     const trackProbs = this.calculateObstacleProbabilities('track');
-    const bankProbs = this.calculateObstacleProbabilities('bank');
+    const bankProbs = this.calculateObstacleProbabilities('bank', 1); // decorative; ignore difficulty scaling
     const cliffProbs = this.calculateObstacleProbabilities('cliff');
     const plateauProbs = this.calculateObstacleProbabilities('plateau');
 
@@ -433,6 +435,10 @@ export class TerrainChunk {
         let placeRock = false;
 
         if (isOnTrack) {
+          if (!this.trackObstaclesEnabled) {
+            continue;
+          }
+
           // Track: Simple proportional approach
           const probs = trackProbs;
           if (Math.random() < probs.baseRarity) {

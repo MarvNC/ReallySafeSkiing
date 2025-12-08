@@ -59,7 +59,13 @@ export class TerrainManager {
       const chunkPoints = this.allPoints.slice(i, i + CHUNK_SEGMENTS + 1);
       if (chunkPoints.length < 2) break; // Need at least 2 points for a chunk
 
-      const chunk = new TerrainChunk(chunkPoints, this.generator, obstacleMultiplier, this.physics);
+      const chunk = new TerrainChunk(
+        chunkPoints,
+        this.generator,
+        obstacleMultiplier,
+        difficulty !== 'CHILL',
+        this.physics
+      );
       this.chunks.push(chunk);
       this.scene.add(chunk.group);
     }
