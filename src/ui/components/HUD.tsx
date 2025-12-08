@@ -34,7 +34,7 @@ const LowPolyHeart = ({
   return (
     <div
       className={clsx(
-        'relative h-10 w-10 sm:h-12 sm:w-12 transition-transform duration-700 [transform-style:preserve-3d]',
+        'relative h-10 w-10 transition-transform duration-700 [transform-style:preserve-3d] sm:h-12 sm:w-12',
         state !== 'lost' && 'animate-[heartTilt_8s_ease-in-out_infinite]',
         pulse && 'animate-[juicePulse_0.6s_ease-out]',
         shattered && 'animate-[heartShatter_0.7s_ease_forwards]',
@@ -169,7 +169,8 @@ export const HUD = () => {
 
   // Helper for heavy text shadow to ensure readability on snow
   const heavyShadow = 'drop-shadow-[2px_2px_0_rgba(0,0,0,0.75)]';
-  const darkGlow = 'drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] drop-shadow-[0_0_18px_rgba(0,0,0,0.5)]';
+  const darkGlow =
+    'drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] drop-shadow-[0_0_18px_rgba(0,0,0,0.5)]';
 
   const showCracked = gameMode === 'ARCADE' && lives === 2;
   const showShattered = gameMode === 'ARCADE' && lives <= 1;
@@ -210,7 +211,7 @@ export const HUD = () => {
               <div className="relative flex flex-col gap-2">
                 <span
                   className={clsx(
-                    'inline-block text-5xl sm:text-6xl font-black italic tracking-[0.08em]',
+                    'inline-block text-5xl font-black tracking-[0.08em] italic sm:text-6xl',
                     heavyShadow,
                     darkGlow
                   )}
@@ -219,21 +220,23 @@ export const HUD = () => {
                 </span>
                 <span
                   className={clsx(
-                    'inline-block text-2xl sm:text-3xl font-black tracking-wider text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]',
+                    'inline-block text-2xl font-black tracking-wider text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.6)] sm:text-3xl',
                     darkGlow,
                     multiplierFlash && 'animate-[juicePulse_0.6s_ease-out]'
                   )}
                 >
-                  x{multiplier.toFixed(1)}
+                  <span className="align-baseline text-lg sm:text-xl">x</span>
                 </span>
                 <span
                   className={clsx(
-                    'inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-amber-100',
+                    'inline-flex items-center gap-2 text-xs font-semibold text-amber-100 sm:text-sm',
                     darkGlow
                   )}
                 >
                   <Coins className="h-4 w-4 text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]" />
-                  <span className="tabular-nums text-base sm:text-lg tracking-[0.08em]">{coins}</span>
+                  <span className="text-base tracking-[0.08em] tabular-nums sm:text-lg">
+                    {coins}
+                  </span>
                 </span>
               </div>
             ) : (
@@ -310,7 +313,12 @@ export const HUD = () => {
           {/* --- TOP RIGHT: SURVIVAL ZONE (ARCADE) --- */}
           {gameMode === 'ARCADE' && (
             <div className="relative flex flex-col items-end gap-2 text-right">
-              <div className={clsx('flex items-center gap-3 pr-1', lifeToast && 'animate-[hudShake_0.6s_ease]')}>
+              <div
+                className={clsx(
+                  'flex items-center gap-3 pr-1',
+                  lifeToast && 'animate-[hudShake_0.6s_ease]'
+                )}
+              >
                 {[0, 1, 2].map((idx) => {
                   const remaining = lives - idx;
                   const isLost = remaining <= 0;
