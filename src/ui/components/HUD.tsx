@@ -132,25 +132,30 @@ export const HUD = () => {
   useEffect(() => {
     if (gameMode !== 'ARCADE') {
       prevLives.current = lives;
-      setLostHeartIndex(null);
-      return;
+      const frame = requestAnimationFrame(() => setLostHeartIndex(null));
+      return () => cancelAnimationFrame(frame);
     }
+
     if (lives < prevLives.current) {
       const lostIdx = Math.max(lives, 0);
-      const frame = requestAnimationFrame(() => setLifeToast(true));
+      const frame = requestAnimationFrame(() => {
+        setLifeToast(true);
+        setLostHeartIndex(lostIdx);
+      });
       const timer = setTimeout(() => {
         setLifeToast(false);
         setLostHeartIndex(null);
       }, 1200);
-      setLostHeartIndex(lostIdx);
       prevLives.current = lives;
       return () => {
         cancelAnimationFrame(frame);
         clearTimeout(timer);
       };
     }
+
     prevLives.current = lives;
-    setLostHeartIndex(null);
+    const resetFrame = requestAnimationFrame(() => setLostHeartIndex(null));
+    return () => cancelAnimationFrame(resetFrame);
   }, [lives, gameMode]);
 
   // Time Formatting: Sprint and Zen count up
