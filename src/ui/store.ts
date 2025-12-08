@@ -3,6 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 
 export enum UIState {
   MENU,
+  FIRST_RUN,
   PLAYING,
   GAME_OVER,
   PAUSED,
@@ -18,6 +19,7 @@ interface GameState {
   // Game Flow
   uiState: UIState;
   endReason: EndReason | null;
+  hasStartedOnce: boolean;
 
   // Stats (Updated every frame)
   speed: number;
@@ -39,6 +41,7 @@ interface GameState {
   // Actions (Callable from React or GameApp)
   setUIState: (state: UIState) => void;
   setEndReason: (reason: EndReason | null) => void;
+  setHasStartedOnce: (started: boolean) => void;
   updateStats: (
     speed: number,
     distance: number,
@@ -60,6 +63,7 @@ export const useGameStore = create<GameState>()(
   subscribeWithSelector((set) => ({
     uiState: UIState.MENU,
     endReason: null,
+    hasStartedOnce: false,
     speed: 0,
     distance: 0,
     timeRemaining: 60,
@@ -74,6 +78,7 @@ export const useGameStore = create<GameState>()(
 
     setUIState: (uiState) => set({ uiState }),
     setEndReason: (endReason) => set({ endReason }),
+    setHasStartedOnce: (hasStartedOnce) => set({ hasStartedOnce }),
     updateStats: (speed, distance, timeRemaining, timeElapsed) =>
       set({
         speed,

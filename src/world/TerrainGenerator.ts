@@ -51,11 +51,9 @@ export class TerrainGenerator {
     if (this.jumpStarts.length === 0) {
       const firstStart = this.sampleJumpSpacing(0);
       const firstLength =
-        JUMP_LENGTH_RANGE.min +
-        this.hash01(1000) * (JUMP_LENGTH_RANGE.max - JUMP_LENGTH_RANGE.min);
+        JUMP_LENGTH_RANGE.min + this.hash01(1000) * (JUMP_LENGTH_RANGE.max - JUMP_LENGTH_RANGE.min);
       const firstHeight =
-        JUMP_HEIGHT_RANGE.min +
-        this.hash01(1001) * (JUMP_HEIGHT_RANGE.max - JUMP_HEIGHT_RANGE.min);
+        JUMP_HEIGHT_RANGE.min + this.hash01(1001) * (JUMP_HEIGHT_RANGE.max - JUMP_HEIGHT_RANGE.min);
       this.jumpStarts.push(firstStart);
       this.jumpLengths.push(firstLength);
       this.jumpHeights.push(firstHeight);
@@ -80,18 +78,18 @@ export class TerrainGenerator {
     }
   }
 
-  private getJumpHeightOffset(
-    s: number
-  ): { offset: number; index: number | null; start: number; length: number } {
+  private getJumpHeightOffset(s: number): {
+    offset: number;
+    index: number | null;
+    start: number;
+    length: number;
+  } {
     this.ensureJumpsCoverS(s);
 
     let idx = this.lastJumpLookupIndex;
 
     // Move forward to the containing/next jump
-    while (
-      idx < this.jumpStarts.length - 1 &&
-      s >= this.jumpStarts[idx] + this.jumpLengths[idx]
-    ) {
+    while (idx < this.jumpStarts.length - 1 && s >= this.jumpStarts[idx] + this.jumpLengths[idx]) {
       idx++;
     }
 
@@ -201,7 +199,11 @@ export class TerrainGenerator {
     // Limit jumps to a lateral band (configurable fraction of rideable width) with random center per jump
     const jump = this.getJumpHeightOffset(s);
     const jumpHeight = jump.offset;
-    if (jumpHeight > 0 && jump.index !== null && (kind === SurfaceKind.Track || kind === SurfaceKind.Bank)) {
+    if (
+      jumpHeight > 0 &&
+      jump.index !== null &&
+      (kind === SurfaceKind.Track || kind === SurfaceKind.Bank)
+    ) {
       const usableHalfWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
       const usableWidth = usableHalfWidth * 2;
       const rawFraction = TERRAIN_CONFIG.JUMP_WIDTH_FRACTION ?? 0.5;

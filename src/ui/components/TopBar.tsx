@@ -34,8 +34,8 @@ export const TopBar = () => {
     InputManager.instance?.triggerAction(Action.Pause);
   };
 
-  // Don't show in main menu (it has its own title)
-  if (uiState === UIState.MENU) return null;
+  // Don't show in main menu or during the first-run prompt
+  if (uiState === UIState.MENU || uiState === UIState.FIRST_RUN) return null;
 
   const isPaused = uiState === UIState.PAUSED || uiState === UIState.ABOUT;
 

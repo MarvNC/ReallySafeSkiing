@@ -78,8 +78,11 @@ export const TouchControls = () => {
     []
   );
 
-  // Only show controls during gameplay
-  if (uiState !== UIState.PLAYING && uiState !== UIState.CRASHED) return null;
+  const shouldShow =
+    uiState === UIState.PLAYING || uiState === UIState.CRASHED || uiState === UIState.FIRST_RUN;
+
+  // Only show controls during gameplay or the first-run prompt
+  if (!shouldShow) return null;
 
   return (
     <div className="pointer-events-none fixed top-16 right-0 bottom-0 left-0 z-40 md:hidden">

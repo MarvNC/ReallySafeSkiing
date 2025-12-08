@@ -26,6 +26,7 @@ const GameState = {
   GAME_OVER: 2,
   PAUSED: 3,
   CRASHED: 4, // Crash sequence state
+  READY: 5, // First-run prompt shown, waiting for input
 } as const;
 
 type GameState = (typeof GameState)[keyof typeof GameState];
@@ -189,6 +190,8 @@ export class GameApp {
         if (this.useDebugCamera) return;
         if (this.gameState === GameState.MENU || this.gameState === GameState.GAME_OVER) {
           this.startGame();
+        } else if (this.gameState === GameState.READY) {
+          this.resumeFromFirstRunPrompt();
         }
       }
     });
@@ -238,24 +241,24 @@ export class GameApp {
 
     // Start game on any movement input
     this.input.on(Action.Forward, (_action, phase) => {
-      if (phase === 'pressed' && this.gameState === GameState.MENU) {
-        this.startGame();
-      }
+      if (phase !== 'pressed') return;
+      if (this.gameState === GameState.MENU) this.startGame();
+      else if (this.gameState === GameState.READY) this.resumeFromFirstRunPrompt();
     });
     this.input.on(Action.MenuUp, (_action, phase) => {
-      if (phase === 'pressed' && this.gameState === GameState.MENU) {
-        this.startGame();
-      }
+      if (phase !== 'pressed') return;
+      if (this.gameState === GameState.MENU) this.startGame();
+      else if (this.gameState === GameState.READY) this.resumeFromFirstRunPrompt();
     });
     this.input.on(Action.SteerLeft, (_action, phase) => {
-      if (phase === 'pressed' && this.gameState === GameState.MENU) {
-        this.startGame();
-      }
+      if (phase !== 'pressed') return;
+      if (this.gameState === GameState.MENU) this.startGame();
+      else if (this.gameState === GameState.READY) this.resumeFromFirstRunPrompt();
     });
     this.input.on(Action.SteerRight, (_action, phase) => {
-      if (phase === 'pressed' && this.gameState === GameState.MENU) {
-        this.startGame();
-      }
+      if (phase !== 'pressed') return;
+      if (this.gameState === GameState.MENU) this.startGame();
+      else if (this.gameState === GameState.READY) this.resumeFromFirstRunPrompt();
     });
 
     // Camera toggle
@@ -308,7 +311,7 @@ export class GameApp {
   private updateKeyBindingsForGameState(): void {
     if (!this.input) return;
 
-    if (this.gameState === GameState.PLAYING) {
+    if (this.gameState === GameState.PLAYING || this.gameState === GameState.READY) {
       // Playing: bind to movement actions
       // Note: 'w' and 'arrowup' removed - propulsion is now automatic
       this.input.bindKey('s', Action.DebugMoveBackward);
@@ -391,16 +394,19 @@ export class GameApp {
   }
 
   private startGame() {
-    const { slopeAngle, difficulty, gameMode } = useGameStore.getState();
+    const { slopeAngle, difficulty, gameMode, hasStartedOnce } = useGameStore.getState();
     const obstacleMultiplier = this.getModeObstacleMultiplier(gameMode);
+    const shouldPauseForFirstRun = !hasStartedOnce;
+
+    useGameStore.getState().setHasStartedOnce(true);
 
     // Full reset so restart behaves like a fresh page load
-    this.timeScale = 1;
+    this.timeScale = shouldPauseForFirstRun ? 0 : 1;
     this.crashTimer = 0;
     this.wasCrashedBeforePause = false;
     this.isAboutOpen = false;
     this.menuIndex = 0;
-    this.gameState = GameState.PLAYING;
+    this.gameState = shouldPauseForFirstRun ? GameState.READY : GameState.PLAYING;
 
     // Rebuild world
     this.terrainManager.regenerate(slopeAngle, difficulty, obstacleMultiplier);
@@ -424,7 +430,9 @@ export class GameApp {
     this.topSpeed = 0;
 
     useGameStore.getState().setMenuIndex(0);
-    useGameStore.getState().setUIState(UIState.PLAYING);
+    useGameStore
+      .getState()
+      .setUIState(shouldPauseForFirstRun ? UIState.FIRST_RUN : UIState.PLAYING);
     useGameStore.getState().setTopSpeed(0);
     useGameStore.getState().setEndReason(null);
     // Reset penalties - use zustand's set function pattern
@@ -485,6 +493,15 @@ export class GameApp {
     }
     this.clock.getDelta(); // Clear accumulated delta time so we don't jump forward
     // Rebind keys for playing state
+    this.updateKeyBindingsForGameState();
+  }
+
+  private resumeFromFirstRunPrompt(): void {
+    if (this.gameState !== GameState.READY) return;
+    this.timeScale = 1;
+    this.gameState = GameState.PLAYING;
+    useGameStore.getState().setUIState(UIState.PLAYING);
+    this.clock.getDelta();
     this.updateKeyBindingsForGameState();
   }
 
@@ -786,6 +803,10 @@ export class GameApp {
       // If PAUSED, we skip the physics step above, effectively freezing the game logic
       // but we CONTINUE to render below, keeping the 3D scene visible behind the menu.
       // Just sync visuals without updating physics
+      this.player.syncFromPhysics();
+      this.terrainManager.update(this.playerPhysics.getPosition());
+    } else if (this.gameState === GameState.READY) {
+      // First-run prompt: keep the scene visible but frozen until input arrives
       this.player.syncFromPhysics();
       this.terrainManager.update(this.playerPhysics.getPosition());
     } else {
