@@ -50,34 +50,34 @@ export const HUD = () => {
       {/* --- TOP LEFT: TIMER & DISTANCE --- */}
       <div className="flex flex-col items-start gap-2">
         {/* TIMER PILL */}
-        <div
-          className={clsx(
-            'flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/40 px-5 py-2 backdrop-blur-md transition-all',
-            showPenaltyNotification &&
-              gameMode === 'SPRINT' &&
-              'border-accent-red/80 animate-pulse bg-red-900/60'
-          )}
-        >
-          <Timer
-            className={clsx(
-              'h-6 w-6 transition-colors duration-300',
-              showPenaltyNotification && gameMode === 'SPRINT'
-                ? 'text-accent-red'
-                : gameMode === 'ZEN'
-                  ? 'text-cyan-300'
-                  : 'text-accent-orange'
-            )}
-          />
+        {gameMode !== 'ZEN' && (
           <div
             className={clsx(
-              'text-4xl font-bold tracking-wider tabular-nums transition-colors duration-300',
-              heavyShadow,
-              showPenaltyNotification && gameMode === 'SPRINT' ? 'text-accent-red' : 'text-white'
+              'flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/40 px-5 py-2 backdrop-blur-md transition-all',
+              showPenaltyNotification &&
+                gameMode === 'SPRINT' &&
+                'border-accent-red/80 animate-pulse bg-red-900/60'
             )}
           >
-            {timeStr}
+            <Timer
+              className={clsx(
+                'h-6 w-6 transition-colors duration-300',
+                showPenaltyNotification && gameMode === 'SPRINT'
+                  ? 'text-accent-red'
+                  : 'text-accent-orange'
+              )}
+            />
+            <div
+              className={clsx(
+                'text-4xl font-bold tracking-wider tabular-nums transition-colors duration-300',
+                heavyShadow,
+                showPenaltyNotification && gameMode === 'SPRINT' ? 'text-accent-red' : 'text-white'
+              )}
+            >
+              {timeStr}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* DISTANCE */}
         <div className="flex items-center gap-2 pl-2 opacity-90">
