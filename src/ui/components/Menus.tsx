@@ -1,10 +1,11 @@
 import clsx from 'clsx';
-import { Flame, Infinity as InfinityIcon } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
+import { GameModeToggle } from './GameModeToggle';
+import { GameOver } from './GameOver';
 import { SlopeControl } from './SlopeControl';
 
 // Consistent content container for width constraints and mobile padding
@@ -12,91 +13,6 @@ const ContentContainer: FC<{ children: ReactNode; className?: string }> = ({
   children,
   className,
 }) => <div className={clsx('w-full max-w-sm px-4 md:max-w-xl md:px-0', className)}>{children}</div>;
-
-const GameModeToggle: FC = () => {
-  const gameMode = useGameStore((state) => state.gameMode);
-  const setGameMode = useGameStore((state) => state.setGameMode);
-
-  return (
-    <div className="group relative w-full">
-      {/* Ambient Background Glow - shifts color based on mode */}
-      <div
-        className={clsx(
-          'absolute -inset-1 rounded-full opacity-20 blur-md transition-all duration-700',
-          gameMode === 'SPRINT' ? 'bg-orange-500' : 'bg-cyan-400'
-        )}
-      />
-      {/* The Toggle Container */}
-      <div
-        className={clsx(
-          'relative flex h-12 w-full cursor-pointer items-center rounded-full border p-1 transition-colors duration-500',
-          gameMode === 'SPRINT'
-            ? 'border-orange-500/30 bg-orange-950/40'
-            : 'border-cyan-400/30 bg-cyan-950/40'
-        )}
-        onClick={() => setGameMode(gameMode === 'SPRINT' ? 'ZEN' : 'SPRINT')}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            setGameMode(gameMode === 'SPRINT' ? 'ZEN' : 'SPRINT');
-          }
-        }}
-      >
-        {/* The Sliding "Puck" */}
-        <div
-          className={clsx(
-            'absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full shadow-lg transition-all duration-500',
-            // Custom spring bezier for that "snappy" feel
-            'ease-[cubic-bezier(0.34,1.56,0.64,1)]',
-            gameMode === 'SPRINT'
-              ? 'left-1 translate-x-0 bg-gradient-to-br from-orange-400 to-red-600 shadow-orange-900/50'
-              : 'left-1 translate-x-full bg-gradient-to-br from-cyan-300 to-blue-500 shadow-cyan-900/50'
-          )}
-        >
-          {/* Shine effect on the puck */}
-          <div className="absolute top-0 right-0 left-0 h-1/2 rounded-t-full bg-white/20" />
-        </div>
-        {/* SPRINT OPTION */}
-        <div className="relative z-10 flex flex-1 items-center justify-center gap-2 text-center">
-          <Flame
-            className={clsx(
-              'h-4 w-4 transition-all duration-300',
-              gameMode === 'SPRINT'
-                ? 'scale-110 text-white drop-shadow-md'
-                : 'scale-90 text-white/40'
-            )}
-          />
-          <span
-            className={clsx(
-              'text-xs font-bold tracking-[0.15em] transition-colors duration-300',
-              gameMode === 'SPRINT' ? 'text-white' : 'text-white/40'
-            )}
-          >
-            SPRINT
-          </span>
-        </div>
-        {/* ZEN OPTION */}
-        <div className="relative z-10 flex flex-1 items-center justify-center gap-2 text-center">
-          <InfinityIcon
-            className={clsx(
-              'h-4 w-4 transition-all duration-300',
-              gameMode === 'ZEN' ? 'scale-110 text-white drop-shadow-md' : 'scale-90 text-white/40'
-            )}
-          />
-          <span
-            className={clsx(
-              'text-xs font-bold tracking-[0.15em] transition-colors duration-300',
-              gameMode === 'ZEN' ? 'text-white' : 'text-white/40'
-            )}
-          >
-            ZEN
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const SetupPanel: FC = () => (
   // Mobile: p-3. Desktop: p-4.
@@ -198,33 +114,10 @@ const MenuFooter: FC = () => {
 };
 
 export const Menus = () => {
-  const {
-    uiState,
-    menuIndex,
-    distance,
-    topSpeed,
-    setMenuIndex,
-    endReason,
-    gameMode,
-    timeElapsed,
-    penalties,
-  } = useGameStore();
+  const { uiState, menuIndex, setMenuIndex, endReason, gameMode } = useGameStore();
   const isCrashGameOver = endReason === 'crash';
-  const isManualEnd = endReason === 'manual';
-  const isComplete = endReason === 'complete';
   const isCrashTint =
     uiState === UIState.CRASHED || (uiState === UIState.GAME_OVER && isCrashGameOver);
-
-  const formatTime = (value: number) => {
-    const minutes = Math.floor(value / 60);
-    const seconds = Math.floor(value % 60);
-    const milliseconds = Math.floor((value * 100) % 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
-  };
-
-  const finalTime = timeElapsed; // Both Sprint and Zen modes use elapsed time
 
   if (uiState === UIState.PLAYING) return null;
 
@@ -394,56 +287,7 @@ export const Menus = () => {
       {/* GAME OVER */}
       {uiState === UIState.GAME_OVER && (
         <>
-          <h1
-            className={clsx(
-              'mb-5 text-4xl italic drop-shadow-lg md:text-7xl',
-              isCrashGameOver
-                ? 'text-accent-red drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]'
-                : isComplete || isManualEnd
-                  ? 'text-cyan-300'
-                  : undefined
-            )}
-          >
-            {isCrashGameOver
-              ? 'WASTED'
-              : isComplete
-                ? 'SPRINT COMPLETE!'
-                : isManualEnd
-                  ? 'RUN COMPLETE'
-                  : "TIME'S UP!"}
-          </h1>
-          {isCrashGameOver && (
-            <div className="mb-2 text-center text-lg text-white/80 md:mb-4 md:text-xl">
-              You wiped out. The run is over.
-            </div>
-          )}
-          <div className="mb-10 flex w-full flex-col items-center gap-5">
-            <div className="text-2xl text-sky-300 drop-shadow-md md:text-4xl">
-              DISTANCE: {Math.floor(distance)}m
-            </div>
-            <div
-              className={clsx(
-                'animate-pulse text-xl italic md:text-3xl',
-                isCrashGameOver ? 'text-accent-red' : 'text-accent-orange'
-              )}
-            >
-              TOP SPEED: {topSpeed} km/h
-            </div>
-            <div className="text-xl text-white/80 md:text-2xl">
-              TIME: {formatTime(finalTime)}
-              {gameMode === 'SPRINT' && penalties > 0 && (
-                <span className="ml-2 text-sm text-white/60">
-                  ({penalties} {penalties === 1 ? 'penalty' : 'penalties'})
-                </span>
-              )}
-            </div>
-            <ContentContainer>
-              <SetupPanel />
-            </ContentContainer>
-            <ContentContainer className="[&>button]:!mt-0">
-              <StartButton label="PLAY AGAIN" onClick={handleStart} gameMode={gameMode} />
-            </ContentContainer>
-          </div>
+          <GameOver />
           <MenuFooter />
         </>
       )}

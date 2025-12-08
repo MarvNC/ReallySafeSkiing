@@ -4,5 +4,3 @@
 - Blur at distance
 - SFX
 - Music (not ai generate, have AI find some no copyright video game stuff for us)
-- Remove timer in zen mode
-- Animation switching sprint/zen modes
