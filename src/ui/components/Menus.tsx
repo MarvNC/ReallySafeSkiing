@@ -1,10 +1,16 @@
 import clsx from 'clsx';
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
 import { SlopeControl } from './SlopeControl';
+
+// Consistent content container for width constraints and mobile padding
+const ContentContainer: FC<{ children: ReactNode; className?: string }> = ({
+  children,
+  className,
+}) => <div className={clsx('w-full max-w-sm px-4 md:max-w-xl md:px-0', className)}>{children}</div>;
 
 const GameModeToggle: FC = () => {
   const gameMode = useGameStore((state) => state.gameMode);
@@ -47,8 +53,8 @@ const GameModeToggle: FC = () => {
 };
 
 const SetupPanel: FC = () => (
-  // Mobile: p-3, max-w-sm. Desktop: p-4, max-w-xl.
-  <div className="pointer-events-auto flex w-full max-w-sm flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-3 text-sm shadow-2xl backdrop-blur-md md:max-w-xl md:gap-3 md:p-4">
+  // Mobile: p-3. Desktop: p-4.
+  <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-3 text-sm shadow-2xl backdrop-blur-md md:gap-3 md:p-4">
     <GameModeToggle />
     {/* Mobile: p-2. Desktop: p-4. */}
     <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-2 md:p-4">
@@ -101,7 +107,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
       onClick={onClick}
       // Mobile: mt-4, py-3, text-lg. Desktop: mt-6, py-4, text-xl.
       className={clsx(
-        'font-russo pointer-events-auto mt-4 w-full max-w-sm cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg transition-all active:scale-95 md:mt-6 md:max-w-xl md:py-4 md:text-xl',
+        'font-russo pointer-events-auto mt-4 w-full cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg transition-all active:scale-95 md:mt-6 md:py-4 md:text-xl',
         gameMode === 'ZEN'
           ? 'bg-cyan-400 shadow-cyan-400/30 hover:bg-cyan-300'
           : 'bg-accent-orange shadow-orange-500/20 hover:bg-orange-400'
@@ -116,7 +122,7 @@ const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClic
   <button
     onClick={onClick}
     // Mobile: mt-2, py-2, text-sm. Desktop: mt-4, py-4, text-lg.
-    className="font-russo pointer-events-auto mt-2 w-full max-w-sm cursor-pointer rounded-xl border-2 border-white/20 bg-transparent py-2 text-sm tracking-widest text-white/80 uppercase transition-all hover:border-white/50 hover:bg-white/10 hover:text-white md:mt-4 md:max-w-xl md:py-4 md:text-lg"
+    className="font-russo pointer-events-auto mt-2 w-full cursor-pointer rounded-xl border-2 border-white/20 bg-transparent py-2 text-sm tracking-widest text-white/80 uppercase transition-all hover:border-white/50 hover:bg-white/10 hover:text-white md:mt-4 md:py-4 md:text-lg"
   >
     {label}
   </button>
@@ -258,14 +264,20 @@ export const Menus = () => {
             REALLY SAFE SKIING
           </h1>
 
-          <SetupPanel />
+          <ContentContainer>
+            <SetupPanel />
+          </ContentContainer>
 
-          <StartButton label="START RUN" onClick={handleStart} gameMode={gameMode} />
+          <ContentContainer>
+            <StartButton label="START RUN" onClick={handleStart} gameMode={gameMode} />
+          </ContentContainer>
 
-          <GhostButton
-            label="ABOUT"
-            onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
-          />
+          <ContentContainer>
+            <GhostButton
+              label="ABOUT"
+              onClick={() => useGameStore.getState().setUIState(UIState.ABOUT)}
+            />
+          </ContentContainer>
 
           <MenuFooter />
         </>
@@ -346,7 +358,7 @@ export const Menus = () => {
               You wiped out. The run is over.
             </div>
           )}
-          <div className="mb-10 flex flex-col items-center gap-5">
+          <div className="mb-10 flex w-full flex-col items-center gap-5">
             <div className="text-2xl text-sky-300 drop-shadow-md md:text-4xl">
               DISTANCE: {Math.floor(distance)}m
             </div>
@@ -366,9 +378,13 @@ export const Menus = () => {
                 </span>
               )}
             </div>
-            <SetupPanel />
+            <ContentContainer>
+              <SetupPanel />
+            </ContentContainer>
+            <ContentContainer className="[&>button]:!mt-0">
+              <StartButton label="PLAY AGAIN" onClick={handleStart} gameMode={gameMode} />
+            </ContentContainer>
           </div>
-          <StartButton label="PLAY AGAIN" onClick={handleStart} gameMode={gameMode} />
           <MenuFooter />
         </>
       )}

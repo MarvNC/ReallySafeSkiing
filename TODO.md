@@ -4,4 +4,5 @@
 - Blur at distance
 - SFX
 - Music (not ai generate, have AI find some no copyright video game stuff for us)
-- Figure out how we want to refactor arcade mode. I think sprint to 2km is good.
+- Remove timer in zen mode
+- Animation switching sprint/zen modes
