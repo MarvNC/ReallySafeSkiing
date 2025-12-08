@@ -1,6 +1,2 @@
 - animations when carving / snow animations
-- FOV warp at speed
-- Zoom out camera more?
 - Blur at distance
-- SFX
-- Music (not ai generate, have AI find some no copyright video game stuff for us)

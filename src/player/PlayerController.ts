@@ -5,7 +5,6 @@ import { InputManager } from '../core/InputManager';
 import { TerrainManager } from '../world/TerrainManager';
 import { PlayerPhysics } from './PlayerPhysics';
 import { createHandWithPole, createSkiPair } from './SkierAssets';
-import { SnowSpray } from './SnowSpray';
 import { SpeedLines } from './SpeedLines';
 
 type PlayerOptions = {
@@ -26,7 +25,6 @@ export class PlayerController {
   private handRig!: THREE.Group;
 
   private speedLines: SpeedLines;
-  private snowSpray: SnowSpray;
 
   private input: InputManager;
   private terrain: TerrainManager;
@@ -108,8 +106,6 @@ export class PlayerController {
     // Speed Lines
     this.speedLines = new SpeedLines();
     this.camera.add(this.speedLines.mesh);
-    this.snowSpray = new SnowSpray();
-    this.mesh.add(this.snowSpray.mesh);
     this.input = input;
     this.physics = options.playerPhysics;
     this.terrain = options.terrain;
@@ -451,15 +447,6 @@ export class PlayerController {
     this.camera.rotation.x = this.basePitch + speedPitch;
     // Apply new Z tilt (Roll)
     this.camera.rotation.z = this.currentCameraBank;
-
-    const isTurning = Math.abs(smoothSteering) > 0.1;
-    if ((isTurning || isBraking) && speed > 2.0) {
-      const sprayPos = this.tmpVecA.set(0, -1.5, 1.0);
-      const intensity = Math.abs(smoothSteering) + (isBraking ? 1.0 : 0);
-      const rightDir = this.tmpVecB.copy(this.rightHand.position).normalize();
-      this.snowSpray.emit(sprayPos, rightDir, intensity);
-    }
-    this.snowSpray.update(deltaTime);
 
     // Update Hands (using the existing logic or the refined version below)
     this.updateHands(deltaTime, isBraking, isPoling, time, smoothSteering);
