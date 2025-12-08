@@ -35,16 +35,12 @@ export const ScoreFeed = () => {
             className="pointer-events-none"
             style={{ animation: 'scoreFloat 1.5s ease-out forwards' }}
           >
-            <div
-              className={clsx(
-                'flex items-baseline gap-3 rounded-2xl border px-4 py-3 backdrop-blur-md',
-                'border-white/10 bg-black/50 shadow-[0_8px_30px_rgba(0,0,0,0.45)]',
-                'font-russo uppercase',
-                colors.glow
-              )}
-            >
+            <div className={clsx('flex items-baseline gap-3', 'font-russo uppercase', colors.glow)}>
               <span
                 className={clsx('text-4xl font-black tracking-[0.08em] sm:text-5xl', colors.text)}
+                style={{
+                  textShadow: '0 0 12px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.5)',
+                }}
               >
                 {popup.text}
               </span>
@@ -54,6 +50,9 @@ export const ScoreFeed = () => {
                   'shadow-[0_0_14px_rgba(0,0,0,0.35)]',
                   colors.tag
                 )}
+                style={{
+                  textShadow: '0 0 8px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.5)',
+                }}
               >
                 x{popup.multiplier.toFixed(1)}
               </span>
