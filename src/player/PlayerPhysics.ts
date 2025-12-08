@@ -21,6 +21,7 @@ export type PlayerPhysicsDebugState = {
 };
 
 export class PlayerPhysics {
+  private readonly world: RAPIER.World;
   private readonly body: RAPIER.RigidBody;
   private readonly collider: RAPIER.Collider;
   private readonly tmpPosition = new THREE.Vector3();
@@ -32,6 +33,8 @@ export class PlayerPhysics {
   private readonly forwardDir = new THREE.Vector3();
   private readonly rightDir = new THREE.Vector3();
   private readonly upDir = new THREE.Vector3(0, 1, 0);
+  private timeSinceGroundContact = Number.POSITIVE_INFINITY;
+  private readonly groundContactMemorySeconds = PLAYER_CONFIG.physics.groundContactMemorySeconds;
 
   private yaw = 0;
   // New crash state
@@ -56,6 +59,7 @@ export class PlayerPhysics {
 
   constructor(physics: PhysicsWorld, startPosition: THREE.Vector3) {
     const world = physics.getWorld();
+    this.world = world;
 
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(startPosition.x, startPosition.y, startPosition.z)
@@ -129,6 +133,29 @@ export class PlayerPhysics {
     return this.collider.handle;
   }
 
+  private updateGroundContact(deltaSeconds: number): boolean {
+    let grounded = false;
+
+    this.world.contactPairsWith(this.collider, (other) => {
+      const membership = other.collisionGroups() & 0xffff;
+      if ((membership & PhysicsLayer.World) !== 0) {
+        grounded = true;
+      }
+    });
+
+    if (grounded) {
+      this.timeSinceGroundContact = 0;
+    } else {
+      this.timeSinceGroundContact += deltaSeconds;
+    }
+
+    return grounded;
+  }
+
+  private hasRecentGroundContact(): boolean {
+    return this.timeSinceGroundContact <= this.groundContactMemorySeconds;
+  }
+
   applyControls(input: InputManager, deltaSeconds: number): void {
     // If crashed, stop processing inputs but allow physics engine to move the body
     if (this.isCrashed) {
@@ -195,69 +222,87 @@ export class PlayerPhysics {
     this.forwardDir.set(0, 0, -1).applyQuaternion(this.tmpQuat).normalize();
     this.rightDir.set(1, 0, 0).applyQuaternion(this.tmpQuat).normalize();
 
+    // Track ground contact time to determine if we should apply ski forces
+    this.updateGroundContact(deltaSeconds);
+    const hasRecentGroundContact = this.hasRecentGroundContact();
+
     // 4. Project Velocity
     const forwardSpeed = this.currentVel.dot(this.forwardDir);
     const lateralSpeed = this.currentVel.dot(this.rightDir);
+    const speed = this.currentVel.length();
 
     // 5. Apply Forces
 
-    // Lateral Friction (Drift control from ski edge)
-    const lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction;
-
-    // Forward snow friction (roughly linear in speed)
-    let forwardForce = -forwardSpeed * PLAYER_CONFIG.physics.forwardFriction;
-
-    // --- NEW: Non-linear air drag ---
-    // Use total speed so drag acts on whatever direction you're actually moving.
-    const speed = this.currentVel.length();
-    if (speed > 0.1) {
-      // v^2 drag: F_drag ~ -k * v * |v|
-      const airK = PLAYER_CONFIG.physics.airDragCoeff;
-
-      // Directional decomposition: project drag onto forward axis
-      const speedSq = speed * speed;
-
-      // How much of the velocity is forward (in terms of ratio)
-      const forwardRatio = speed > 0 ? Math.abs(forwardSpeed) / speed : 0;
-
-      const forwardSign = Math.sign(forwardSpeed) || 1;
-
-      // Forward air drag - grows ~ v^2
-      const forwardAir = -forwardSign * airK * speedSq * forwardRatio;
-
-      forwardForce += forwardAir;
-    }
-
-    // Extra damping when snow-plowing
-    if (isBraking) {
-      const forwardSign = Math.sign(forwardSpeed) || 1;
-      const brakeForce = -forwardSign * PLAYER_CONFIG.physics.brakeDamping * Math.abs(forwardSpeed);
-      forwardForce += brakeForce;
-    }
-
-    const impulse = new THREE.Vector3()
-      .copy(this.rightDir)
-      .multiplyScalar(lateralForce)
-      .addScaledVector(this.forwardDir, forwardForce);
-
-    // Poling Logic - Centralized state calculation
-    const currentSpeed = this.currentVel.length();
+    let lateralForce = 0;
+    let forwardForce = 0;
     let pushForceApplied = 0;
 
-    // Convert maxPoleSpeed from km/h to m/s for comparison
-    const maxPoleSpeedMs = PLAYER_CONFIG.physics.maxPoleSpeedKmh / 3.6;
+    const impulse = new THREE.Vector3();
 
-    // The single source of truth calculation for pushing state
-    this._isPushing = currentSpeed < maxPoleSpeedMs && !isBraking;
+    if (hasRecentGroundContact) {
+      // Lateral Friction (Drift control from ski edge)
+      lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction;
 
-    // Apply forces based on the class property
-    if (this._isPushing) {
-      const effectiveness = 1.0 - currentSpeed / maxPoleSpeedMs;
-      const pushImpulse = PLAYER_CONFIG.physics.poleForce * effectiveness;
+      // Forward snow friction (roughly linear in speed)
+      forwardForce = -forwardSpeed * PLAYER_CONFIG.physics.forwardFriction;
 
-      const pushVec = this.forwardDir.clone().multiplyScalar(pushImpulse);
-      impulse.add(pushVec);
-      pushForceApplied = pushImpulse; // Variable is now used below
+      // --- NEW: Non-linear air drag ---
+      // Use total speed so drag acts on whatever direction you're actually moving.
+      if (speed > 0.1) {
+        // v^2 drag: F_drag ~ -k * v * |v|
+        const airK = PLAYER_CONFIG.physics.airDragCoeff;
+
+        // Directional decomposition: project drag onto forward axis
+        const speedSq = speed * speed;
+
+        // How much of the velocity is forward (in terms of ratio)
+        const forwardRatio = speed > 0 ? Math.abs(forwardSpeed) / speed : 0;
+
+        const forwardSign = Math.sign(forwardSpeed) || 1;
+
+        // Forward air drag - grows ~ v^2
+        const forwardAir = -forwardSign * airK * speedSq * forwardRatio;
+
+        forwardForce += forwardAir;
+      }
+
+      // Extra damping when snow-plowing
+      if (isBraking) {
+        const forwardSign = Math.sign(forwardSpeed) || 1;
+        const brakeForce =
+          -forwardSign * PLAYER_CONFIG.physics.brakeDamping * Math.abs(forwardSpeed);
+        forwardForce += brakeForce;
+      }
+
+      impulse.addScaledVector(this.rightDir, lateralForce);
+      impulse.addScaledVector(this.forwardDir, forwardForce);
+
+      // Poling Logic - Centralized state calculation
+      const currentSpeed = speed;
+
+      // Convert maxPoleSpeed from km/h to m/s for comparison
+      const maxPoleSpeedMs = PLAYER_CONFIG.physics.maxPoleSpeedKmh / 3.6;
+
+      // The single source of truth calculation for pushing state
+      this._isPushing = currentSpeed < maxPoleSpeedMs && !isBraking;
+
+      // Apply forces based on the class property
+      if (this._isPushing) {
+        const effectiveness = 1.0 - currentSpeed / maxPoleSpeedMs;
+        const pushImpulse = PLAYER_CONFIG.physics.poleForce * effectiveness;
+
+        const pushVec = this.forwardDir.clone().multiplyScalar(pushImpulse);
+        impulse.add(pushVec);
+        pushForceApplied = pushImpulse; // Variable is now used below
+      }
+    } else {
+      // In the air, allow rotation but don't let it curve momentum; only apply air drag along velocity.
+      this._isPushing = false;
+      if (speed > 0.1) {
+        const airK = PLAYER_CONFIG.physics.airDragCoeff;
+        const dragMagnitude = -airK * speed * speed;
+        impulse.addScaledVector(this.currentVel, dragMagnitude / speed);
+      }
     }
 
     impulse.multiplyScalar(PLAYER_CONFIG.physics.mass * deltaSeconds);
@@ -265,9 +310,8 @@ export class PlayerPhysics {
 
     // 6. Debug Data
     // Calculate impulse components for debug display
-    const forwardImpulse =
-      forwardForce * PLAYER_CONFIG.physics.mass * deltaSeconds + pushForceApplied;
-    const lateralImpulse = lateralForce * PLAYER_CONFIG.physics.mass * deltaSeconds;
+    const forwardImpulse = impulse.dot(this.forwardDir);
+    const lateralImpulse = impulse.dot(this.rightDir);
 
     this.debugState = {
       yaw: this.yaw,
