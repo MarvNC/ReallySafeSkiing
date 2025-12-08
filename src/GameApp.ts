@@ -574,7 +574,7 @@ export class GameApp {
     }
   }
 
-  private updateHUD(gameDelta?: number, enableArcadeScoring: boolean = false) {
+  private updateHUD(enableArcadeScoring: boolean = false) {
     // Get velocity and calculate speed
     const vel = this.playerPhysics.getVelocity();
     const speed = vel.length();
@@ -882,7 +882,7 @@ export class GameApp {
         this.player.syncFromPhysics();
       }
 
-      this.updateHUD(gameDelta, gameMode === 'ARCADE');
+      this.updateHUD(gameMode === 'ARCADE');
 
       // Win condition: Sprint mode checks distance
       if (gameMode === 'SPRINT') {
