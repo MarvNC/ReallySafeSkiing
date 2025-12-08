@@ -164,12 +164,18 @@ export class TerrainManager {
     this.allPoints.length = 0;
   }
 
-  update(playerPosition?: THREE.Vector3): void {
+  update(playerPosition?: THREE.Vector3, deltaSeconds: number = 0): void {
     if (!playerPosition) return;
 
     const playerZ = playerPosition.z;
     this.ensureChunksAhead(playerZ);
     this.removeOldChunks(playerZ);
+
+    if (deltaSeconds > 0) {
+      for (const chunk of this.chunks) {
+        chunk.update(deltaSeconds);
+      }
+    }
   }
 
   setWireframe(enabled: boolean): void {

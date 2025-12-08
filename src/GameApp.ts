@@ -893,7 +893,7 @@ export class GameApp {
         }
       }
 
-      this.terrainManager.update(this.playerPhysics.getPosition());
+      this.terrainManager.update(this.playerPhysics.getPosition(), gameDelta);
     }
     // STATE: CRASHED (New Logic)
     else if (this.gameState === GameState.CRASHED) {
@@ -927,22 +927,22 @@ export class GameApp {
 
       // Sync visuals
       this.player.syncFromPhysics();
-      this.terrainManager.update(this.playerPhysics.getPosition());
+      this.terrainManager.update(this.playerPhysics.getPosition(), gameDelta);
     } else if (this.gameState === GameState.PAUSED) {
       // If PAUSED, we skip the physics step above, effectively freezing the game logic
       // but we CONTINUE to render below, keeping the 3D scene visible behind the menu.
       // Just sync visuals without updating physics
       this.player.syncFromPhysics();
-      this.terrainManager.update(this.playerPhysics.getPosition());
+      this.terrainManager.update(this.playerPhysics.getPosition(), gameDelta);
     } else if (this.gameState === GameState.READY) {
       // First-run prompt: keep the scene visible but frozen until input arrives
       this.player.syncFromPhysics();
-      this.terrainManager.update(this.playerPhysics.getPosition());
+      this.terrainManager.update(this.playerPhysics.getPosition(), gameDelta);
     } else {
       // In MENU or GAME_OVER, pause physics and just sync visuals
       this.player.syncFromPhysics();
       // Still update terrain manager to keep visuals in sync
-      this.terrainManager.update(this.playerPhysics.getPosition());
+      this.terrainManager.update(this.playerPhysics.getPosition(), gameDelta);
     }
 
     // Update debug camera movement

@@ -33,6 +33,12 @@ const SURFACE_KIND_TO_INDEX: Record<SurfaceKind, number> = {
   [SurfaceKind.Plateau]: 5,
 };
 
+type CoinInstance = {
+  position: THREE.Vector3;
+  baseRotationY: number;
+  active: boolean;
+};
+
 export const CHUNK_WIDTH = TERRAIN_DIMENSIONS.CHUNK_WIDTH;
 export const CHUNK_LENGTH = TERRAIN_DIMENSIONS.CHUNK_LENGTH;
 export const CHUNK_SEGMENTS = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS;
@@ -58,6 +64,9 @@ export class TerrainChunk {
   private coinMaterial: THREE.MeshStandardMaterial;
   private coinColliders: RAPIER.Collider[] = [];
   private coinHandleToIndex: Map<number, number> = new Map();
+  private coinInstances: CoinInstance[] = [];
+  private coinSpinAngle = 0;
+  private coinDummy = new THREE.Object3D();
   private treeMaterial: THREE.MeshStandardMaterial;
   private deadTreeMaterial: THREE.MeshStandardMaterial;
   private rockMaterial: THREE.MeshStandardMaterial;
@@ -365,14 +374,17 @@ export class TerrainChunk {
       this.coinMesh.count = 0;
       this.coinHandleToIndex.clear();
       this.coinColliders = [];
+      this.coinInstances.length = 0;
+      this.coinSpinAngle = 0;
       return;
     }
     const world = physics?.getWorld();
-    const dummy = new THREE.Object3D();
+    const dummy = this.coinDummy;
     let coinIndex = 0;
 
     this.coinHandleToIndex.clear();
     this.coinColliders = [];
+    this.coinSpinAngle = 0;
 
     const coinsToSpawn = Math.min(this.maxCoins, Math.max(4, Math.floor(points.length * 0.08)));
 
@@ -385,13 +397,19 @@ export class TerrainChunk {
       const worldZ = point.z;
       const sample = this.generator.sampleTerrainAt(worldX, worldZ, point);
       const worldY = sample.height + 0.8;
+      const baseRotationY = Math.random() * Math.PI * 2;
 
       dummy.position.set(worldX, worldY, worldZ - startZ);
-      dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      dummy.rotation.set(0, baseRotationY, 0);
       dummy.scale.setScalar(1);
       dummy.updateMatrix();
 
       this.coinMesh.setMatrixAt(coinIndex, dummy.matrix);
+      this.coinInstances[coinIndex] = {
+        position: new THREE.Vector3(worldX, worldY, worldZ - startZ),
+        baseRotationY,
+        active: true,
+      };
 
       if (world) {
         const colliderDesc = RAPIER.ColliderDesc.ball(ARCADE_CONFIG.COIN_RADIUS)
@@ -408,6 +426,7 @@ export class TerrainChunk {
     }
 
     this.coinMesh.count = coinIndex;
+    this.coinInstances.length = coinIndex;
     this.coinMesh.instanceMatrix.needsUpdate = true;
   }
 
@@ -415,6 +434,10 @@ export class TerrainChunk {
     if (!this.coinMesh) return false;
     const index = this.coinHandleToIndex.get(handle);
     if (index === undefined) return false;
+    const coinInstance = this.coinInstances[index];
+    if (coinInstance) {
+      coinInstance.active = false;
+    }
 
     // Remove collider to prevent re-triggering
     if (this.physics) {
@@ -433,6 +456,33 @@ export class TerrainChunk {
     this.coinMesh.instanceMatrix.needsUpdate = true;
 
     return true;
+  }
+
+  update(deltaSeconds: number): void {
+    this.updateCoinRotation(deltaSeconds);
+  }
+
+  private updateCoinRotation(deltaSeconds: number): void {
+    if (!this.coinMesh || !this.coinsEnabled) return;
+    if (this.coinMesh.count === 0 || deltaSeconds <= 0) return;
+
+    this.coinSpinAngle =
+      (this.coinSpinAngle + deltaSeconds * ARCADE_CONFIG.COIN_ROTATION_SPEED) % (Math.PI * 2);
+
+    const dummy = this.coinDummy;
+
+    for (let i = 0; i < this.coinMesh.count; i++) {
+      const coin = this.coinInstances[i];
+      if (!coin || !coin.active) continue;
+
+      dummy.position.copy(coin.position);
+      dummy.rotation.set(0, coin.baseRotationY + this.coinSpinAngle, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      this.coinMesh.setMatrixAt(i, dummy.matrix);
+    }
+
+    this.coinMesh.instanceMatrix.needsUpdate = true;
   }
 
   /**
@@ -760,6 +810,7 @@ export class TerrainChunk {
     this.rockGeometry.dispose();
     this.coinGeometry.dispose();
     this.coinMaterial.dispose();
+    this.coinInstances.length = 0;
   }
 
   private createTerrainCollider(snowPos: THREE.BufferAttribute, startZ: number): void {
