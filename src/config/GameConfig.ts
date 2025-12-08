@@ -16,6 +16,15 @@ export const GAME_CONFIG = {
   zenObstacleDensityMultiplier: 0.7,
 } as const;
 
+export const SPRINT_CONFIG = {
+  // Target distance to complete the sprint (in meters)
+  TARGET_DISTANCE: 200,
+  // Time penalty for crashing (in seconds)
+  PENALTY_SECONDS: 20,
+  // Crash sequence duration (in seconds)
+  CRASH_DURATION: 2.0,
+} as const;
+
 const isLowPreset =
   typeof navigator !== 'undefined' &&
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

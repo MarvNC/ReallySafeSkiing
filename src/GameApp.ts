@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 
-import { GAME_CONFIG, GRAPHICS_PRESET, LIGHTING_CONFIG, PLAYER_CONFIG } from './config/GameConfig';
+import {
+  GAME_CONFIG,
+  GRAPHICS_PRESET,
+  LIGHTING_CONFIG,
+  PLAYER_CONFIG,
+  SPRINT_CONFIG,
+} from './config/GameConfig';
 import { Action, InputManager } from './core/InputManager';
 import { LightingManager } from './core/LightingManager';
 import { DebugHelpers } from './debug/DebugHelpers';
@@ -58,7 +64,7 @@ export class GameApp {
   // Crash sequence variables
   private timeScale = 1.0;
   private crashTimer = 0;
-  private readonly CRASH_DURATION = 3.0; // Real-time seconds
+  private readonly CRASH_DURATION = SPRINT_CONFIG.CRASH_DURATION; // Real-time seconds
   private wasCrashedBeforePause = false; // Track if we were in crash state before pausing
 
   // New Menu State
@@ -392,6 +398,8 @@ export class GameApp {
     useGameStore.getState().setUIState(UIState.PLAYING);
     useGameStore.getState().setTopSpeed(0);
     useGameStore.getState().setEndReason(null);
+    // Reset penalties - use zustand's set function pattern
+    useGameStore.setState({ penalties: 0 });
     useGameStore.getState().updateStats(0, 0, this.timeRemaining, this.timeElapsed);
 
     // Reset clock
@@ -548,7 +556,61 @@ export class GameApp {
     if (this.gameState !== GameState.CRASHED) return;
     this.timeScale = 1;
     this.wasCrashedBeforePause = false;
-    this.endGame('crash');
+
+    const gameMode = useGameStore.getState().gameMode;
+
+    // In Sprint mode, recover from crash instead of ending game
+    if (gameMode === 'SPRINT') {
+      this.recoverFromCrash();
+    } else {
+      // In Zen mode or other modes, end the game on crash
+      this.endGame('crash');
+    }
+  }
+
+  private recoverFromCrash(): void {
+    if (this.gameState !== GameState.CRASHED) return;
+
+    const gameMode = useGameStore.getState().gameMode;
+    if (gameMode !== 'SPRINT') return;
+
+    // 1. Add penalty time (this also increments penalty count)
+    useGameStore.getState().addPenalty(SPRINT_CONFIG.PENALTY_SECONDS);
+    // Update local timeElapsed to match store
+    this.timeElapsed = useGameStore.getState().timeElapsed;
+
+    // 2. Reset velocity
+    this.playerPhysics.resetVelocity();
+
+    // 3. Snap to track center at current Z position
+    const currentPos = this.playerPhysics.getPosition();
+    const closestPoint = this.terrainManager.getClosestPathPoint(currentPos.z);
+
+    if (closestPoint) {
+      // Get terrain height at the center of the track
+      const terrainHeight = this.terrainManager.getTerrainHeight(closestPoint.x, closestPoint.z);
+      const respawnHeight = terrainHeight + PLAYER_CONFIG.radius + 0.5;
+
+      // Create respawn position at track center
+      const respawnPos = new THREE.Vector3(closestPoint.x, respawnHeight, closestPoint.z);
+
+      // Reset player position
+      this.playerPhysics.resetPosition(respawnPos);
+      this.player.mesh.position.copy(respawnPos);
+      this.player.mesh.quaternion.set(0, 0, 0, 1);
+    }
+
+    // 4. Reset crash state
+    this.playerPhysics.setCrashed(false);
+    this.player.isCrashed = false;
+    this.player.resetCamera();
+
+    // 5. Return to playing state
+    this.gameState = GameState.PLAYING;
+    useGameStore.getState().setUIState(UIState.PLAYING);
+
+    // Optional: Could trigger a "Penalty" floating text here
+    console.log(`Penalty! +${SPRINT_CONFIG.PENALTY_SECONDS}s`);
   }
 
   private setupMouseLook(): void {
@@ -636,9 +698,12 @@ export class GameApp {
         }
       });
 
-      if (isZenMode) {
+      // Timer logic: Sprint mode counts up, Zen mode counts up, old Arcade mode counted down
+      const isSprintMode = gameMode === 'SPRINT';
+      if (isZenMode || isSprintMode) {
         this.timeElapsed += gameDelta;
       } else {
+        // Legacy timer countdown (if any other modes exist)
         this.timeRemaining = Math.max(0, this.timeRemaining - gameDelta);
       }
 
@@ -650,7 +715,14 @@ export class GameApp {
 
       this.updateHUD();
 
-      if (!isZenMode && this.timeRemaining <= 0) {
+      // Win condition: Sprint mode checks distance, old mode checks time
+      if (isSprintMode) {
+        const currentPos = this.playerPhysics.getPosition();
+        const distance = Math.abs(currentPos.z - this.startPosition.z);
+        if (distance >= SPRINT_CONFIG.TARGET_DISTANCE) {
+          this.endGame('complete');
+        }
+      } else if (!isZenMode && this.timeRemaining <= 0) {
         this.endGame('time');
       }
 
@@ -678,7 +750,8 @@ export class GameApp {
       this.player.setCrashCameraValues(easeProgress);
 
       // 5. Keep Timer Running
-      if (isZenMode) {
+      const isSprintMode = gameMode === 'SPRINT';
+      if (isZenMode || isSprintMode) {
         this.timeElapsed += gameDelta;
       } else {
         this.timeRemaining = Math.max(0, this.timeRemaining - gameDelta); // Slow-mo means game timer slows too

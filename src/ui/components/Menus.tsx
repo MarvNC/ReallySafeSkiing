@@ -19,16 +19,16 @@ const GameModeToggle: FC = () => {
     <div className="flex w-full items-center gap-1 rounded-full border border-white/10 bg-black/40 p-1 shadow-inner shadow-black/40">
       <button
         type="button"
-        aria-pressed={gameMode === 'ARCADE'}
-        onClick={() => handleToggle('ARCADE')}
+        aria-pressed={gameMode === 'SPRINT'}
+        onClick={() => handleToggle('SPRINT')}
         className={clsx(
           'flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold tracking-[0.2em] uppercase transition-all md:text-sm',
-          gameMode === 'ARCADE'
+          gameMode === 'SPRINT'
             ? 'bg-accent-orange text-slate-900 shadow-lg shadow-orange-500/40'
             : 'text-white/60 hover:text-white'
         )}
       >
-        Timed
+        Sprint
       </button>
       <button
         type="button"
@@ -41,7 +41,7 @@ const GameModeToggle: FC = () => {
             : 'text-white/60 hover:text-white'
         )}
       >
-        Infinite
+        Zen
       </button>
     </div>
   );
@@ -148,9 +148,11 @@ export const Menus = () => {
     gameMode,
     timeRemaining,
     timeElapsed,
+    penalties,
   } = useGameStore();
   const isCrashGameOver = endReason === 'crash';
   const isManualEnd = endReason === 'manual';
+  const isComplete = endReason === 'complete';
   const isCrashTint =
     uiState === UIState.CRASHED || (uiState === UIState.GAME_OVER && isCrashGameOver);
 
@@ -164,7 +166,11 @@ export const Menus = () => {
   };
 
   const finalTime =
-    gameMode === 'ZEN' ? timeElapsed : Math.max(0, GAME_CONFIG.timerDuration - timeRemaining);
+    gameMode === 'ZEN'
+      ? timeElapsed
+      : gameMode === 'SPRINT'
+        ? timeElapsed // Sprint mode uses elapsed time (includes penalties)
+        : Math.max(0, GAME_CONFIG.timerDuration - timeRemaining);
 
   if (uiState === UIState.PLAYING) return null;
 
@@ -329,12 +335,18 @@ export const Menus = () => {
               'mb-5 text-4xl italic drop-shadow-lg md:text-7xl',
               isCrashGameOver
                 ? 'text-accent-red drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]'
-                : isManualEnd
+                : isComplete || isManualEnd
                   ? 'text-cyan-300'
                   : undefined
             )}
           >
-            {isCrashGameOver ? 'WASTED' : isManualEnd ? 'RUN COMPLETE' : "TIME'S UP!"}
+            {isCrashGameOver
+              ? 'WASTED'
+              : isComplete
+                ? 'SPRINT COMPLETE!'
+                : isManualEnd
+                  ? 'RUN COMPLETE'
+                  : "TIME'S UP!"}
           </h1>
           {isCrashGameOver && (
             <div className="mb-2 text-center text-lg text-white/80 md:mb-4 md:text-xl">
@@ -353,7 +365,14 @@ export const Menus = () => {
             >
               TOP SPEED: {topSpeed} km/h
             </div>
-            <div className="text-xl text-white/80 md:text-2xl">TIME: {formatTime(finalTime)}</div>
+            <div className="text-xl text-white/80 md:text-2xl">
+              TIME: {formatTime(finalTime)}
+              {gameMode === 'SPRINT' && penalties > 0 && (
+                <span className="ml-2 text-sm text-white/60">
+                  ({penalties} {penalties === 1 ? 'penalty' : 'penalties'})
+                </span>
+              )}
+            </div>
             <SetupPanel />
           </div>
           <StartButton label="PLAY AGAIN" onClick={handleStart} gameMode={gameMode} />

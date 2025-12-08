@@ -173,7 +173,7 @@ export class TerrainManager {
     return this.wireframe;
   }
 
-  private getClosestPathPoint(worldZ: number): PathPoint | undefined {
+  getClosestPathPoint(worldZ: number): PathPoint | undefined {
     if (this.allPoints.length === 0) {
       return undefined;
     }

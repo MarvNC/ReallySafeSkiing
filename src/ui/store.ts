@@ -11,8 +11,8 @@ export enum UIState {
 }
 
 export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
-export type GameMode = 'ARCADE' | 'ZEN';
-export type EndReason = 'time' | 'crash' | 'manual';
+export type GameMode = 'SPRINT' | 'ZEN';
+export type EndReason = 'time' | 'crash' | 'manual' | 'complete';
 
 interface GameState {
   // Game Flow
@@ -25,6 +25,7 @@ interface GameState {
   timeRemaining: number;
   timeElapsed: number;
   topSpeed: number;
+  penalties: number; // Number of penalties incurred (crashes)
 
   // Menu Navigation
   menuIndex: number; // 0: Resume, 1: Restart, 2: Back to menu, 3: About
@@ -48,6 +49,7 @@ interface GameState {
   setSlopeAngle: (angle: number) => void;
   setDifficulty: (difficulty: Difficulty) => void;
   setGameMode: (mode: GameMode) => void;
+  addPenalty: (seconds: number) => void;
 }
 
 // Create store with subscription capability (useful if GameApp needs to react to UI changes)
@@ -60,10 +62,11 @@ export const useGameStore = create<GameState>()(
     timeRemaining: 60,
     timeElapsed: 0,
     topSpeed: 0,
+    penalties: 0,
     menuIndex: 0,
     slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
-    gameMode: 'ARCADE',
+    gameMode: 'SPRINT',
 
     setUIState: (uiState) => set({ uiState }),
     setEndReason: (endReason) => set({ endReason }),
@@ -79,5 +82,10 @@ export const useGameStore = create<GameState>()(
     setSlopeAngle: (angle) => set({ slopeAngle: Math.max(0, Math.min(70, angle)) }),
     setDifficulty: (difficulty) => set({ difficulty }),
     setGameMode: (mode) => set({ gameMode: mode }),
+    addPenalty: (seconds) =>
+      set((state) => ({
+        timeElapsed: state.timeElapsed + seconds,
+        penalties: state.penalties + 1,
+      })),
   }))
 );
