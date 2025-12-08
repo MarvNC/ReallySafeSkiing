@@ -137,8 +137,7 @@ export const GameOver = () => {
           difficulty: finishStats.difficulty,
           slopeAngle: finishStats.slopeAngle,
         },
-        finishStats.timeElapsed,
-        true
+        finishStats.timeElapsed
       );
     }
   }, [

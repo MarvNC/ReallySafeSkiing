@@ -18,6 +18,7 @@ type PersonalBestContext = {
 
 type PersonalBestOptions = {
   includeLegacy?: boolean;
+  betterIsLower?: boolean;
 };
 
 const getStorage = () => {
@@ -37,6 +38,8 @@ const getPBKey = ({ mode, difficulty, slopeAngle }: PersonalBestContext) =>
 
 const getLegacyPBKey = (mode: GameMode) => `rss_pb_${mode.toLowerCase()}`;
 
+const prefersLowerScore = (mode: GameMode) => mode === 'SPRINT';
+
 export const calculateGrade = (timeSeconds: number, penalties: number): Grade => {
   const penaltyWeightSeconds = SPRINT_CONFIG.PENALTY_SECONDS * 0.5;
   const adjustedScore = timeSeconds + penalties * penaltyWeightSeconds;
@@ -50,8 +53,8 @@ export const calculateGrade = (timeSeconds: number, penalties: number): Grade =>
 
 export const savePersonalBest = (
   context: PersonalBestContext,
-  score: number,
-  betterIsLower = true
+  value: number,
+  options: Pick<PersonalBestOptions, 'betterIsLower'> = {}
 ): boolean => {
   const storage = getStorage();
   if (!storage) return false;
@@ -65,12 +68,13 @@ export const savePersonalBest = (
     return false;
   }
 
+  const betterIsLower = options.betterIsLower ?? prefersLowerScore(context.mode);
   const isBetter =
-    currentScore === null ? true : betterIsLower ? score < currentScore : score > currentScore;
+    currentScore === null ? true : betterIsLower ? value < currentScore : value > currentScore;
 
   if (isBetter) {
     try {
-      storage.setItem(key, score.toString());
+      storage.setItem(key, value.toString());
       return true;
     } catch {
       return false;

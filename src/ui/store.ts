@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
 import { ARCADE_CONFIG } from '../config/GameConfig';
+import { getPersonalBest, savePersonalBest } from '../utils/scoreSystem';
 
 export enum UIState {
   MENU,
@@ -94,20 +95,13 @@ const ARCADE_DEFAULT_LIVES = ARCADE_CONFIG.DEFAULT_LIVES;
 const ARCADE_DEFAULT_MULTIPLIER = 1;
 const SCORE_POPUP_LIFETIME_MS = 1600;
 
-const getStoredHighScore = (): number => {
-  if (typeof window === 'undefined') return 0;
-  const stored = window.localStorage.getItem('arcadeHighScore');
-  const parsed = stored ? Number(stored) : 0;
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const persistHighScore = (score: number) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem('arcadeHighScore', score.toString());
-  } catch (err) {
-    console.warn('Failed to persist arcade high score', err);
-  }
+const loadArcadePersonalBest = (difficulty: Difficulty, slopeAngle: number): number => {
+  const context: { mode: GameMode; difficulty: Difficulty; slopeAngle: number } = {
+    mode: 'ARCADE',
+    difficulty,
+    slopeAngle,
+  };
+  return getPersonalBest(context) ?? 0;
 };
 
 // Create store with subscription capability (useful if GameApp needs to react to UI changes)
@@ -128,7 +122,7 @@ export const useGameStore = create<GameState>()(
     difficulty: 'SPORT',
     gameMode: 'ARCADE',
     score: 0,
-    highScore: getStoredHighScore(),
+    highScore: loadArcadePersonalBest('SPORT', 30),
     coins: 0,
     lives: ARCADE_DEFAULT_LIVES,
     multiplier: ARCADE_DEFAULT_MULTIPLIER,
@@ -146,9 +140,31 @@ export const useGameStore = create<GameState>()(
       }),
     setTopSpeed: (topSpeed) => set({ topSpeed }),
     setMenuIndex: (menuIndex) => set({ menuIndex }),
-    setSlopeAngle: (angle) => set({ slopeAngle: Math.max(0, Math.min(70, angle)) }),
-    setDifficulty: (difficulty) => set({ difficulty }),
-    setGameMode: (mode) => set({ gameMode: mode }),
+    setSlopeAngle: (angle) =>
+      set((state) => {
+        const nextAngle = Math.max(0, Math.min(70, angle));
+        const nextHighScore =
+          state.gameMode === 'ARCADE'
+            ? loadArcadePersonalBest(state.difficulty, nextAngle)
+            : state.highScore;
+        return { slopeAngle: nextAngle, highScore: nextHighScore };
+      }),
+    setDifficulty: (difficulty) =>
+      set((state) => ({
+        difficulty,
+        highScore:
+          state.gameMode === 'ARCADE'
+            ? loadArcadePersonalBest(difficulty, state.slopeAngle)
+            : state.highScore,
+      })),
+    setGameMode: (mode) =>
+      set((state) => ({
+        gameMode: mode,
+        highScore:
+          mode === 'ARCADE'
+            ? loadArcadePersonalBest(state.difficulty, state.slopeAngle)
+            : state.highScore,
+      })),
     resetArcadeRun: () =>
       set((state) => ({
         score: 0,
@@ -162,7 +178,10 @@ export const useGameStore = create<GameState>()(
         const nextScore = Math.max(0, state.score + amount);
         const newHigh = Math.max(state.highScore, nextScore);
         if (newHigh > state.highScore) {
-          persistHighScore(newHigh);
+          savePersonalBest(
+            { mode: 'ARCADE', difficulty: state.difficulty, slopeAngle: state.slopeAngle },
+            newHigh
+          );
         }
         return {
           score: nextScore,
@@ -186,7 +205,10 @@ export const useGameStore = create<GameState>()(
       set((state) => {
         const newHigh = Math.max(score, state.highScore);
         if (newHigh > state.highScore) {
-          persistHighScore(newHigh);
+          savePersonalBest(
+            { mode: 'ARCADE', difficulty: state.difficulty, slopeAngle: state.slopeAngle },
+            newHigh
+          );
         }
         return { highScore: newHigh };
       }),
