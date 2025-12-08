@@ -412,7 +412,8 @@ export class TerrainChunk {
       };
 
       if (world) {
-        const colliderDesc = RAPIER.ColliderDesc.ball(ARCADE_CONFIG.COIN_RADIUS)
+        const colliderRadius = ARCADE_CONFIG.COIN_RADIUS * 1.5; // sphere collider enlarged for easier pickup
+        const colliderDesc = RAPIER.ColliderDesc.ball(colliderRadius)
           .setSensor(true)
           .setTranslation(worldX, worldY, worldZ)
           .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Collectible, PhysicsLayer.Player))
