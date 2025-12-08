@@ -47,6 +47,7 @@ interface GameState {
   topSpeed: number;
   penalties: number; // Number of penalties incurred (crashes)
   showPenaltyNotification: boolean; // Flag to show penalty animation
+  hudVisible: boolean; // Flag to toggle HUD visibility
 
   // Menu Navigation
   menuIndex: number; // 0: Resume, 1: Restart, 2: Back to menu, 3: About
@@ -88,6 +89,7 @@ interface GameState {
   addPenalty: (seconds: number) => void;
   triggerPenaltyNotification: () => void;
   clearPenaltyNotification: () => void;
+  toggleHUD: () => void;
   triggerScorePopup: (payload: ScorePopupPayload) => void;
 }
 
@@ -117,6 +119,7 @@ export const useGameStore = create<GameState>()(
     topSpeed: 0,
     penalties: 0,
     showPenaltyNotification: false,
+    hudVisible: true,
     menuIndex: 0,
     slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
@@ -219,6 +222,7 @@ export const useGameStore = create<GameState>()(
       })),
     triggerPenaltyNotification: () => set({ showPenaltyNotification: true }),
     clearPenaltyNotification: () => set({ showPenaltyNotification: false }),
+    toggleHUD: () => set((state) => ({ hudVisible: !state.hudVisible })),
     triggerScorePopup: (payload) => {
       const id = Date.now() + Math.random();
       const value = payload.value ?? 0;

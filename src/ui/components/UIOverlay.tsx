@@ -6,18 +6,18 @@ import { TopBar } from './TopBar';
 import { TouchControls } from './TouchControls';
 
 export const UIOverlay = () => {
-  const { uiState } = useGameStore();
+  const { uiState, hudVisible } = useGameStore();
 
   return (
     <>
       {/* Top Bar (Pause / Fullscreen) */}
-      <TopBar />
+      {hudVisible && <TopBar />}
 
       {/* HUD visible during gameplay AND crash */}
-      {(uiState === UIState.PLAYING || uiState === UIState.CRASHED) && <HUD />}
+      {hudVisible && (uiState === UIState.PLAYING || uiState === UIState.CRASHED) && <HUD />}
 
       {/* Mobile Controls */}
-      <TouchControls />
+      {hudVisible && <TouchControls />}
 
       {/* Menus handle MENU, PAUSED, GAME_OVER, and CRASHED states */}
       <Menus />

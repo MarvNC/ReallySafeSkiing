@@ -179,7 +179,8 @@ export class GameApp {
     this.input.bindKey('c', Action.ToggleCamera);
     this.input.bindKey('v', Action.ToggleWireframe);
     this.input.bindKey('g', Action.ToggleGrid);
-    this.input.bindKey('F2', Action.ToggleDebugUi);
+    this.input.bindKey('5', Action.ToggleDebugUi);
+    this.input.bindKey('6', Action.ToggleHUD);
 
     // Player controls
     this.input.bindKey('w', Action.Forward);
@@ -311,6 +312,11 @@ export class GameApp {
       if (phase !== 'pressed') return;
       this.setDebugMode(!this.isDebugMode);
       console.info(`Debug mode ${this.isDebugMode ? 'enabled' : 'disabled'}`);
+    });
+
+    this.input.on(Action.ToggleHUD, (_action, phase) => {
+      if (phase !== 'pressed') return;
+      useGameStore.getState().toggleHUD();
     });
 
     // Set initial key bindings for menu state

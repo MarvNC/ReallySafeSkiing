@@ -165,7 +165,8 @@ export class DebugUI {
         <div class="debug-row"><span class="debug-label">C:</span> Toggle Camera</div>
         <div class="debug-row"><span class="debug-label">V:</span> Toggle Wireframe</div>
         <div class="debug-row"><span class="debug-label">G:</span> Toggle Grid</div>
-        <div class="debug-row"><span class="debug-label">F2:</span> Toggle Debug UI</div>
+        <div class="debug-row"><span class="debug-label">5:</span> Toggle Debug UI</div>
+        <div class="debug-row"><span class="debug-label">6:</span> Toggle HUD</div>
       </div>
     `;
   }

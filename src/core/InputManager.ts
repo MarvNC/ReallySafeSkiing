@@ -3,6 +3,7 @@ export const Action = {
   ToggleWireframe: 'ToggleWireframe',
   ToggleGrid: 'ToggleGrid',
   ToggleDebugUi: 'ToggleDebugUi',
+  ToggleHUD: 'ToggleHUD',
   // Game Flow Actions
   Start: 'Start',
   // Reserved for future player controls
