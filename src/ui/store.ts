@@ -17,6 +17,21 @@ export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
 export type GameMode = 'SPRINT' | 'ZEN' | 'ARCADE';
 export type EndReason = 'time' | 'crash' | 'manual' | 'complete';
 
+export type ScorePopup = {
+  id: number;
+  value: number;
+  multiplier: number;
+  text: string;
+  type: 'coin' | 'airtime' | 'trick';
+};
+
+type ScorePopupPayload = {
+  value?: number;
+  multiplier: number;
+  text?: string;
+  type: ScorePopup['type'];
+};
+
 interface GameState {
   // Game Flow
   uiState: UIState;
@@ -46,6 +61,7 @@ interface GameState {
   coins: number;
   lives: number;
   multiplier: number;
+  scorePopups: ScorePopup[];
 
   // Actions (Callable from React or GameApp)
   setUIState: (state: UIState) => void;
@@ -71,10 +87,12 @@ interface GameState {
   addPenalty: (seconds: number) => void;
   triggerPenaltyNotification: () => void;
   clearPenaltyNotification: () => void;
+  triggerScorePopup: (payload: ScorePopupPayload) => void;
 }
 
 const ARCADE_DEFAULT_LIVES = ARCADE_CONFIG.DEFAULT_LIVES;
 const ARCADE_DEFAULT_MULTIPLIER = 1;
+const SCORE_POPUP_LIFETIME_MS = 1600;
 
 const getStoredHighScore = (): number => {
   if (typeof window === 'undefined') return 0;
@@ -114,6 +132,7 @@ export const useGameStore = create<GameState>()(
     coins: 0,
     lives: ARCADE_DEFAULT_LIVES,
     multiplier: ARCADE_DEFAULT_MULTIPLIER,
+    scorePopups: [],
 
     setUIState: (uiState) => set({ uiState }),
     setEndReason: (endReason) => set({ endReason }),
@@ -178,5 +197,31 @@ export const useGameStore = create<GameState>()(
       })),
     triggerPenaltyNotification: () => set({ showPenaltyNotification: true }),
     clearPenaltyNotification: () => set({ showPenaltyNotification: false }),
+    triggerScorePopup: (payload) => {
+      const id = Date.now() + Math.random();
+      const value = payload.value ?? 0;
+      const text = payload.text ?? `+${Math.round(value)}`;
+
+      set((state) => ({
+        scorePopups: [
+          ...state.scorePopups,
+          {
+            id,
+            value,
+            multiplier: payload.multiplier,
+            text,
+            type: payload.type,
+          },
+        ],
+      }));
+
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          set((state) => ({
+            scorePopups: state.scorePopups.filter((popup) => popup.id !== id),
+          }));
+        }, SCORE_POPUP_LIFETIME_MS);
+      }
+    },
   }))
 );

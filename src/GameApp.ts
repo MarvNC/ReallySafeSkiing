@@ -609,8 +609,16 @@ export class GameApp {
     const store = useGameStore.getState();
     if (store.gameMode !== 'ARCADE') return;
 
+    const currentMultiplier = store.multiplier;
+    const coinScore = ARCADE_CONFIG.COIN_VALUE * currentMultiplier;
+
     store.addCoin(1);
-    store.addScore(ARCADE_CONFIG.COIN_VALUE * store.multiplier);
+    store.addScore(coinScore);
+    store.triggerScorePopup({
+      value: coinScore,
+      multiplier: currentMultiplier,
+      type: 'coin',
+    });
     store.setMultiplier(
       Number((store.multiplier + ARCADE_CONFIG.COIN_MULTIPLIER_BONUS).toFixed(2))
     );
@@ -697,6 +705,11 @@ export class GameApp {
           const bonus = incrementsEarned * ARCADE_CONFIG.AIR_MULTIPLIER_INCREMENT;
           const next = Number((store.multiplier + bonus).toFixed(2));
           store.setMultiplier(next);
+          store.triggerScorePopup({
+            text: 'AIRTIME!',
+            multiplier: next,
+            type: 'airtime',
+          });
           this.airTimeAccumulator -= incrementsEarned * interval;
         }
       }

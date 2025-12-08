@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { SPRINT_CONFIG } from '../../config/GameConfig';
 import { useGameStore } from '../store';
+import { ScoreFeed } from './ScoreFeed';
 
 type HeartState = 'full' | 'fragile' | 'lost';
 
@@ -208,6 +209,7 @@ export const HUD = () => {
             'radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.4) 90%, rgba(0,0,0,0.8) 100%)',
         }}
       />
+      <ScoreFeed />
       <div className="font-russo pointer-events-none absolute inset-0 z-30 flex flex-col justify-between p-6 text-white uppercase select-none">
         <div className="flex items-start justify-between gap-4">
           {/* --- TOP LEFT: HYPE ZONE (ARCADE) OR TIMER/DISTANCE (OTHERS) --- */}
