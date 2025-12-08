@@ -338,7 +338,7 @@ export const GameOver = () => {
               <RefreshCcw className="h-5 w-5 transition-transform group-hover:rotate-180" />
               Play Again
             </button>
-            <div className="hidden text-center text-xs text-white/60 md:block">
+            <div className="text-center text-xs text-white/60">
               Press Space or Enter to restart instantly.
             </div>
           </div>
