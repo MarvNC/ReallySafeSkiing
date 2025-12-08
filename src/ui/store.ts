@@ -47,7 +47,7 @@ export const useGameStore = create<GameState>()(
     timeRemaining: 60,
     topSpeed: 0,
     menuIndex: 0,
-    slopeAngle: 20, // ~matches previous START_ALTITUDE / TOTAL_LENGTH slope
+    slopeAngle: 30, // default to intermediate slope
     difficulty: 'SPORT',
 
     setUIState: (uiState) => set({ uiState }),
