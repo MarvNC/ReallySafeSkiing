@@ -81,7 +81,7 @@ const SetupPanel: FC = () => (
         <span className="tracking-widest">TO WEDGE</span>
       </div>
       {/* Mobile controls */}
-      <div className="flex flex-col items-center gap-1 text-center tracking-widest md:hidden">
+      <div className="flex flex-col items-center gap-1 text-center text-xs tracking-widest md:hidden">
         <div>TAP LEFT AND RIGHT SIDES TO STEER</div>
         <div>TAP BOTH SIDES TO WEDGE</div>
       </div>
