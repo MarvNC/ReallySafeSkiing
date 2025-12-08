@@ -101,7 +101,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
       onClick={onClick}
       // Mobile: mt-4, py-3, text-lg. Desktop: mt-6, py-4, text-xl.
       className={clsx(
-        'font-russo pointer-events-auto mt-4 w-full max-w-sm cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg transition-all active:scale-95 md:mt-6 md:max-w-3xl md:py-4 md:text-xl',
+        'font-russo pointer-events-auto mt-4 w-full max-w-sm cursor-pointer rounded-xl py-3 text-lg tracking-widest text-white uppercase shadow-lg transition-all active:scale-95 md:mt-6 md:max-w-xl md:py-4 md:text-xl',
         gameMode === 'ZEN'
           ? 'bg-cyan-400 shadow-cyan-400/30 hover:bg-cyan-300'
           : 'bg-accent-orange shadow-orange-500/20 hover:bg-orange-400'
@@ -116,7 +116,7 @@ const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClic
   <button
     onClick={onClick}
     // Mobile: mt-2, py-2, text-sm. Desktop: mt-4, py-4, text-lg.
-    className="font-russo pointer-events-auto mt-2 w-full max-w-sm cursor-pointer rounded-xl border-2 border-white/20 bg-transparent py-2 text-sm tracking-widest text-white/80 uppercase transition-all hover:border-white/50 hover:bg-white/10 hover:text-white md:mt-4 md:max-w-3xl md:py-4 md:text-lg"
+    className="font-russo pointer-events-auto mt-2 w-full max-w-sm cursor-pointer rounded-xl border-2 border-white/20 bg-transparent py-2 text-sm tracking-widest text-white/80 uppercase transition-all hover:border-white/50 hover:bg-white/10 hover:text-white md:mt-4 md:max-w-xl md:py-4 md:text-lg"
   >
     {label}
   </button>
