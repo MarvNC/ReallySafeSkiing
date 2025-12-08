@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
-import { type FC, type ReactNode, useState } from 'react';
+import { type FC, type ReactNode, useEffect, useState } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
@@ -34,6 +34,47 @@ const ContentContainer: FC<{ children: ReactNode; className?: string }> = ({
   children,
   className,
 }) => <div className={clsx('w-full max-w-sm px-4 md:max-w-xl md:px-0', className)}>{children}</div>;
+
+const KeyPill: FC<{ label: string; large?: boolean }> = ({ label, large = false }) => (
+  <span
+    className={clsx(
+      'rounded-md border border-white/20 bg-white/10 px-3 py-2 font-mono text-white shadow-[0_0_25px_rgba(255,255,255,0.08)]',
+      large ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl'
+    )}
+  >
+    {label}
+  </span>
+);
+
+const FirstRunPrompt: FC<{ isMobile: boolean }> = ({ isMobile }) => (
+  <div className="pointer-events-none flex flex-col items-center gap-6 text-center text-white md:gap-8">
+    {isMobile ? (
+      <>
+        <div className="text-4xl font-extrabold tracking-wide md:text-6xl">
+          TAP LEFT / RIGHT TO STEER
+        </div>
+        <div className="text-3xl font-semibold text-amber-200 md:text-5xl">
+          TAP BOTH SIDES TO WEDGE / BRAKE
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-3xl font-semibold text-white md:gap-6 md:text-4xl">
+          <KeyPill label="A" large />
+          <span className="text-2xl font-semibold text-white/60 md:text-3xl">/</span>
+          <KeyPill label="D" large />
+          <span className="text-2xl font-semibold text-white/80 md:text-3xl">TO STEER</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-3xl font-semibold text-amber-200 md:gap-4 md:text-4xl">
+          <KeyPill label="A" />
+          <span className="text-xl font-semibold text-white/70 md:text-2xl">+</span>
+          <KeyPill label="D" />
+          <span className="text-2xl font-bold text-amber-200 md:text-4xl">WEDGE / BRAKE</span>
+        </div>
+      </>
+    )}
+  </div>
+);
 
 const AccordionSection: FC<{
   title: string;
@@ -195,6 +236,27 @@ const MenuFooter: FC = () => {
 
 export const Menus = () => {
   const { uiState, menuIndex, setMenuIndex, endReason, gameMode } = useGameStore();
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const hasTouchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+    return window.matchMedia('(pointer: coarse)').matches || hasTouchPoints;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    const updateIsMobile = () => {
+      const hasTouchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+      setIsMobile(mediaQuery.matches || hasTouchPoints);
+    };
+
+    updateIsMobile();
+    mediaQuery.addEventListener('change', updateIsMobile);
+
+    return () => mediaQuery.removeEventListener('change', updateIsMobile);
+  }, []);
+
+  const isFirstRunOverlay = uiState === UIState.FIRST_RUN;
 
   if (uiState === UIState.PLAYING) return null;
 
@@ -242,6 +304,7 @@ export const Menus = () => {
     <div
       className={clsx(
         'font-russo absolute inset-0 z-50 flex flex-col items-center justify-center overflow-hidden text-white',
+        isFirstRunOverlay && 'pointer-events-none',
         isCrashTint
           ? 'bg-red-950/40 backdrop-blur-sm transition-colors duration-1000'
           : uiState === UIState.ABOUT
@@ -263,6 +326,13 @@ export const Menus = () => {
               : 'bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.2),transparent)]'
           )}
         />
+      )}
+
+      {/* FIRST RUN PROMPT */}
+      {uiState === UIState.FIRST_RUN && (
+        <div className="flex flex-col items-center gap-8 px-4 text-center md:gap-10">
+          <FirstRunPrompt isMobile={isMobile} />
+        </div>
       )}
 
       {/* MAIN MENU */}
