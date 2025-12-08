@@ -1,3 +1,2 @@
 - Revamp pause menu to be in line with rest of game styling.
-- Add share button
 - Fix FOV making the camera behind terrain on steep slopes at high speeds
