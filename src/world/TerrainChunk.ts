@@ -374,44 +374,37 @@ export class TerrainChunk {
     this.coinHandleToIndex.clear();
     this.coinColliders = [];
 
-    for (let arc = 0; arc < ARCADE_CONFIG.ARCS_PER_CHUNK && coinIndex < this.maxCoins; arc++) {
-      const coinsPerArc = ARCADE_CONFIG.COINS_PER_ARC;
-      const availableStart = Math.max(0, points.length - coinsPerArc - 1);
-      const arcStartIndex = availableStart > 0 ? Math.floor(Math.random() * availableStart) : 0;
-      const lateralOffset = (Math.random() - 0.5) * (CHUNK_WIDTH * 0.35);
-      const arcHeight =
-        ARCADE_CONFIG.COIN_ARC_HEIGHT_RANGE.min +
-        Math.random() *
-          (ARCADE_CONFIG.COIN_ARC_HEIGHT_RANGE.max - ARCADE_CONFIG.COIN_ARC_HEIGHT_RANGE.min);
+    const coinsToSpawn = Math.min(this.maxCoins, Math.max(4, Math.floor(points.length * 0.08)));
 
-      for (let i = 0; i < coinsPerArc && coinIndex < this.maxCoins; i++) {
-        const point = points[Math.min(points.length - 1, arcStartIndex + i)];
-        const t = coinsPerArc > 1 ? i / (coinsPerArc - 1) : 0.5;
-        const heightOffset = Math.sin(Math.PI * t) * arcHeight;
-        const worldX = point.x + point.rightX * lateralOffset;
-        const worldZ = point.z;
-        const worldY = point.y + heightOffset + 1;
+    for (let i = 0; i < coinsToSpawn; i++) {
+      const pointIndex = Math.floor(Math.random() * points.length);
+      const point = points[pointIndex];
+      const lateralRange = (point.width ?? CHUNK_WIDTH * 0.5) * 0.6;
+      const lateralOffset = (Math.random() - 0.5) * lateralRange;
+      const worldX = point.x + point.rightX * lateralOffset;
+      const worldZ = point.z;
+      const sample = this.generator.sampleTerrainAt(worldX, worldZ, point);
+      const worldY = sample.height + 0.8;
 
-        dummy.position.set(worldX, worldY, worldZ - startZ);
-        dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
-        dummy.scale.setScalar(1);
-        dummy.updateMatrix();
+      dummy.position.set(worldX, worldY, worldZ - startZ);
+      dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
 
-        this.coinMesh.setMatrixAt(coinIndex, dummy.matrix);
+      this.coinMesh.setMatrixAt(coinIndex, dummy.matrix);
 
-        if (world) {
-          const colliderDesc = RAPIER.ColliderDesc.ball(ARCADE_CONFIG.COIN_RADIUS)
-            .setSensor(true)
-            .setTranslation(worldX, worldY, worldZ)
-            .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Collectible, PhysicsLayer.Player))
-            .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-          const collider = world.createCollider(colliderDesc);
-          this.coinColliders.push(collider);
-          this.coinHandleToIndex.set(collider.handle, coinIndex);
-        }
-
-        coinIndex++;
+      if (world) {
+        const colliderDesc = RAPIER.ColliderDesc.ball(ARCADE_CONFIG.COIN_RADIUS)
+          .setSensor(true)
+          .setTranslation(worldX, worldY, worldZ)
+          .setCollisionGroups(makeCollisionGroups(PhysicsLayer.Collectible, PhysicsLayer.Player))
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+        const collider = world.createCollider(colliderDesc);
+        this.coinColliders.push(collider);
+        this.coinHandleToIndex.set(collider.handle, coinIndex);
       }
+
+      coinIndex++;
     }
 
     this.coinMesh.count = coinIndex;

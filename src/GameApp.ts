@@ -64,6 +64,7 @@ export class GameApp {
   private topSpeed: number = 0; // Track top speed in km/h
   private lastDistance = 0;
   private arcadeInvulnerability = 0;
+  private airTimeAccumulator = 0;
   private tmpVecA = new THREE.Vector3();
   private tmpVecB = new THREE.Vector3();
 
@@ -417,6 +418,7 @@ export class GameApp {
     this.gameState = shouldPauseForFirstRun ? GameState.READY : GameState.PLAYING;
     this.lastDistance = 0;
     this.arcadeInvulnerability = 0;
+    this.airTimeAccumulator = 0;
 
     // Rebuild world
     this.terrainManager.regenerate(slopeAngle, difficulty, obstacleMultiplier, coinsEnabled);
@@ -598,13 +600,6 @@ export class GameApp {
       if (baseScore > 0) {
         store.addScore(baseScore);
       }
-
-      if (gameDelta !== undefined && this.playerPhysics.isAirborne()) {
-        const nextMult = store.multiplier + ARCADE_CONFIG.AIR_MULTIPLIER_PER_SECOND * gameDelta;
-        if (nextMult > store.multiplier) {
-          store.setMultiplier(Number(nextMult.toFixed(2)));
-        }
-      }
     }
   }
 
@@ -645,6 +640,7 @@ export class GameApp {
 
     if (speedKmh >= ARCADE_CONFIG.DAMAGE_THRESHOLD_KMH) {
       store.loseLife(1);
+      this.airTimeAccumulator = 0;
       this.arcadeInvulnerability = ARCADE_CONFIG.INVULNERABILITY_SECONDS;
       if (useGameStore.getState().lives <= 0) {
         this.triggerCrashSequence();
@@ -669,6 +665,30 @@ export class GameApp {
       this.playerPhysics.setHandlingModifiers(ARCADE_CONFIG.STEER_NOISE_DAMAGED, 1);
     } else {
       this.playerPhysics.setHandlingModifiers(0, 1);
+    }
+  }
+
+  private updateAirMultiplier(gameDelta: number): void {
+    if (!this.playerPhysics) {
+      this.airTimeAccumulator = 0;
+      return;
+    }
+
+    const store = useGameStore.getState();
+    if (store.gameMode !== 'ARCADE') {
+      this.airTimeAccumulator = 0;
+      return;
+    }
+
+    if (this.playerPhysics.isAirborne()) {
+      this.airTimeAccumulator += gameDelta;
+      while (this.airTimeAccumulator >= 0.5) {
+        const next = Number((store.multiplier + 0.1).toFixed(2));
+        store.setMultiplier(next);
+        this.airTimeAccumulator -= 0.5;
+      }
+    } else {
+      this.airTimeAccumulator = 0;
     }
   }
 
@@ -801,6 +821,7 @@ export class GameApp {
       this.arcadeInvulnerability = Math.max(0, this.arcadeInvulnerability - realDelta);
     }
     this.updateArcadeHandling();
+    this.updateAirMultiplier(gameDelta);
 
     // Keep sun/shadows following the rider
     if (this.playerPhysics) {

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { AlertTriangle, Coins, Glasses, MapPin, Timer } from 'lucide-react';
+import { AlertTriangle, Coins, Heart, MapPin, Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { SPRINT_CONFIG } from '../../config/GameConfig';
@@ -41,12 +41,18 @@ export const HUD = () => {
 
   // Multiplier pulse when it changes
   useEffect(() => {
-    if (gameMode !== 'ARCADE') return;
+    if (gameMode !== 'ARCADE') {
+      prevMultiplier.current = multiplier;
+      return;
+    }
     if (multiplier !== prevMultiplier.current) {
-      setMultiplierFlash(true);
+      const frame = requestAnimationFrame(() => setMultiplierFlash(true));
       const timer = setTimeout(() => setMultiplierFlash(false), 800);
       prevMultiplier.current = multiplier;
-      return () => clearTimeout(timer);
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
     }
     prevMultiplier.current = multiplier;
   }, [multiplier, gameMode]);
@@ -58,10 +64,13 @@ export const HUD = () => {
       return;
     }
     if (lives < prevLives.current) {
-      setLifeToast(true);
+      const frame = requestAnimationFrame(() => setLifeToast(true));
       const timer = setTimeout(() => setLifeToast(false), 1200);
       prevLives.current = lives;
-      return () => clearTimeout(timer);
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
     }
     prevLives.current = lives;
   }, [lives, gameMode]);
@@ -187,9 +196,6 @@ export const HUD = () => {
         {/* --- TOP CENTER: SCORE (ARCADE) --- */}
         {gameMode === 'ARCADE' && (
           <div className="absolute top-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-center">
-            <div className="rounded-full border border-amber-200/40 bg-slate-900/60 px-4 py-1 text-[10px] font-semibold tracking-[0.3em] text-amber-100/80 backdrop-blur">
-              Arcade Mode
-            </div>
             <div className="flex items-center gap-3">
               <Coins className="h-6 w-6 text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]" />
               <div
@@ -238,14 +244,14 @@ export const HUD = () => {
                         : 'border-amber-200/30 bg-slate-900/50 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
                     )}
                   >
-                    <Glasses
+                    <Heart
                       className={clsx(
                         'h-6 w-6 transition-transform',
                         isLost
-                          ? 'text-white/30'
+                          ? 'text-white/25'
                           : isFragile
-                            ? 'text-amber-200 drop-shadow'
-                            : 'text-white'
+                            ? 'text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                            : 'text-red-300 drop-shadow-[0_0_10px_rgba(248,113,113,0.5)]'
                       )}
                     />
                   </div>
