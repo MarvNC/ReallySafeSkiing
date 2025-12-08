@@ -180,7 +180,7 @@ const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }
 const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    className="font-russo pointer-events-auto w-full cursor-pointer rounded-xl border border-white/10 bg-white/20 py-2 text-sm tracking-[0.15em] text-white uppercase transition-all duration-200 hover:bg-white/30 hover:text-white md:py-4 md:text-lg"
+    className="font-russo pointer-events-auto w-full cursor-pointer rounded-xl border border-white/10 bg-white/20 py-4 text-xl tracking-[0.15em] text-white uppercase transition-all duration-200 hover:bg-white/30 hover:text-white"
   >
     {label}
   </button>
