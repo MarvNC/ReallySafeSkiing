@@ -92,7 +92,7 @@ export const About = () => {
               Created By
             </h3>
             <a
-              href="https://github.com/MarvNC"
+              href="https://github.com/MarvNC/ReallySafeSkiing"
               target="_blank"
               rel="noopener noreferrer"
               className="group hover:border-accent-orange/50 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 transition-all hover:bg-white/10"

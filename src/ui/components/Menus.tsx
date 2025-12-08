@@ -252,7 +252,7 @@ const GhostButton: FC<{ label: string; onClick: () => void }> = ({ label, onClic
 const MenuFooter: FC = () => {
   return (
     <a
-      href="https://github.com/MarvNC"
+      href="https://github.com/MarvNC/ReallySafeSkiing"
       target="_blank"
       rel="noopener noreferrer"
       className="font-russo pointer-events-auto absolute right-4 bottom-4 z-50 flex items-center gap-2 text-xs tracking-wider text-white/30 transition-colors hover:text-white md:text-sm"
