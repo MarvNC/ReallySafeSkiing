@@ -39,6 +39,70 @@
   }
 }
 
+@keyframes juicePulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.14);
+  }
+  65% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes hudShake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-6px) rotate(-1deg);
+  }
+  40% {
+    transform: translateX(8px) rotate(1deg);
+  }
+  60% {
+    transform: translateX(-5px) rotate(-0.6deg);
+  }
+  80% {
+    transform: translateX(5px) rotate(0.6deg);
+  }
+}
+
+@keyframes heartShatter {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg) translateY(0);
+  }
+  40% {
+    transform: scale(1.12) rotate(-8deg) translateY(-2px);
+  }
+  70% {
+    opacity: 0.6;
+    transform: scale(0.78) rotate(12deg) translateY(4px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-18deg) translateY(12px);
+  }
+}
+
+@keyframes heartTilt {
+  0% {
+    transform: rotateX(14deg) rotateY(0deg) translateY(0);
+  }
+  50% {
+    transform: rotateX(14deg) rotateY(12deg) translateY(-3px);
+  }
+  100% {
+    transform: rotateX(14deg) rotateY(0deg) translateY(0);
+  }
+}
+
 :root {
   font-family: 'Russo One', sans-serif;
   background: radial-gradient(circle at 20% 20%, #b7e9ff 0%, #8bd1ff 25%, #fef7ee 100%);
