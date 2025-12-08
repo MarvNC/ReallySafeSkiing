@@ -615,18 +615,19 @@ export class GameApp {
     if (store.gameMode !== 'ARCADE') return;
 
     const currentMultiplier = store.multiplier;
+    const nextMultiplier = Number(
+      (currentMultiplier + ARCADE_CONFIG.COIN_MULTIPLIER_BONUS).toFixed(2)
+    );
     const coinScore = ARCADE_CONFIG.COIN_VALUE * currentMultiplier;
 
     store.addCoin(1);
     store.addScore(coinScore);
+    store.setMultiplier(nextMultiplier);
     store.triggerScorePopup({
       value: coinScore,
-      multiplier: currentMultiplier,
+      multiplier: nextMultiplier,
       type: 'coin',
     });
-    store.setMultiplier(
-      Number((store.multiplier + ARCADE_CONFIG.COIN_MULTIPLIER_BONUS).toFixed(2))
-    );
   }
 
   private handleArcadeCollision(otherHandle: number, speed: number): void {
