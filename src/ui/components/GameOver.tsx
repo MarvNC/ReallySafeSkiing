@@ -127,7 +127,6 @@ export const GameOver = () => {
   }, [showSettings]);
 
   const isCrash = finishStats.endReason === 'crash';
-  const isComplete = finishStats.endReason === 'complete';
   const showGrade = sprintComplete && grade;
 
   useEffect(() => {
@@ -151,23 +150,7 @@ export const GameOver = () => {
     finishStats.slopeAngle,
   ]);
 
-  const headerText = (() => {
-    if (isCrash) return 'WASTED';
-    if (isComplete && finishStats.gameMode === 'SPRINT') return 'SPRINT COMPLETE';
-    if (isComplete) return 'RUN COMPLETE';
-    if (finishStats.endReason === 'manual') return 'RUN ABORTED';
-    return "TIME'S UP";
-  })();
-
-  const subText = (() => {
-    if (isCrash) return 'You clipped a tree. Shake it off and try again.';
-    if (isComplete && finishStats.gameMode === 'SPRINT')
-      return 'You cleared the sprint target. Can you shave off a few more seconds?';
-    if (isComplete) return 'Run concluded. Your stats are locked in.';
-    if (finishStats.endReason === 'manual')
-      return 'Manual exit. Dial in your setup and send it again.';
-    return 'Timer expired. Keep chasing the line.';
-  })();
+  const headerText = 'GAME OVER';
 
   const handleRestart = () => {
     InputManager.instance?.triggerAction(Action.Start);
@@ -177,19 +160,11 @@ export const GameOver = () => {
     <div className="pointer-events-auto flex w-full flex-col items-center gap-3 px-4 text-white md:px-0">
       <div className="text-center">
         <div className="mb-2 text-xs tracking-[0.5em] text-white/50">
-          {finishStats.gameMode} MODE • FINAL REPORT
+          {finishStats.gameMode} MODE
         </div>
-        <h1
-          className={clsx(
-            'font-russo text-4xl tracking-widest uppercase italic drop-shadow-md md:text-6xl',
-            isCrash
-              ? 'text-accent-red drop-shadow-[0_6px_0_rgba(0,0,0,0.7)]'
-              : 'bg-gradient-to-b from-white to-sky-200 bg-clip-text text-transparent'
-          )}
-        >
+        <h1 className="font-russo bg-gradient-to-b from-white to-sky-200 bg-clip-text text-4xl tracking-widest text-transparent uppercase italic drop-shadow-md md:text-6xl">
           {headerText}
         </h1>
-        <p className="mt-3 text-sm text-white/70 md:text-base">{subText}</p>
         {isCrash && finishStats.penalties > 0 && (
           <div className="mt-2 text-xs tracking-[0.4em] text-white/40 uppercase">
             {finishStats.penalties} {finishStats.penalties === 1 ? 'PENALTY' : 'PENALTIES'}
