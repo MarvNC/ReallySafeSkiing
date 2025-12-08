@@ -4,6 +4,7 @@ import type { FC, ReactNode } from 'react';
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
 import { DifficultySelector } from './DifficultySelector';
+import { GameLogo } from './GameLogo';
 import { GameModeToggle } from './GameModeToggle';
 import { GameOver } from './GameOver';
 import { SlopeControl } from './SlopeControl';
@@ -211,10 +212,7 @@ export const Menus = () => {
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
         <>
-          {/* Mobile: text-4xl, mb-2. Desktop: text-7xl, mb-5 */}
-          <h1 className="mb-2 bg-gradient-to-b from-white to-sky-200 bg-clip-text px-4 text-center text-6xl text-transparent italic drop-shadow-md md:mb-5">
-            REALLY SAFE SKIING
-          </h1>
+          <GameLogo className="mb-4" />
 
           <ContentContainer>
             <SetupPanel />
