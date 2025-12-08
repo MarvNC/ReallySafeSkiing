@@ -246,6 +246,8 @@ export class GameApp {
     this.input.on(Action.MenuUp, (a, p) => p === 'pressed' && handleMenuNav(a));
     this.input.on(Action.MenuDown, (a, p) => p === 'pressed' && handleMenuNav(a));
     this.input.on(Action.MenuSelect, (a, p) => p === 'pressed' && handleMenuNav(a));
+    // Allow space (Start action) to select pause menu items for keyboard parity
+    this.input.on(Action.Start, (a, p) => p === 'pressed' && handleMenuNav(a));
 
     // Start game on any movement input
     this.input.on(Action.Forward, (_action, phase) => {

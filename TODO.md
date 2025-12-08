@@ -1,7 +1,4 @@
-- Remove time and distance from HUD in arcade mode
-- Revamp HUD elements for arcade mode
 - Add score animations for arcade stuff to be more fun whenever we pick up a coin or accumulate airtime
 - Steering 0.7 as effective on one life
 - Limit how long u can brake/wedge
 - Better design for configure run button
-- Make coin spin
