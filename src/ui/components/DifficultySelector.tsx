@@ -4,29 +4,33 @@ import type { ComponentType } from 'react';
 
 import type { Difficulty } from '../store';
 import { useGameStore } from '../store';
+import { SelectionTile } from './SelectionTile';
 
-const OPTIONS: Array<{
+type DifficultyOption = {
   value: Difficulty;
   icon: ComponentType<{ className?: string }>;
-  selectedClasses: string;
-}> = [
+  glowClass: string;
+  iconClass: string;
+};
+
+const OPTIONS: DifficultyOption[] = [
   {
     value: 'CHILL',
     icon: Snowflake,
-    selectedClasses:
-      'border-cyan-400 text-white bg-cyan-500 shadow-[0_0_20px_rgba(34,211,238,0.45)]',
+    glowClass: 'shadow-[0_0_18px_rgba(34,211,238,0.35)]',
+    iconClass: 'text-cyan-200',
   },
   {
     value: 'SPORT',
     icon: Wind,
-    selectedClasses:
-      'border-orange-500 text-white bg-accent-orange shadow-[0_0_20px_rgba(249,115,22,0.45)]',
+    glowClass: 'shadow-[0_0_18px_rgba(249,115,22,0.35)]',
+    iconClass: 'text-orange-200',
   },
   {
     value: 'EXTREME',
     icon: Skull,
-    selectedClasses:
-      'border-rose-600 text-white bg-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.45)]',
+    glowClass: 'shadow-[0_0_18px_rgba(225,29,72,0.35)]',
+    iconClass: 'text-rose-200',
   },
 ];
 
@@ -41,23 +45,18 @@ export const DifficultySelector = () => {
           const isActive = difficulty === option.value;
 
           return (
-            <button
+            <SelectionTile
               key={option.value}
-              type="button"
-              className={clsx(
-                'flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 text-center text-sm font-semibold drop-shadow-md transition-all duration-200',
-                'border-white/10 bg-white/5 text-white/60 hover:scale-105 hover:bg-white/10',
-                isActive && option.selectedClasses
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
+              active={isActive}
+              glowClass={option.glowClass}
+              label={option.value}
+              onClick={() => {
                 setDifficulty(option.value);
               }}
-              aria-pressed={isActive}
-            >
-              <Icon className="h-6 w-6" />
-              <span>{option.value}</span>
-            </button>
+              icon={
+                <Icon className={clsx('h-6 w-6', option.iconClass, !isActive && 'opacity-70')} />
+              }
+            />
           );
         })}
       </div>

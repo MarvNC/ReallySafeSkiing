@@ -6,3 +6,4 @@
 - SFX
 - Music
 - Infinite terrain
+- End game on wipeout
