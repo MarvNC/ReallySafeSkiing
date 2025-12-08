@@ -319,12 +319,63 @@ export class PlayerController {
     this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, fovLerp);
     this.camera.updateProjectionMatrix();
 
+    // Slope-aware camera offset: keep camera centered above skis on steep slopes
+    // At ~60° slope, remove backward pull, add lift and slight forward bias.
+    const slopeAngle = Math.acos(THREE.MathUtils.clamp(this.currentGroundNormal.y, -1, 1));
+    const slopeBlend = THREE.MathUtils.clamp(slopeAngle / (Math.PI / 3), 0, 1); // 0 -> flat, 1 -> 60deg+
+
     const targetZOffset = THREE.MathUtils.lerp(
       PLAYER_CONFIG.camera.zOffsetMin,
       PLAYER_CONFIG.camera.zOffsetMax,
       flowRatio
     );
-    this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, targetZOffset, fovLerp);
+
+    const backwardWorld = this.tmpVecA.set(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+    const upWorld = this.tmpVecB.set(0, 1, 0);
+    const slopeAwareDirLocal = backwardWorld
+      .lerp(upWorld, slopeBlend)
+      .normalize()
+      .applyQuaternion(this.tmpQuatA.copy(this.mesh.quaternion).invert());
+
+    // Reduce backward distance as slope increases; at steep slopes, center above skis.
+    const backOffset = this.tmpVecA
+      .copy(slopeAwareDirLocal)
+      .multiplyScalar(targetZOffset * (1 - slopeBlend));
+
+    // Add slight forward push on steep slopes to stay ahead of the skis.
+    const forwardOffset = this.tmpForward
+      .set(0, 0, -1)
+      .multiplyScalar((PLAYER_CONFIG.camera.slopeForwardPush ?? 0.6) * slopeBlend);
+
+    const maxLift = Math.min(PLAYER_CONFIG.camera.slopeLiftMax ?? 0.6, 10);
+    const targetEyeHeight = PLAYER_CONFIG.camera.eyeHeight + slopeBlend * maxLift;
+
+    // Base target in local space
+    const targetCameraPos = this.tmpVecB
+      .set(0, targetEyeHeight, 0)
+      .add(backOffset)
+      .add(forwardOffset);
+
+    // Clearance check: keep camera at least minClearance above snow along the ground normal
+    const desiredWorldPos = targetCameraPos.clone().applyMatrix4(this.mesh.matrixWorld);
+    const terrainHeight = this.terrain.getTerrainHeight(desiredWorldPos.x, desiredWorldPos.z);
+    const clearance = desiredWorldPos.y - terrainHeight;
+    const minClearance = PLAYER_CONFIG.camera.cameraMinClearance ?? 0.4;
+    if (clearance < minClearance) {
+      const pushDist = minClearance - clearance;
+      const pushLocal = this.tmpVecA
+        .copy(this.currentGroundNormal)
+        .multiplyScalar(pushDist)
+        .applyQuaternion(this.tmpQuatA.copy(this.mesh.quaternion).invert());
+      const smoothing = THREE.MathUtils.clamp(
+        PLAYER_CONFIG.camera.cameraClearanceSmoothing ?? 0.35,
+        0,
+        1
+      );
+      targetCameraPos.addScaledVector(pushLocal, smoothing);
+    }
+
+    this.camera.position.lerp(targetCameraPos, fovLerp);
 
     // NEW: Get the smoothed steering value from physics
     const smoothSteering = this.physics.getSteeringValue();

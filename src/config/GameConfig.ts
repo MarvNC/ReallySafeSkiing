@@ -90,6 +90,12 @@ export const PLAYER_CONFIG = {
     pitchSpeedAdd: -0.1,
     zOffsetMin: 0,
     zOffsetMax: 2.0,
+    // Slope-aware camera tuning
+    slopeBackMultiplierMin: 0.8, // Min fraction of back offset to keep on steep slopes
+    slopeLiftMax: 1, // Extra meters to raise camera at steep + fast
+    slopeForwardPush: 2, // Forward push at steep slopes to keep camera ahead
+    cameraMinClearance: 2, // Min distance from snow before pushing up
+    cameraClearanceSmoothing: 0.35, // 0-1: how softly to apply clearance push
     flowStartKmh: 100,
     flowMaxKmh: 200,
   },
