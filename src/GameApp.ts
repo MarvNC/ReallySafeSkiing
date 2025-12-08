@@ -681,11 +681,14 @@ export class GameApp {
     }
 
     if (this.playerPhysics.isAirborne()) {
-      this.airTimeAccumulator += gameDelta;
-      while (this.airTimeAccumulator >= 0.5) {
-        const next = Number((store.multiplier + 0.1).toFixed(2));
+      // Use config-driven rate so short hops still reward progress
+      const increment = ARCADE_CONFIG.AIR_MULTIPLIER_PER_SECOND * gameDelta;
+      this.airTimeAccumulator += increment;
+
+      if (this.airTimeAccumulator >= 0.001) {
+        const next = Number((store.multiplier + this.airTimeAccumulator).toFixed(2));
         store.setMultiplier(next);
-        this.airTimeAccumulator -= 0.5;
+        this.airTimeAccumulator = 0;
       }
     } else {
       this.airTimeAccumulator = 0;
