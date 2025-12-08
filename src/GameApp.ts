@@ -8,7 +8,7 @@ import { DebugUI } from './debug/DebugUI';
 import { PhysicsWorld } from './physics/PhysicsWorld';
 import { PlayerController } from './player/PlayerController';
 import { PlayerPhysics } from './player/PlayerPhysics';
-import { UIState, useGameStore } from './ui/store';
+import { EndReason, UIState, useGameStore } from './ui/store';
 import { BackgroundEnvironment } from './world/BackgroundEnvironment';
 import { SnowSparkles } from './world/SnowSparkles';
 import { TerrainManager } from './world/TerrainManager';
@@ -377,6 +377,7 @@ export class GameApp {
     useGameStore.getState().setMenuIndex(0);
     useGameStore.getState().setUIState(UIState.PLAYING);
     useGameStore.getState().setTopSpeed(0);
+    useGameStore.getState().setEndReason(null);
     useGameStore.getState().updateStats(0, 0, this.timeRemaining);
 
     // Reset clock
@@ -387,7 +388,8 @@ export class GameApp {
     this.updateKeyBindingsForGameState();
   }
 
-  private endGame() {
+  private endGame(reason: EndReason = 'time') {
+    this.timeScale = 1;
     this.gameState = GameState.GAME_OVER;
 
     // Calculate final distance and update store
@@ -396,6 +398,7 @@ export class GameApp {
 
     useGameStore.getState().updateStats(0, distance, this.timeRemaining);
     useGameStore.getState().setTopSpeed(this.topSpeed);
+    useGameStore.getState().setEndReason(reason);
 
     // Rebind keys for menu state (game over shows menu)
     this.updateKeyBindingsForGameState();
@@ -437,10 +440,14 @@ export class GameApp {
   private returnToMainMenu(): void {
     // Leave the paused state and show the setup menu
     this.gameState = GameState.MENU;
+    this.timeScale = 1;
+    this.crashTimer = 0;
+    this.wasCrashedBeforePause = false;
     this.isAboutOpen = false;
     this.menuIndex = 0;
     useGameStore.getState().setMenuIndex(0);
     useGameStore.getState().setUIState(UIState.MENU);
+    useGameStore.getState().setEndReason(null);
     this.updateKeyBindingsForGameState();
   }
 
@@ -518,33 +525,11 @@ export class GameApp {
     this.player.captureCrashCameraState();
   }
 
-  private recoverFromCrash(): void {
-    // Reset State
-    this.gameState = GameState.PLAYING;
-    useGameStore.getState().setUIState(UIState.PLAYING);
-    this.timeScale = 1.0;
-
-    // 1. Find Safe Ground
-    // Get current X/Z
-    const currentPos = this.playerPhysics.getPosition();
-
-    // "Cast a vertical line" - query the terrain generator for height at this X/Z
-    const safeY = this.terrainManager.getTerrainHeight(currentPos.x, currentPos.z);
-
-    // 2. Teleport Player
-    // Place slightly above terrain (radius + padding)
-    const resetPos = new THREE.Vector3(
-      currentPos.x,
-      safeY + PLAYER_CONFIG.radius + 0.5,
-      currentPos.z
-    );
-
-    this.playerPhysics.resetPosition(resetPos);
-    this.player.mesh.position.copy(resetPos);
-    this.player.mesh.quaternion.set(0, 0, 0, 1); // Reset rotation upright
-
-    // 3. Reset Camera
-    this.player.resetCamera();
+  private finalizeCrashGameOver(): void {
+    if (this.gameState !== GameState.CRASHED) return;
+    this.timeScale = 1;
+    this.wasCrashedBeforePause = false;
+    this.endGame('crash');
   }
 
   private setupMouseLook(): void {
@@ -641,7 +626,7 @@ export class GameApp {
 
       if (this.timeRemaining <= 0) {
         this.timeRemaining = 0;
-        this.endGame();
+        this.endGame('time');
       }
 
       this.terrainManager.update(this.playerPhysics.getPosition());
@@ -673,7 +658,7 @@ export class GameApp {
 
       // 6. End Crash Sequence
       if (this.crashTimer >= this.CRASH_DURATION) {
-        this.recoverFromCrash();
+        this.finalizeCrashGameOver();
       }
 
       // Sync visuals

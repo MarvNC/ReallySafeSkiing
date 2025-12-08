@@ -11,10 +11,12 @@ export enum UIState {
 }
 
 export type Difficulty = 'CHILL' | 'SPORT' | 'EXTREME';
+export type EndReason = 'time' | 'crash';
 
 interface GameState {
   // Game Flow
   uiState: UIState;
+  endReason: EndReason | null;
 
   // Stats (Updated every frame)
   speed: number;
@@ -31,6 +33,7 @@ interface GameState {
 
   // Actions (Callable from React or GameApp)
   setUIState: (state: UIState) => void;
+  setEndReason: (reason: EndReason | null) => void;
   updateStats: (speed: number, distance: number, time: number) => void;
   setTopSpeed: (speed: number) => void;
   setMenuIndex: (index: number) => void;
@@ -42,6 +45,7 @@ interface GameState {
 export const useGameStore = create<GameState>()(
   subscribeWithSelector((set) => ({
     uiState: UIState.MENU,
+    endReason: null,
     speed: 0,
     distance: 0,
     timeRemaining: 60,
@@ -51,6 +55,7 @@ export const useGameStore = create<GameState>()(
     difficulty: 'SPORT',
 
     setUIState: (uiState) => set({ uiState }),
+    setEndReason: (endReason) => set({ endReason }),
     updateStats: (speed, distance, timeRemaining) => set({ speed, distance, timeRemaining }),
     setTopSpeed: (topSpeed) => set({ topSpeed }),
     setMenuIndex: (menuIndex) => set({ menuIndex }),

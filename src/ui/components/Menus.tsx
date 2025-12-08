@@ -85,7 +85,10 @@ const MenuFooter: FC = () => {
 };
 
 export const Menus = () => {
-  const { uiState, menuIndex, distance, topSpeed, setMenuIndex } = useGameStore();
+  const { uiState, menuIndex, distance, topSpeed, setMenuIndex, endReason } = useGameStore();
+  const isCrashGameOver = endReason === 'crash';
+  const isCrashTint =
+    uiState === UIState.CRASHED || (uiState === UIState.GAME_OVER && isCrashGameOver);
 
   if (uiState === UIState.PLAYING) return null;
 
@@ -142,7 +145,7 @@ export const Menus = () => {
       className={clsx(
         'font-russo absolute inset-0 z-50 flex flex-col items-center justify-center text-white',
         // Add background blur/tint only for non-crash menus, or a red tint for crash
-        uiState === UIState.CRASHED
+        isCrashTint
           ? 'bg-red-900/30 transition-colors duration-1000'
           : uiState === UIState.ABOUT
             ? 'bg-sky-dark/60 backdrop-blur-xl'
@@ -243,12 +246,31 @@ export const Menus = () => {
       {/* GAME OVER */}
       {uiState === UIState.GAME_OVER && (
         <>
-          <h1 className="mb-5 text-4xl italic drop-shadow-lg md:text-7xl">TIME&apos;S UP!</h1>
+          <h1
+            className={clsx(
+              'mb-5 text-4xl italic drop-shadow-lg md:text-7xl',
+              isCrashGameOver
+                ? 'text-accent-red drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]'
+                : undefined
+            )}
+          >
+            {isCrashGameOver ? 'WASTED' : "TIME'S UP!"}
+          </h1>
+          {isCrashGameOver && (
+            <div className="mb-2 text-center text-lg text-white/80 md:mb-4 md:text-xl">
+              You wiped out. The run is over.
+            </div>
+          )}
           <div className="mb-10 flex flex-col items-center gap-5">
             <div className="text-2xl text-sky-300 drop-shadow-md md:text-4xl">
               DISTANCE: {Math.floor(distance)}m
             </div>
-            <div className="text-accent-orange animate-pulse text-xl italic md:text-3xl">
+            <div
+              className={clsx(
+                'animate-pulse text-xl italic md:text-3xl',
+                isCrashGameOver ? 'text-accent-red' : 'text-accent-orange'
+              )}
+            >
               TOP SPEED: {topSpeed} km/h
             </div>
             <SetupPanel />
