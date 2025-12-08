@@ -650,6 +650,12 @@ export class GameApp {
 
     if (speedKmh >= ARCADE_CONFIG.DAMAGE_THRESHOLD_KMH) {
       store.loseLife(1);
+      const { multiplier } = useGameStore.getState();
+      store.triggerScorePopup({
+        text: 'LIFE LOST',
+        multiplier,
+        type: 'life',
+      });
       this.airTimeAccumulator = 0;
       this.arcadeInvulnerability = ARCADE_CONFIG.INVULNERABILITY_SECONDS;
       if (useGameStore.getState().lives <= 0) {

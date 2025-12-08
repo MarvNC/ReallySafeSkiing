@@ -22,7 +22,7 @@ export type ScorePopup = {
   value: number;
   multiplier: number;
   text: string;
-  type: 'coin' | 'airtime' | 'trick';
+  type: 'coin' | 'airtime' | 'trick' | 'life';
 };
 
 type ScorePopupPayload = {

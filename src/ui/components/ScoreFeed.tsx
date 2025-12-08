@@ -18,6 +18,11 @@ const palette = {
     tag: 'bg-fuchsia-500/20 border-fuchsia-300/60 text-fuchsia-50',
     glow: 'drop-shadow-[0_0_18px_rgba(217,70,239,0.45)]',
   },
+  life: {
+    text: 'text-rose-100',
+    tag: 'bg-rose-500/20 border-rose-200/70 text-rose-50',
+    glow: 'drop-shadow-[0_0_18px_rgba(244,63,94,0.45)]',
+  },
 } as const;
 
 export const ScoreFeed = () => {
