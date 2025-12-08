@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { type FC, type ReactNode, useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { type FC, type ReactNode, useState } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import { GameMode, UIState, useGameStore } from '../store';
@@ -34,101 +35,119 @@ const ContentContainer: FC<{ children: ReactNode; className?: string }> = ({
   className,
 }) => <div className={clsx('w-full max-w-sm px-4 md:max-w-xl md:px-0', className)}>{children}</div>;
 
-const KeyPill: FC<{ label: string; large?: boolean }> = ({ label, large = false }) => (
-  <span
-    className={clsx(
-      'rounded-md border border-white/20 bg-white/10 px-3 py-2 font-mono text-white shadow-[0_0_25px_rgba(255,255,255,0.08)]',
-      large ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl'
-    )}
-  >
-    {label}
-  </span>
-);
+const AccordionSection: FC<{
+  title: string;
+  subtitle?: ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}> = ({ title, subtitle, isOpen, onToggle, children }) => {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10 md:overflow-visible md:rounded-none md:border-none md:bg-transparent md:hover:bg-transparent">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between p-3 text-left outline-none md:cursor-default md:p-0 md:pb-1"
+      >
+        <div className="flex flex-col md:w-full md:flex-row md:items-baseline md:justify-between md:gap-4">
+          <span className="text-[10px] font-bold tracking-[0.2em] text-white/90 uppercase">
+            {title}
+          </span>
+          {subtitle && (
+            <span className="text-[10px] text-white/50 uppercase md:text-white/30">{subtitle}</span>
+          )}
+        </div>
+        <ChevronDown
+          className={clsx(
+            'h-4 w-4 text-white/50 transition-transform duration-300 md:hidden',
+            isOpen && 'rotate-180'
+          )}
+        />
+      </button>
+      <div
+        className={clsx(
+          'grid transition-[grid-template-rows] duration-300 ease-out md:grid-rows-[1fr]',
+          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
+      >
+        <div className="overflow-hidden md:overflow-visible">
+          <div className="p-3 pt-0 md:p-0">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-const FirstRunPrompt: FC<{ isMobile: boolean }> = ({ isMobile }) => (
-  <div className="pointer-events-none flex flex-col items-center gap-6 text-center text-white md:gap-8">
-    {isMobile ? (
-      <>
-        <div className="text-4xl font-extrabold tracking-wide md:text-6xl">
-          TAP LEFT / RIGHT TO STEER
-        </div>
-        <div className="text-3xl font-semibold text-amber-200 md:text-5xl">
-          TAP BOTH SIDES TO WEDGE / BRAKE
-        </div>
-      </>
-    ) : (
-      <>
-        <div className="flex flex-wrap items-center justify-center gap-4 text-3xl font-semibold text-white md:gap-6 md:text-4xl">
-          <KeyPill label="A" large />
-          <span className="text-2xl font-semibold text-white/60 md:text-3xl">/</span>
-          <KeyPill label="D" large />
-          <span className="text-2xl font-semibold text-white/80 md:text-3xl">TO STEER</span>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-3 text-3xl font-semibold text-amber-200 md:gap-4 md:text-4xl">
-          <KeyPill label="A" />
-          <span className="text-xl font-semibold text-white/70 md:text-2xl">+</span>
-          <KeyPill label="D" />
-          <span className="text-2xl font-bold text-amber-200 md:text-4xl">WEDGE / BRAKE</span>
-        </div>
-      </>
-    )}
-  </div>
-);
+const SetupPanel: FC = () => {
+  const [openSection, setOpenSection] = useState<'DENSITY' | 'SLOPE' | null>('DENSITY');
 
-const SetupPanel: FC = () => (
-  // Mobile: p-3. Desktop: p-4.
-  <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-sm shadow-2xl backdrop-blur-xl transition-all duration-500 md:p-6">
-    <div className="flex flex-col gap-2">
-      <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
-        Game Mode
+  const toggleSection = (section: 'DENSITY' | 'SLOPE') => {
+    setOpenSection(openSection === section ? null : section);
+  };
+
+  return (
+    // Mobile: p-3. Desktop: p-4.
+    <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm shadow-2xl backdrop-blur-xl transition-all duration-500 md:gap-4 md:p-6">
+      <div className="flex flex-col gap-2">
+        <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
+          Game Mode
+        </div>
+        <GameModeToggle />
       </div>
-      <GameModeToggle />
+
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent md:hidden" />
+      <div className="hidden h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent md:block" />
+
+      <AccordionSection
+        title="Obstacle Density"
+        subtitle="Trees & Rocks"
+        isOpen={openSection === 'DENSITY'}
+        onToggle={() => toggleSection('DENSITY')}
+      >
+        <DifficultySelector />
+      </AccordionSection>
+
+      <div className="hidden h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent md:hidden" />
+
+      <AccordionSection
+        title="Steepness"
+        subtitle="Speed & Gravity"
+        isOpen={openSection === 'SLOPE'}
+        onToggle={() => toggleSection('SLOPE')}
+      >
+        <SlopeControl />
+      </AccordionSection>
+
+      <div className="text-s flex items-center justify-center gap-4 border-t border-white/10 pt-2 pt-3 text-white opacity-80">
+        {/* Desktop controls */}
+        <div className="hidden items-center gap-2 md:flex">
+          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
+            A
+          </span>
+          <span className="tracking-widest">/</span>
+          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
+            D
+          </span>
+          <span className="tracking-widest">STEER</span>
+          <span className="mx-1 tracking-widest">|</span>
+          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
+            A
+          </span>
+          <span className="tracking-widest">+</span>
+          <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
+            D
+          </span>
+          <span className="tracking-widest">TO WEDGE</span>
+        </div>
+        {/* Mobile controls */}
+        <div className="flex flex-col items-center gap-1 text-center text-xs tracking-widest md:hidden">
+          <div>TAP LEFT AND RIGHT SIDES TO STEER</div>
+          <div>TAP BOTH SIDES TO WEDGE</div>
+        </div>
+      </div>
     </div>
-    {/* Separator */}
-    <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-    <div className="flex flex-col gap-2">
-      <div className="mb-1 flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
-        <span>Obstacle Density</span>
-        <span className="text-white/30">Trees & Rocks</span>
-      </div>
-      <DifficultySelector />
-    </div>
-    <div className="flex flex-col gap-2">
-      <div className="mb-0 flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-white/50 uppercase">
-        <span>Steepness</span>
-        <span className="text-white/30">Speed & Gravity</span>
-      </div>
-      <SlopeControl />
-    </div>
-    <div className="text-s mt-1 flex items-center justify-center gap-4 border-t border-white/10 pt-2 text-white opacity-80 md:pt-4">
-      {/* Desktop controls */}
-      <div className="hidden items-center gap-2 md:flex">
-        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-          A
-        </span>
-        <span className="tracking-widest">/</span>
-        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-          D
-        </span>
-        <span className="tracking-widest">STEER</span>
-        <span className="mx-1 tracking-widest">|</span>
-        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-          A
-        </span>
-        <span className="tracking-widest">+</span>
-        <span className="rounded-md border-b-2 border-white/10 bg-white/20 px-2 py-1 font-mono">
-          D
-        </span>
-        <span className="tracking-widest">TO WEDGE</span>
-      </div>
-      {/* Mobile controls */}
-      <div className="flex flex-col items-center gap-1 text-center text-xs tracking-widest md:hidden">
-        <div>TAP LEFT AND RIGHT SIDES TO STEER</div>
-        <div>TAP BOTH SIDES TO WEDGE</div>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 const StartButton: FC<{ label: string; onClick: () => void; gameMode: GameMode }> = ({
   label,
@@ -176,28 +195,6 @@ const MenuFooter: FC = () => {
 
 export const Menus = () => {
   const { uiState, menuIndex, setMenuIndex, endReason, gameMode } = useGameStore();
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const hasTouchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
-    return window.matchMedia('(pointer: coarse)').matches || hasTouchPoints;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia('(pointer: coarse)');
-    const updateIsMobile = () => {
-      const hasTouchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
-      setIsMobile(mediaQuery.matches || hasTouchPoints);
-    };
-
-    updateIsMobile();
-    mediaQuery.addEventListener('change', updateIsMobile);
-
-    return () => mediaQuery.removeEventListener('change', updateIsMobile);
-  }, []);
-
-  const showFirstRunPrompt = uiState === UIState.FIRST_RUN;
-  const isFirstRunOverlay = uiState === UIState.FIRST_RUN;
 
   if (uiState === UIState.PLAYING) return null;
 
@@ -245,7 +242,6 @@ export const Menus = () => {
     <div
       className={clsx(
         'font-russo absolute inset-0 z-50 flex flex-col items-center justify-center overflow-hidden text-white',
-        isFirstRunOverlay && 'pointer-events-none',
         isCrashTint
           ? 'bg-red-950/40 backdrop-blur-sm transition-colors duration-1000'
           : uiState === UIState.ABOUT
@@ -269,23 +265,10 @@ export const Menus = () => {
         />
       )}
 
-      {/* FIRST RUN PROMPT */}
-      {uiState === UIState.FIRST_RUN && (
-        <div className="flex flex-col items-center gap-8 px-4 text-center md:gap-10">
-          {showFirstRunPrompt && <FirstRunPrompt isMobile={isMobile} />}
-        </div>
-      )}
-
       {/* MAIN MENU */}
       {uiState === UIState.MENU && (
         <>
           <GameLogo className="mb-4" />
-
-          {showFirstRunPrompt && (
-            <ContentContainer>
-              <FirstRunPrompt isMobile={isMobile} />
-            </ContentContainer>
-          )}
 
           <ContentContainer>
             <SetupPanel />

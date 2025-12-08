@@ -1,4 +1,3 @@
 - Revamp pause menu to be in line with rest of game styling.
-- Optimize main menu for mobile UI - hide options selections behind toggle dropdown, you can only have one option toggle open at a time.
 - Add share button
 - Fix FOV making the camera behind terrain on steep slopes at high speeds
