@@ -102,15 +102,19 @@ const SCORE_POPUP_TEXT = {
 } as const;
 
 const formatScorePopupText = (type: ScorePopup['type'], value: number): string => {
+  const roundedValue = Math.round(value);
+
   switch (type) {
     case 'airtime':
-      return SCORE_POPUP_TEXT.airtime;
+      return roundedValue > 0
+        ? `${SCORE_POPUP_TEXT.airtime} +${roundedValue}`
+        : SCORE_POPUP_TEXT.airtime;
     case 'life':
       return SCORE_POPUP_TEXT.life;
     case 'speed':
-      return `${SCORE_POPUP_TEXT.speed} +${Math.round(value)}`;
+      return `${SCORE_POPUP_TEXT.speed} +${roundedValue}`;
     default:
-      return `+${Math.round(value)}`;
+      return `+${roundedValue}`;
   }
 };
 

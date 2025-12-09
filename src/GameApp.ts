@@ -65,7 +65,7 @@ export class GameApp {
   private lastDistance = 0;
   private arcadeInvulnerability = 0;
   private airTimeAccumulator = 0;
-  private speedBonusPopupTimer = 0;
+  private speedBonusTimer = 0;
   private tmpVecA = new THREE.Vector3();
   private tmpVecB = new THREE.Vector3();
   private lifeShakeTime = 0;
@@ -433,6 +433,7 @@ export class GameApp {
     this.lastDistance = 0;
     this.arcadeInvulnerability = 0;
     this.airTimeAccumulator = 0;
+    this.speedBonusTimer = 0;
 
     // Rebuild world
     this.terrainManager.regenerate(slopeAngle, difficulty, obstacleMultiplier, coinsEnabled);
@@ -611,31 +612,16 @@ export class GameApp {
 
     if (enableArcadeScoring && store.gameMode === 'ARCADE') {
       const currentMultiplier = store.multiplier;
-      let activeMultiplier = currentMultiplier;
       const distanceScore =
         distanceDelta * ARCADE_CONFIG.DISTANCE_SCORE_PER_METER * currentMultiplier;
 
-      let speedBonus = 0;
-      if (speedKmh > ARCADE_CONFIG.SPEED_BONUS_THRESHOLD_KMH) {
-        speedBonus = ARCADE_CONFIG.SPEED_BONUS_POINTS_PER_SECOND * currentMultiplier * deltaSeconds;
-
-        const multiplierGain = ARCADE_CONFIG.SPEED_BONUS_MULTIPLIER_PER_SECOND * deltaSeconds;
-        if (multiplierGain > 0) {
-          activeMultiplier = Number((currentMultiplier + multiplierGain).toFixed(2));
-          store.setMultiplier(activeMultiplier);
-        }
-
-        this.maybeTriggerSpeedBonusPopup(deltaSeconds, activeMultiplier, store);
-      } else {
-        this.speedBonusPopupTimer = 0;
+      if (distanceScore > 0) {
+        store.addScore(distanceScore);
       }
 
-      const totalScore = distanceScore + speedBonus;
-      if (totalScore > 0) {
-        store.addScore(totalScore);
-      }
+      this.updateSpeedBonus(speedKmh, currentMultiplier, deltaSeconds, store);
     } else {
-      this.speedBonusPopupTimer = 0;
+      this.speedBonusTimer = 0;
     }
   }
 
@@ -744,9 +730,16 @@ export class GameApp {
 
         if (incrementsEarned > 0) {
           const bonus = incrementsEarned * ARCADE_CONFIG.AIR_MULTIPLIER_INCREMENT;
-          const next = Number((store.multiplier + bonus).toFixed(2));
+          const currentMultiplier = store.multiplier;
+          const airtimeBonus =
+            ARCADE_CONFIG.AIRTIME_BONUS_POINTS * incrementsEarned * currentMultiplier;
+          const next = Number((currentMultiplier + bonus).toFixed(2));
           store.setMultiplier(next);
+          if (airtimeBonus > 0) {
+            store.addScore(airtimeBonus);
+          }
           store.triggerScorePopup({
+            value: airtimeBonus,
             multiplier: next,
             type: 'airtime',
           });
@@ -758,27 +751,46 @@ export class GameApp {
     }
   }
 
-  private maybeTriggerSpeedBonusPopup(
+  private updateSpeedBonus(
+    speedKmh: number,
+    currentMultiplier: number,
     deltaSeconds: number,
-    multiplier: number,
     store: ReturnType<typeof useGameStore.getState>
   ): void {
+    if (speedKmh <= ARCADE_CONFIG.SPEED_BONUS_THRESHOLD_KMH) {
+      this.speedBonusTimer = 0;
+      return;
+    }
+
     const interval = ARCADE_CONFIG.SPEED_BONUS_POPUP_INTERVAL_SECONDS ?? 1;
-    if (interval <= 0) return;
+    const pointsPerInterval = ARCADE_CONFIG.SPEED_BONUS_POINTS_PER_SECOND * interval;
 
-    this.speedBonusPopupTimer += deltaSeconds;
-    const completedIntervals = Math.floor(this.speedBonusPopupTimer / interval);
-    if (completedIntervals <= 0) return;
+    this.speedBonusTimer += deltaSeconds;
+    const events = interval > 0 ? Math.floor(this.speedBonusTimer / interval) : 1;
 
-    this.speedBonusPopupTimer -= completedIntervals * interval;
-    const popupValue =
-      ARCADE_CONFIG.SPEED_BONUS_POINTS_PER_SECOND * multiplier * interval * completedIntervals;
+    let awarded = 0;
+    if (events > 0) {
+      this.speedBonusTimer -= interval > 0 ? events * interval : 0;
+      awarded = pointsPerInterval * events * currentMultiplier;
+    }
 
-    store.triggerScorePopup({
-      value: popupValue,
-      multiplier,
-      type: 'speed',
-    });
+    const nextMultiplier = Number(
+      (currentMultiplier + ARCADE_CONFIG.SPEED_BONUS_MULTIPLIER_PER_SECOND * deltaSeconds).toFixed(
+        2
+      )
+    );
+    if (nextMultiplier !== currentMultiplier) {
+      store.setMultiplier(nextMultiplier);
+    }
+
+    if (awarded > 0) {
+      store.addScore(awarded);
+      store.triggerScorePopup({
+        value: awarded,
+        multiplier: nextMultiplier,
+        type: 'speed',
+      });
+    }
   }
 
   private triggerCrashSequence(): void {
