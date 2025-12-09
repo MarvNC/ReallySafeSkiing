@@ -1,6 +1,9 @@
 # dependencies
 node_modules
 
+# uses agents.md
+CLAUDE.md
+
 # production builds
 dist
 dist-ssr
