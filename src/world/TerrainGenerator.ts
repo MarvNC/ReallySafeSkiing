@@ -238,15 +238,14 @@ export class TerrainGenerator {
     } = TERRAIN_CONFIG;
     const { totalLength } = MOUNTAIN_CONFIG;
 
-    const segmentLengthValue = segmentLength;
     const numPoints = segmentCount + 1;
     const rawPoints: Array<{ x: number; y: number; z: number }> = [];
-    const startDistance = startIndex * segmentLengthValue;
-    const virtualRunSamples = totalLength / segmentLengthValue;
+    const startDistance = startIndex * segmentLength;
+    const virtualRunSamples = totalLength / segmentLength;
 
     for (let i = 0; i < numPoints; i++) {
       const globalIndex = startIndex + i;
-      const distanceAlong = startDistance + i * segmentLengthValue;
+      const distanceAlong = startDistance + i * segmentLength;
       const currentZ = -distanceAlong;
       const progress = virtualRunSamples > 0 ? globalIndex / virtualRunSamples : 0;
       const noiseValue = this.noise2D(globalIndex * noiseScale, 0);
@@ -289,7 +288,7 @@ export class TerrainGenerator {
       const z = combinedPoints[combinedIndex].z;
 
       let directionX = 0;
-      let directionZ = -segmentLengthValue;
+      let directionZ = -segmentLength;
 
       if (combinedIndex > 0) {
         directionX = x - smoothedX[combinedIndex - 1];
@@ -301,9 +300,9 @@ export class TerrainGenerator {
 
       let stepLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
       if (stepLength === 0) {
-        stepLength = segmentLengthValue;
+        stepLength = segmentLength;
         directionX = 0;
-        directionZ = -segmentLengthValue;
+        directionZ = -segmentLength;
       }
 
       if (combinedIndex > 0) {
