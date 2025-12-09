@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {
   ARCADE_CONFIG,
   COLOR_PALETTE,
-  OBSTACLE_CONFIG,
+  type ObstacleConfig,
   TERRAIN_CONFIG,
 } from '../config/GameConfig';
 import { makeCollisionGroups, PhysicsLayer } from '../physics/PhysicsLayers';
@@ -86,15 +86,15 @@ export class TerrainChunk {
   private readonly maxTreesPerBucket: number;
   private readonly maxDeadTrees: number;
   private readonly maxRocks: number;
+  private readonly obstacleConfig: ObstacleConfig;
   private readonly obstacleDensityMultiplier: number;
-  private readonly trackObstaclesEnabled: boolean;
   private readonly coinsEnabled: boolean;
 
   constructor(
     points: PathPoint[],
     generator: TerrainGenerator,
+    obstacleConfig: ObstacleConfig,
     obstacleDensityMultiplier: number,
-    trackObstaclesEnabled: boolean = true,
     coinsEnabled: boolean = false,
     physics?: PhysicsWorld
   ) {
@@ -102,8 +102,8 @@ export class TerrainChunk {
     this.points = points;
     this.currentZ = points.length > 0 ? points[0].z : 0;
     this.physics = physics;
+    this.obstacleConfig = obstacleConfig;
     this.obstacleDensityMultiplier = obstacleDensityMultiplier;
-    this.trackObstaclesEnabled = trackObstaclesEnabled;
     this.coinsEnabled = coinsEnabled;
     this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.obstacleCount * obstacleDensityMultiplier);
     this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity);
@@ -327,53 +327,27 @@ export class TerrainChunk {
     surfaceType: 'track' | 'bank' | 'cliff' | 'plateau',
     densityScale: number = this.obstacleDensityMultiplier
   ) {
-    const config = OBSTACLE_CONFIG.surfaces[surfaceType];
+    const config = this.obstacleConfig.surfaces[surfaceType];
 
-    // Normalize tree/rock/deadTree proportions (for track which doesn't use noise)
+    // Normalize obstacle type proportions
     const obstacleTypeProportions = this.normalizeProportions({
       tree: config.treeProportion,
       rock: config.rockProportion,
-      deadTree:
-        'deadTreeProportion' in config && config.deadTreeProportion !== undefined
-          ? config.deadTreeProportion
-          : 0,
+      deadTree: config.deadTreeProportion ?? 0,
     });
 
-    // Normalize tree size proportions (for track)
+    // Normalize tree size proportions
     const treeSizeProportions = this.normalizeProportions(config.treeSizes);
 
-    // Calculate base rarity (convert to a reasonable probability per grid point)
-    // Higher rarity = more likely to spawn obstacles
-    // Multiply by obstacleDensityMultiplier to scale rarity based on difficulty
-    const baseRarity = (config.rarity / 100) * densityScale; // Scale down for reasonable probabilities
-
-    // Multiply rockProbability by density multiplier for consistency
-    const rockProbability =
-      'rockProbability' in config && config.rockProbability !== undefined
-        ? config.rockProbability * densityScale
-        : undefined;
-
-    // Multiply noise threshold probabilities by density multiplier
-    let adjustedNoiseThresholds:
-      | Record<string, { min: number; max: number; probability?: number }>
-      | undefined = undefined;
-    if ('noiseThresholds' in config && config.noiseThresholds) {
-      adjustedNoiseThresholds = {};
-      for (const [key, threshold] of Object.entries(config.noiseThresholds)) {
-        adjustedNoiseThresholds[key] = {
-          ...threshold,
-          probability:
-            threshold.probability !== undefined ? threshold.probability * densityScale : undefined,
-        };
-      }
-    }
+    // Calculate base rarity (0-100 scale converted to 0-1 probability)
+    // When rarity is 0, no obstacles should spawn regardless of other settings
+    // Multiply by obstacleDensityMultiplier to scale rarity based on difficulty/mode
+    const baseRarity = (config.rarity / 100) * densityScale;
 
     return {
       baseRarity,
       obstacleTypeProportions,
       treeSizeProportions,
-      noiseThresholds: adjustedNoiseThresholds,
-      rockProbability,
     };
   }
 
@@ -496,36 +470,15 @@ export class TerrainChunk {
   }
 
   /**
-   * Select tree size based on proportions and noise value
+   * Select tree size based on proportions (simple weighted random)
    */
-  private selectTreeSize(
-    treeSizeProportions: Record<string, number>,
-    noiseThresholds: Record<string, { min: number; max: number; probability?: number }> | undefined,
-    normalizedNoise: number
-  ): TreeArchetype | null {
-    if (!noiseThresholds) {
-      // Simple proportional selection without noise (for track)
-      const roll = Math.random();
-      let cumulative = 0;
-      for (const [size, prob] of Object.entries(treeSizeProportions)) {
-        cumulative += prob;
-        if (roll < cumulative) {
-          return size as TreeArchetype;
-        }
-      }
-      return null;
-    }
-
-    // Noise-based selection with probabilities
-    for (const [size, threshold] of Object.entries(noiseThresholds)) {
-      if (normalizedNoise >= threshold.min && normalizedNoise < threshold.max) {
-        // Check if this size has a proportion > 0 and a probability
-        if (treeSizeProportions[size] > 0 && threshold.probability !== undefined) {
-          // Apply the probability from config
-          if (Math.random() < threshold.probability) {
-            return size as TreeArchetype;
-          }
-        }
+  private selectTreeSize(treeSizeProportions: Record<string, number>): TreeArchetype | null {
+    const roll = Math.random();
+    let cumulative = 0;
+    for (const [size, prob] of Object.entries(treeSizeProportions)) {
+      cumulative += prob;
+      if (roll < cumulative) {
+        return size as TreeArchetype;
       }
     }
     return null;
@@ -560,9 +513,8 @@ export class TerrainChunk {
     this.deadTreeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.rockMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-    // Grid-based placement with noise sampling
-    const gridSize = OBSTACLE_CONFIG.gridSize;
-    const noiseScale = OBSTACLE_CONFIG.noiseScale;
+    // Grid-based placement
+    const gridSize = this.obstacleConfig.gridSize;
 
     const lateralMax = CHUNK_WIDTH / 2;
 
@@ -588,103 +540,45 @@ export class TerrainChunk {
           sample.kind === SurfaceKind.WallVertical || sample.kind === SurfaceKind.WallLedge;
         const isOnPlateau = sample.kind === SurfaceKind.Plateau;
         const isOnTrack = sample.kind === SurfaceKind.Track;
-
-        const noiseValue = this.generator.sampleNoise(
-          worldX * noiseScale,
-          sample.localS * noiseScale
-        );
-        const normalizedNoise = (noiseValue + 1) / 2;
         const y = sample.height;
 
         let placeTree: TreeArchetype | null = null;
         let placeDeadTree = false;
         let placeRock = false;
 
+        // Determine which surface type we're on and get its probabilities
+        let probs: ReturnType<typeof this.calculateObstacleProbabilities> | null = null;
         if (isOnTrack) {
-          if (!this.trackObstaclesEnabled) {
-            continue;
-          }
-
-          // Track: Simple proportional approach
-          const probs = trackProbs;
-          if (Math.random() < probs.baseRarity) {
-            // Determine obstacle type based on proportions
-            const typeRoll = Math.random();
-            let cumulative = 0;
-            let selectedType: 'tree' | 'rock' | 'deadTree' | null = null;
-
-            for (const [type, prob] of Object.entries(probs.obstacleTypeProportions)) {
-              cumulative += prob;
-              if (typeRoll < cumulative) {
-                selectedType = type as 'tree' | 'rock' | 'deadTree';
-                break;
-              }
-            }
-
-            if (selectedType === 'tree') {
-              // Track trees are always small
-              placeTree = this.selectTreeSize(
-                probs.treeSizeProportions,
-                undefined,
-                normalizedNoise
-              );
-            } else if (selectedType === 'rock') {
-              placeRock = true;
-            }
-          }
+          probs = trackProbs;
         } else if (isOnBank) {
-          // Bank: Noise-based tree selection, then rock fallback
-          const probs = bankProbs;
-          placeTree = this.selectTreeSize(
-            probs.treeSizeProportions,
-            probs.noiseThresholds,
-            normalizedNoise
-          );
-          if (
-            !placeTree &&
-            probs.rockProbability !== undefined &&
-            Math.random() < probs.rockProbability
-          ) {
-            placeRock = true;
-          }
+          probs = bankProbs;
         } else if (isOnCliff) {
-          // Cliff: Noise-based tree selection, then rock fallback
-          const probs = cliffProbs;
-          placeTree = this.selectTreeSize(
-            probs.treeSizeProportions,
-            probs.noiseThresholds,
-            normalizedNoise
-          );
-          if (
-            !placeTree &&
-            probs.rockProbability !== undefined &&
-            Math.random() < probs.rockProbability
-          ) {
-            placeRock = true;
-          }
+          probs = cliffProbs;
         } else if (isOnPlateau) {
-          // Plateau: Noise-based selection for dead trees and tree sizes
-          const probs = plateauProbs;
-          if (probs.noiseThresholds) {
-            // Check dead tree first (low noise range)
-            const deadTreeThreshold =
-              'deadTree' in probs.noiseThresholds ? probs.noiseThresholds.deadTree : undefined;
-            if (
-              deadTreeThreshold &&
-              normalizedNoise >= deadTreeThreshold.min &&
-              normalizedNoise < deadTreeThreshold.max &&
-              deadTreeThreshold.probability !== undefined &&
-              Math.random() < deadTreeThreshold.probability
-            ) {
-              placeDeadTree = true;
-            } else {
-              // Check tree sizes
-              placeTree = this.selectTreeSize(
-                probs.treeSizeProportions,
-                probs.noiseThresholds,
-                normalizedNoise
-              );
+          probs = plateauProbs;
+        }
+
+        // Simple proportional obstacle placement for all surfaces
+        if (probs && probs.baseRarity > 0 && Math.random() < probs.baseRarity) {
+          // Determine obstacle type based on proportions
+          const typeRoll = Math.random();
+          let cumulative = 0;
+          let selectedType: 'tree' | 'rock' | 'deadTree' | null = null;
+
+          for (const [type, prob] of Object.entries(probs.obstacleTypeProportions)) {
+            cumulative += prob;
+            if (typeRoll < cumulative) {
+              selectedType = type as 'tree' | 'rock' | 'deadTree';
+              break;
             }
+          }
+
+          if (selectedType === 'tree') {
+            placeTree = this.selectTreeSize(probs.treeSizeProportions);
+          } else if (selectedType === 'rock') {
+            placeRock = true;
+          } else if (selectedType === 'deadTree') {
+            placeDeadTree = true;
           }
         }
 

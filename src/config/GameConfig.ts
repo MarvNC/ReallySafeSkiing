@@ -383,31 +383,20 @@ export interface TerrainConfig {
  * Obstacle surface configuration.
  */
 export interface ObstacleSurfaceConfig {
-  /** Overall rarity (relative - lower = rarer). */
+  /** Overall rarity (0-100, higher = more common). When 0, no obstacles spawn. */
   rarity: number;
-  /** Tree proportion when obstacle appears. */
+  /** Tree proportion (relative weights, e.g. 4 = 4x more likely than rock). */
   treeProportion: number;
-  /** Rock proportion when obstacle appears. */
+  /** Rock proportion (relative weights, e.g. 1 = base weight). */
   rockProportion: number;
-  /** Dead tree proportion (plateau only). */
+  /** Dead tree proportion (relative weights, plateau only). */
   deadTreeProportion?: number;
-  /** Tree size proportions. */
+  /** Tree size proportions (relative weights, normalized internally). */
   treeSizes: {
     small: number;
     medium: number;
     large: number;
   };
-  /** Noise thresholds for tree size variety (0-1 range) with probabilities. */
-  noiseThresholds?: Record<
-    string,
-    {
-      min: number;
-      max: number;
-      probability?: number;
-    }
-  >;
-  /** Probability for rocks when no tree is placed. */
-  rockProbability?: number;
 }
 
 /**
@@ -426,6 +415,18 @@ export interface ObstacleConfig {
     plateau: ObstacleSurfaceConfig;
   };
 }
+
+/**
+ * Partial obstacle config for overriding base settings.
+ */
+export type PartialObstacleConfig = {
+  surfaces?: {
+    track?: Partial<ObstacleSurfaceConfig>;
+    bank?: Partial<ObstacleSurfaceConfig>;
+    cliff?: Partial<ObstacleSurfaceConfig>;
+    plateau?: Partial<ObstacleSurfaceConfig>;
+  };
+};
 
 /**
  * Shadow configuration.
@@ -531,6 +532,8 @@ export interface LightingConfig {
 export interface DifficultySettings {
   /** Obstacle density multiplier (1.0 = normal). */
   obstacleDensity: number;
+  /** Obstacle configuration overrides for this difficulty. Merged with base config. */
+  obstacleOverrides?: PartialObstacleConfig;
 }
 
 /**
@@ -646,15 +649,106 @@ const isLowPreset =
 
 export const GRAPHICS_PRESET: 'high' | 'low' = isLowPreset ? 'low' : 'high';
 
+/**
+ * Base obstacle configuration. All difficulties use this as a starting point.
+ */
+const BASE_OBSTACLE_CONFIG: ObstacleConfig = {
+  gridSize: 5,
+  noiseScale: 0.1,
+  surfaces: {
+    track: {
+      rarity: 4,
+      treeProportion: 1,
+      rockProportion: 1,
+      treeSizes: {
+        small: 1,
+        medium: 0,
+        large: 0,
+      },
+    },
+    bank: {
+      rarity: 14,
+      treeProportion: 4,
+      rockProportion: 1,
+      deadTreeProportion: 1,
+      treeSizes: {
+        small: 1,
+        medium: 2,
+        large: 1,
+      },
+    },
+    cliff: {
+      rarity: 1,
+      treeProportion: 1,
+      rockProportion: 1,
+      treeSizes: {
+        small: 1,
+        medium: 1,
+        large: 0,
+      },
+    },
+    plateau: {
+      rarity: 60,
+      treeProportion: 4,
+      rockProportion: 1,
+      deadTreeProportion: 1,
+      treeSizes: {
+        small: 1,
+        medium: 2,
+        large: 3,
+      },
+    },
+  },
+};
+
+/**
+ * Merge obstacle config with overrides.
+ */
+function mergeObstacleConfig(
+  base: ObstacleConfig,
+  overrides?: PartialObstacleConfig
+): ObstacleConfig {
+  if (!overrides) return base;
+
+  const merged: ObstacleConfig = { ...base };
+  if (overrides.surfaces) {
+    merged.surfaces = { ...base.surfaces };
+    if (overrides.surfaces.track) {
+      merged.surfaces.track = { ...base.surfaces.track, ...overrides.surfaces.track };
+    }
+    if (overrides.surfaces.bank) {
+      merged.surfaces.bank = { ...base.surfaces.bank, ...overrides.surfaces.bank };
+    }
+    if (overrides.surfaces.cliff) {
+      merged.surfaces.cliff = { ...base.surfaces.cliff, ...overrides.surfaces.cliff };
+    }
+    if (overrides.surfaces.plateau) {
+      merged.surfaces.plateau = { ...base.surfaces.plateau, ...overrides.surfaces.plateau };
+    }
+  }
+  return merged;
+}
+
 export const DIFFICULTY_SETTINGS: Record<string, DifficultySettings> = {
   CHILL: {
-    obstacleDensity: 0.5,
+    obstacleDensity: 0.4,
+    obstacleOverrides: {
+      surfaces: {
+        track: { rarity: 0 },
+        plateau: { rarity: 60 },
+      },
+    },
   },
   SPORT: {
     obstacleDensity: 1.0,
   },
   EXTREME: {
     obstacleDensity: 2.0,
+    obstacleOverrides: {
+      surfaces: {
+        plateau: { rarity: 60 },
+      },
+    },
   },
 };
 
@@ -789,71 +883,19 @@ export const TERRAIN_CONFIG: TerrainConfig = {
   obstacleCount: 200,
 };
 
-export const OBSTACLE_CONFIG: ObstacleConfig = {
-  gridSize: 5,
-  noiseScale: 0.1,
-  surfaces: {
-    track: {
-      rarity: 12,
-      treeProportion: 2,
-      rockProportion: 3,
-      treeSizes: {
-        small: 1,
-        medium: 0,
-        large: 0,
-      },
-    },
-    bank: {
-      rarity: 50,
-      treeProportion: 4,
-      rockProportion: 1,
-      treeSizes: {
-        small: 1,
-        medium: 2,
-        large: 1,
-      },
-      noiseThresholds: {
-        small: { min: 0.3, max: 0.5, probability: 0.25 },
-        medium: { min: 0.5, max: 0.7, probability: 0.3 },
-        large: { min: 0.7, max: 1.0, probability: 0.2 },
-      },
-      rockProbability: 0.15,
-    },
-    cliff: {
-      rarity: 5,
-      treeProportion: 1,
-      rockProportion: 1,
-      treeSizes: {
-        small: 1,
-        medium: 1,
-        large: 0,
-      },
-      noiseThresholds: {
-        small: { min: 0.4, max: 0.6, probability: 0.1 },
-        medium: { min: 0.6, max: 1.0, probability: 0.08 },
-        large: { min: 0, max: 0, probability: 0 },
-      },
-      rockProbability: 0.08,
-    },
-    plateau: {
-      rarity: 15,
-      treeProportion: 3,
-      rockProportion: 0,
-      deadTreeProportion: 1,
-      treeSizes: {
-        small: 1,
-        medium: 2,
-        large: 3,
-      },
-      noiseThresholds: {
-        deadTree: { min: 0, max: 0.4, probability: 0.1 },
-        small: { min: 0.4, max: 0.6, probability: 0.6 },
-        medium: { min: 0.6, max: 0.8, probability: 0.7 },
-        large: { min: 0.8, max: 1.0, probability: 0.8 },
-      },
-    },
-  },
-};
+/**
+ * Get obstacle config for a specific difficulty.
+ */
+export function getObstacleConfig(difficulty: string): ObstacleConfig {
+  const settings = DIFFICULTY_SETTINGS[difficulty] ?? DIFFICULTY_SETTINGS.SPORT;
+  return mergeObstacleConfig(BASE_OBSTACLE_CONFIG, settings.obstacleOverrides);
+}
+
+/**
+ * @deprecated Use getObstacleConfig(difficulty) instead.
+ * Legacy export for backward compatibility.
+ */
+export const OBSTACLE_CONFIG: ObstacleConfig = BASE_OBSTACLE_CONFIG;
 
 export const LIGHTING_CONFIG: LightingConfig = {
   shadow: {

@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 
-import { DIFFICULTY_SETTINGS, MOUNTAIN_CONFIG, TERRAIN_CONFIG } from '../config/GameConfig';
+import {
+  DIFFICULTY_SETTINGS,
+  getObstacleConfig,
+  MOUNTAIN_CONFIG,
+  type ObstacleConfig,
+  TERRAIN_CONFIG,
+} from '../config/GameConfig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { Difficulty } from '../ui/store';
 import { TerrainChunk } from './TerrainChunk';
@@ -22,7 +28,7 @@ export class TerrainManager {
   private readonly chunkLength = TERRAIN_CONFIG.dimensions.chunkLength;
   private sampleIndex = 0;
   private obstacleMultiplier = 1;
-  private trackObstaclesEnabled = true;
+  private obstacleConfig: ObstacleConfig = getObstacleConfig('SPORT');
   private readonly chunksAhead = 6;
   private readonly chunksBehind = 2;
 
@@ -54,9 +60,10 @@ export class TerrainManager {
     this.coinsEnabled = coinsEnabled;
     this.startAltitude = this.getStartAltitudeFromSlope(slopeAngle);
     this.slopeTangent = Math.tan(THREE.MathUtils.degToRad(Math.max(0, Math.min(70, slopeAngle))));
-    const baseObstacleDensity = DIFFICULTY_SETTINGS[difficulty]?.obstacleDensity ?? 1;
+    const difficultySettings = DIFFICULTY_SETTINGS[difficulty] ?? DIFFICULTY_SETTINGS.SPORT;
+    const baseObstacleDensity = difficultySettings.obstacleDensity;
     this.obstacleMultiplier = baseObstacleDensity * obstacleModeMultiplier;
-    this.trackObstaclesEnabled = difficulty !== 'CHILL';
+    this.obstacleConfig = getObstacleConfig(difficulty);
 
     const initialChunks = this.chunksAhead + this.chunksBehind + 2;
     for (let i = 0; i < initialChunks; i++) {
@@ -90,8 +97,8 @@ export class TerrainManager {
     const chunk = new TerrainChunk(
       points,
       this.generator,
+      this.obstacleConfig,
       this.obstacleMultiplier,
-      this.trackObstaclesEnabled,
       this.coinsEnabled,
       this.physics
     );
