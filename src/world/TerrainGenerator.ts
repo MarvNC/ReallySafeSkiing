@@ -1,10 +1,8 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 
 import { MOUNTAIN_CONFIG, TERRAIN_CONFIG } from '../config/GameConfig';
-import type { ChunkState, PathPoint, TerrainSample } from './WorldState';
+import type { PathPoint, TerrainSample } from './WorldState';
 import { SurfaceKind } from './WorldState';
-
-const { chunkSegments } = TERRAIN_CONFIG.dimensions;
 
 /**
  * Pure terrain-generation logic: heightfields, path spine, and noise sampling.
@@ -122,14 +120,6 @@ export class TerrainGenerator {
     }
 
     return { offset, index: idx, start, length };
-  }
-
-  private getTrackWidth(z: number): number {
-    const widthNoise = this.noise2D(z * 0.01, 100);
-    return (
-      TERRAIN_CONFIG.widthMin +
-      (widthNoise * 0.5 + 0.5) * (TERRAIN_CONFIG.widthMax - TERRAIN_CONFIG.widthMin)
-    );
   }
 
   getSnowHeightAt(worldX: number, worldZ: number, point: PathPoint): number {
@@ -357,66 +347,6 @@ export class TerrainGenerator {
     }
 
     return newPoints;
-  }
-
-  // Keep the old method for backward compatibility during transition
-  generatePathSpine(startState: ChunkState): { points: PathPoint[]; endState: ChunkState } {
-    const points: PathPoint[] = [];
-    let currentX = startState.endX;
-    let currentAngle = startState.endAngle;
-
-    const segmentLength =
-      TERRAIN_CONFIG.dimensions.chunkLength / TERRAIN_CONFIG.dimensions.chunkSegments;
-
-    for (let i = 0; i <= chunkSegments; i++) {
-      const localZ = -i * segmentLength;
-      const worldZ = startState.endZ + localZ;
-
-      // Generate target angle using noise
-      const noiseFreq = TERRAIN_CONFIG.turnSpeed;
-      const noiseValue = this.noise2D(0, worldZ * noiseFreq);
-      const targetAngle = noiseValue * Math.PI * 0.3; // Max ~54 degrees
-
-      // Smoothly interpolate current angle toward target (momentum)
-      currentAngle += (targetAngle - currentAngle) * TERRAIN_CONFIG.angleInterpolation;
-
-      // Update X position based on angle
-      currentX += Math.sin(currentAngle) * segmentLength;
-
-      // Track width
-      const width = this.getTrackWidth(worldZ);
-
-      // Calculate banking based on current angle
-      const banking = currentAngle * TERRAIN_CONFIG.bankingStrength;
-
-      const s = points.length > 0 ? points[points.length - 1].s + segmentLength : 0;
-      const forwardX = Math.sin(currentAngle);
-      const forwardZ = -Math.cos(currentAngle);
-      const rightX = forwardZ;
-      const rightZ = -forwardX;
-
-      points.push({
-        x: currentX,
-        y: 0, // Placeholder - will be calculated by new method
-        z: localZ,
-        angle: currentAngle,
-        width: width,
-        banking: banking,
-        s,
-        forwardX,
-        forwardZ,
-        rightX,
-        rightZ,
-      });
-    }
-
-    const endState: ChunkState = {
-      endX: currentX,
-      endAngle: currentAngle,
-      endZ: startState.endZ - TERRAIN_CONFIG.dimensions.chunkLength,
-    };
-
-    return { points, endState };
   }
 
   private worldToLocalXZ(
