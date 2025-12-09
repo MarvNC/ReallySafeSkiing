@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
-import { Clock, MapPin, RefreshCcw, Trophy, Zap } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Clock, Home, MapPin, RefreshCcw, Trophy, Zap } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
 import {
@@ -10,10 +10,9 @@ import {
   type Grade,
   savePersonalBest,
 } from '../../utils/scoreSystem';
-import { Difficulty, EndReason, GameMode, useGameStore } from '../store';
-import { DIFFICULTY_OPTIONS, DifficultySelector } from './DifficultySelector';
-import { GameModeToggle } from './GameModeToggle';
-import { SLOPE_LEVELS, SlopeControl } from './SlopeControl';
+import { Difficulty, EndReason, GameMode, UIState, useGameStore } from '../store';
+import { DIFFICULTY_OPTIONS } from './DifficultySelector';
+import { SLOPE_LEVELS } from './SlopeControl';
 
 const formatTime = (value: number) => {
   const minutes = Math.floor(value / 60);
@@ -112,19 +111,6 @@ export const GameOver = () => {
   }
 
   const { sprintComplete, grade, personalBest, isNewRecord } = resultMetaRef.current!;
-  const [showSettings, setShowSettings] = useState(false);
-
-  useEffect(() => {
-    if (!showSettings) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setShowSettings(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSettings]);
 
   const isCrash = finishStats.endReason === 'crash';
   const showGrade = sprintComplete && grade;
@@ -155,6 +141,13 @@ export const GameOver = () => {
     InputManager.instance?.triggerAction(Action.Start);
   };
 
+  const handleBackToMenu = () => {
+    const store = useGameStore.getState();
+    store.setUIState(UIState.MENU);
+    store.setEndReason(null);
+    store.setMenuIndex(0);
+  };
+
   return (
     <div className="pointer-events-auto flex w-full flex-col items-center gap-3 px-4 text-white md:px-0">
       <div className="text-center">
@@ -174,150 +167,112 @@ export const GameOver = () => {
       <div className="pointer-events-auto relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/70 p-6 shadow-2xl backdrop-blur-2xl md:p-10">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
-        {showSettings ? (
-          <div className="space-y-6">
-            <div className="text-[11px] font-semibold tracking-[0.4em] text-white/60 uppercase">
-              Run Settings
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="text-[10px] font-semibold tracking-[0.2em] text-white/50 uppercase">
-                  Game Mode
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            {finishStats.gameMode === 'ARCADE' && (
+              <div className="col-span-2 flex flex-col items-center gap-2 text-center">
+                <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.35em] text-amber-100/90 uppercase">
+                  <Trophy className="h-4 w-4 text-amber-200" />
+                  Score
                 </div>
-                <GameModeToggle />
-              </div>
-              <div className="space-y-2">
-                <div className="text-[10px] font-semibold tracking-[0.2em] text-white/50 uppercase">
-                  Obstacle Density
+                <div className="text-4xl font-black tracking-[0.18em] text-white md:text-5xl">
+                  {Math.floor(finishStats.score).toLocaleString()}
                 </div>
-                <DifficultySelector />
-              </div>
-              <div className="space-y-2">
-                <div className="text-[10px] font-semibold tracking-[0.2em] text-white/50 uppercase">
-                  Steepness
+                <div className="text-xs font-semibold tracking-[0.2em] text-white/70">
+                  Best {Math.floor(finishStats.highScore).toLocaleString()}
                 </div>
-                <SlopeControl />
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowSettings(false)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-3 text-xs font-semibold tracking-[0.3em] text-white/80 uppercase transition hover:bg-white/10"
-            >
-              Back
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              {finishStats.gameMode === 'ARCADE' && (
-                <div className="col-span-2 flex flex-col items-center gap-2 text-center">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.35em] text-amber-100/90 uppercase">
-                    <Trophy className="h-4 w-4 text-amber-200" />
-                    Score
-                  </div>
-                  <div className="text-4xl font-black tracking-[0.18em] text-white md:text-5xl">
-                    {Math.floor(finishStats.score).toLocaleString()}
-                  </div>
-                  <div className="text-xs font-semibold tracking-[0.2em] text-white/70">
-                    Best {Math.floor(finishStats.highScore).toLocaleString()}
-                  </div>
+            )}
+            <StatCard
+              icon={Zap}
+              label="TOP SPEED"
+              value={`${Math.round(finishStats.topSpeed)} KM/H`}
+              accentClass="text-accent-orange"
+            />
+            <div className="relative flex flex-col items-center justify-center rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/0 p-3 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <Clock className="text-accent-orange mb-2 h-6 w-6" />
+              <div className="text-3xl font-black tracking-wide md:text-4xl">
+                {formatTime(finishStats.timeElapsed)}
+              </div>
+              <div className="text-[11px] tracking-[0.4em] text-white/70 uppercase">Final Time</div>
+              {personalBest && !isNewRecord && (
+                <div className="mt-2 text-xs text-white/60">PB {formatTime(personalBest)}</div>
+              )}
+              {isNewRecord && (
+                <div className="absolute -top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-300 px-3 py-1 text-[10px] font-black text-slate-900 shadow-lg">
+                  <Trophy className="h-3 w-3" />
+                  NEW BEST
                 </div>
               )}
-              <StatCard
-                icon={Zap}
-                label="TOP SPEED"
-                value={`${Math.round(finishStats.topSpeed)} KM/H`}
-                accentClass="text-accent-orange"
-              />
-              <div className="relative flex flex-col items-center justify-center rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/0 p-3 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                <Clock className="text-accent-orange mb-2 h-6 w-6" />
-                <div className="text-3xl font-black tracking-wide md:text-4xl">
-                  {formatTime(finishStats.timeElapsed)}
-                </div>
-                <div className="text-[11px] tracking-[0.4em] text-white/70 uppercase">
-                  Final Time
-                </div>
-                {personalBest && !isNewRecord && (
-                  <div className="mt-2 text-xs text-white/60">PB {formatTime(personalBest)}</div>
-                )}
-                {isNewRecord && (
-                  <div className="absolute -top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-300 px-3 py-1 text-[10px] font-black text-slate-900 shadow-lg">
-                    <Trophy className="h-3 w-3" />
-                    NEW BEST
-                  </div>
-                )}
+            </div>
+            <StatCard
+              icon={MapPin}
+              label="DISTANCE"
+              value={`${Math.floor(finishStats.distance)} M`}
+              accentClass="text-sky-300"
+            />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
+                {(() => {
+                  const activeDifficulty = DIFFICULTY_OPTIONS.find(
+                    (option) => option.value === finishStats.difficulty
+                  );
+                  if (!activeDifficulty) return null;
+                  const Icon = activeDifficulty.icon;
+                  return (
+                    <>
+                      <Icon className={clsx('h-5 w-5', activeDifficulty.iconClass)} />
+                      <div className="text-lg font-black tracking-wide text-white">
+                        {activeDifficulty.value}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
-              <StatCard
-                icon={MapPin}
-                label="DISTANCE"
-                value={`${Math.floor(finishStats.distance)} M`}
-                accentClass="text-sky-300"
-              />
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-                  {(() => {
-                    const activeDifficulty = DIFFICULTY_OPTIONS.find(
-                      (option) => option.value === finishStats.difficulty
-                    );
-                    if (!activeDifficulty) return null;
-                    const Icon = activeDifficulty.icon;
-                    return (
-                      <>
-                        <Icon className={clsx('h-5 w-5', activeDifficulty.iconClass)} />
+              <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
+                {(() => {
+                  const activeSlope = getSlopeDescriptor(finishStats.slopeAngle);
+                  return (
+                    <>
+                      <div className="flex h-8 w-8 items-center justify-center">
+                        {activeSlope.renderIcon(true)}
+                      </div>
+                      <div>
                         <div className="text-lg font-black tracking-wide text-white">
-                          {activeDifficulty.value}
+                          {Math.round(finishStats.slopeAngle)}°
                         </div>
-                      </>
-                    );
-                  })()}
-                </div>
-                <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-                  {(() => {
-                    const activeSlope = getSlopeDescriptor(finishStats.slopeAngle);
-                    return (
-                      <>
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          {activeSlope.renderIcon(true)}
-                        </div>
-                        <div>
-                          <div className="text-lg font-black tracking-wide text-white">
-                            {Math.round(finishStats.slopeAngle)}°
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowSettings(true)}
-              className={clsx(
-                'rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs font-semibold tracking-[0.4em] text-white/80 uppercase transition hover:bg-white/10',
-                isCrash && 'text-accent-red/90'
-              )}
-            >
-              CONFIGURE RUN
-            </button>
-
-            <button
-              type="button"
-              onClick={handleRestart}
-              className="group from-accent-orange to-accent-red relative flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r py-4 text-lg font-black tracking-[0.3em] uppercase shadow-[0_12px_30px_rgba(249,115,22,0.45)] transition-transform hover:translate-y-[-2px] active:scale-95"
-            >
-              <RefreshCcw className="h-5 w-5 transition-transform group-hover:rotate-180" />
-              Play Again
-            </button>
-            <div className="hidden text-center text-xs text-white/60 md:block">
-              Press Space or Enter to restart instantly.
-            </div>
           </div>
-        )}
 
-        {showGrade && !showSettings && (
+          <button
+            type="button"
+            onClick={handleBackToMenu}
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs font-semibold tracking-[0.35em] text-white/80 uppercase transition hover:bg-white/10"
+          >
+            <Home className="h-4 w-4 text-white/70" />
+            Back to Home
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRestart}
+            className="group from-accent-orange to-accent-red relative flex h-14 items-center justify-center gap-3 rounded-2xl bg-gradient-to-r py-4 text-lg font-black tracking-[0.3em] uppercase shadow-[0_12px_30px_rgba(249,115,22,0.45)] transition-transform hover:translate-y-[-2px] active:scale-95"
+          >
+            <RefreshCcw className="h-5 w-5 transition-transform group-hover:rotate-180" />
+            Play Again
+          </button>
+
+          <div className="hidden text-center text-xs text-white/60 md:block">
+            Press Space or Enter to restart instantly.
+          </div>
+        </div>
+
+        {showGrade && (
           <div className="pointer-events-none absolute top-6 -right-2 rotate-12 text-8xl font-black text-white/20 md:text-[8rem]">
             {grade}
           </div>
