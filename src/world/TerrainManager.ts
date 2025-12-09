@@ -19,8 +19,7 @@ export class TerrainManager {
   private startAltitude: number = 0;
   private slopeTangent: number = 0;
   private readonly chunkSegments = TERRAIN_CONFIG.dimensions.chunkSegments;
-  private readonly chunkLength =
-    TERRAIN_CONFIG.dimensions.chunkSegments * TERRAIN_CONFIG.segmentLength;
+  private readonly chunkLength = TERRAIN_CONFIG.dimensions.chunkLength;
   private sampleIndex = 0;
   private obstacleMultiplier = 1;
   private trackObstaclesEnabled = true;

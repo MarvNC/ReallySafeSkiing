@@ -750,14 +750,18 @@ export const MOUNTAIN_CONFIG: MountainConfig = {
   totalLength: 2500,
 };
 
+const TERRAIN_CHUNK_SEGMENTS = 60;
+const TERRAIN_SEGMENT_LENGTH = 8;
+const TERRAIN_CHUNK_LENGTH = TERRAIN_CHUNK_SEGMENTS * TERRAIN_SEGMENT_LENGTH;
+
 export const TERRAIN_CONFIG: TerrainConfig = {
   dimensions: {
     chunkWidth: 150,
-    chunkLength: 150,
-    chunkSegments: 60,
+    chunkLength: TERRAIN_CHUNK_LENGTH,
+    chunkSegments: TERRAIN_CHUNK_SEGMENTS,
     widthSegments: 80,
   },
-  segmentLength: 8,
+  segmentLength: TERRAIN_SEGMENT_LENGTH,
   amplitude: 60,
   noiseScale: 0.02,
   meander1Freq: 1.0,
