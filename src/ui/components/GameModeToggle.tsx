@@ -22,7 +22,7 @@ export const GameModeToggle = () => {
 
   return (
     <div className="group relative w-full">
-      <div className="relative flex h-12 w-full items-stretch overflow-hidden rounded-full border border-white/10 bg-slate-900/60 p-1 shadow-inner shadow-black/30 backdrop-blur">
+      <div className="relative flex h-14 w-full items-stretch overflow-hidden rounded-full border border-white/10 bg-slate-900/60 p-1 shadow-inner shadow-black/30 backdrop-blur">
         <div
           className={clsx(
             'absolute top-1 bottom-1 w-1/3 rounded-full bg-gradient-to-br transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
