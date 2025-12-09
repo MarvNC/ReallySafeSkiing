@@ -1,5 +1,4 @@
 import clsx from 'clsx';
-import type { LucideIcon } from 'lucide-react';
 import { Clock, Home, MapPin, RefreshCcw, Trophy, Zap } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
@@ -23,23 +22,6 @@ const formatTime = (value: number) => {
     .toString()
     .padStart(2, '0')}`;
 };
-
-type StatCardProps = {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  accentClass: string;
-  detail?: string;
-};
-
-const StatCard = ({ icon: Icon, label, value, accentClass, detail }: StatCardProps) => (
-  <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-inner shadow-black/30 backdrop-blur-md">
-    <Icon className={clsx('h-5 w-5', accentClass)} />
-    <div className="text-2xl font-black tracking-wide md:text-3xl">{value}</div>
-    <div className="text-[10px] font-semibold tracking-[0.3em] text-white/70">{label}</div>
-    {detail && <div className="text-xs text-white/60">{detail}</div>}
-  </div>
-);
 
 const getSlopeDescriptor = (angle: number) =>
   SLOPE_LEVELS.reduce((closest, current) => {
@@ -86,7 +68,7 @@ export const GameOver = () => {
     };
   }
 
-  const finishStats = finishStatsRef.current!;
+  const finishStats = finishStatsRef.current;
 
   const resultMetaRef = useRef<ResultMeta | null>(null);
   if (!resultMetaRef.current) {
@@ -110,7 +92,7 @@ export const GameOver = () => {
     };
   }
 
-  const { sprintComplete, grade, personalBest, isNewRecord } = resultMetaRef.current!;
+  const { sprintComplete, grade, personalBest, isNewRecord } = resultMetaRef.current;
 
   const isCrash = finishStats.endReason === 'crash';
   const showGrade = sprintComplete && grade;
@@ -135,8 +117,6 @@ export const GameOver = () => {
     finishStats.slopeAngle,
   ]);
 
-  const headerText = 'GAME OVER';
-
   const handleRestart = () => {
     InputManager.instance?.triggerAction(Action.Start);
   };
@@ -148,132 +128,158 @@ export const GameOver = () => {
     store.setMenuIndex(0);
   };
 
-  return (
-    <div className="pointer-events-auto flex w-full flex-col items-center gap-3 px-4 text-white md:px-0">
-      <div className="text-center">
-        <div className="mb-2 text-xs tracking-[0.5em] text-white/50">
-          {finishStats.gameMode} MODE
-        </div>
-        <h1 className="font-russo bg-gradient-to-b from-white to-sky-200 bg-clip-text text-4xl tracking-widest text-transparent uppercase italic drop-shadow-md md:text-6xl">
-          {headerText}
-        </h1>
-        {isCrash && finishStats.penalties > 0 && (
-          <div className="mt-2 text-xs tracking-[0.4em] text-white/40 uppercase">
-            {finishStats.penalties} {finishStats.penalties === 1 ? 'PENALTY' : 'PENALTIES'}
-          </div>
-        )}
-      </div>
+  const activeDifficulty = DIFFICULTY_OPTIONS.find(
+    (option) => option.value === finishStats.difficulty
+  );
+  const slopeDescriptor = getSlopeDescriptor(finishStats.slopeAngle);
 
-      <div className="pointer-events-auto relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/70 p-6 shadow-2xl backdrop-blur-2xl md:p-10">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+  const arcadeBestScore = Math.max(finishStats.highScore, finishStats.score);
+  const isArcadeNewBest =
+    finishStats.gameMode === 'ARCADE' &&
+    finishStats.score > 0 &&
+    (finishStats.highScore === 0 || finishStats.score > finishStats.highScore);
+
+  return (
+    <div className="pointer-events-auto flex w-full flex-col items-center px-4 text-white md:px-0">
+      <div className="relative w-full max-w-4xl overflow-hidden rounded-[28px] border border-white/10 bg-slate-900/70 p-5 shadow-2xl shadow-black/30 backdrop-blur-2xl md:p-8">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-white/40 to-transparent" />
 
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            {finishStats.gameMode === 'ARCADE' && (
-              <div className="col-span-2 flex flex-col items-center gap-2 text-center">
-                <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.35em] text-amber-100/90 uppercase">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {activeDifficulty && (
+                <span className="flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[11px] font-semibold tracking-[0.16em] text-white/80 md:h-8 md:gap-2 md:px-4 md:text-xs">
+                  <activeDifficulty.icon
+                    className={clsx('h-3.5 w-3.5 md:h-4 md:w-4', activeDifficulty.iconClass)}
+                  />
+                  {activeDifficulty.value}
+                </span>
+              )}
+              <span className="flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[11px] font-semibold tracking-[0.16em] text-white/80 md:h-8 md:gap-2 md:px-4 md:text-xs">
+                <div className="flex scale-50 items-center justify-center md:scale-[0.6]">
+                  {slopeDescriptor.renderIcon(true)}
+                </div>
+                {slopeDescriptor.label}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="text-[10px] font-semibold tracking-[0.4em] text-white/50">
+              {finishStats.gameMode} MODE
+            </div>
+            <h1 className="font-russo bg-linear-to-b from-white to-sky-200 bg-clip-text text-4xl tracking-[0.2em] text-transparent uppercase italic drop-shadow-md md:text-6xl">
+              Game Over
+            </h1>
+            {isCrash && finishStats.penalties > 0 && (
+              <div className="text-[11px] tracking-[0.32em] text-white/45 uppercase">
+                {finishStats.penalties} {finishStats.penalties === 1 ? 'Penalty' : 'Penalties'}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 shadow-inner shadow-black/20">
+            {finishStats.gameMode === 'ARCADE' ? (
+              <>
+                <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-white/60 uppercase">
                   <Trophy className="h-4 w-4 text-amber-200" />
                   Score
                 </div>
-                <div className="text-4xl font-black tracking-[0.18em] text-white md:text-5xl">
+                <div className="font-mono text-5xl leading-none font-black text-white md:text-6xl">
                   {Math.floor(finishStats.score).toLocaleString()}
                 </div>
-                <div className="text-xs font-semibold tracking-[0.2em] text-white/70">
-                  Best {Math.floor(finishStats.highScore).toLocaleString()}
+                <div className="flex items-center justify-between text-sm text-white/70">
+                  <span>Best {Math.floor(arcadeBestScore).toLocaleString()}</span>
+                  {isArcadeNewBest && <span className="text-amber-200">New personal best!</span>}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-white/60 uppercase">
+                  <Clock className="text-accent-orange h-4 w-4" />
+                  Final Time
+                </div>
+                <div className="font-mono text-4xl leading-tight font-black text-white md:text-5xl">
+                  {formatTime(finishStats.timeElapsed)}
+                </div>
+                {personalBest || isNewRecord ? (
+                  <div className="flex items-center justify-between text-sm text-white/70">
+                    {personalBest && <span>Personal Best: {formatTime(personalBest)}</span>}
+                    {isNewRecord && (
+                      <span className="flex items-center gap-2 font-semibold text-amber-200">
+                        <Trophy className="h-4 w-4" />
+                        New record!
+                      </span>
+                    )}
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+
+          <div
+            className={clsx(
+              'grid items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-2 text-center shadow-inner shadow-black/20',
+              finishStats.gameMode === 'ARCADE' ? 'grid-cols-3' : 'grid-cols-2'
+            )}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Zap className="h-5 w-5 text-amber-200" />
+              <div className="font-mono text-lg font-semibold">
+                {Math.round(finishStats.topSpeed)} km/h
+              </div>
+              <div className="text-[10px] font-semibold tracking-[0.25em] text-white/60 uppercase">
+                Speed
+              </div>
+            </div>
+            {finishStats.gameMode === 'ARCADE' && (
+              <div className="flex flex-col items-center gap-1">
+                <Clock className="h-5 w-5 text-sky-200" />
+                <div className="font-mono text-lg font-semibold">
+                  {formatTime(finishStats.timeElapsed)}
+                </div>
+                <div className="text-[10px] font-semibold tracking-[0.25em] text-white/60 uppercase">
+                  Time
                 </div>
               </div>
             )}
-            <StatCard
-              icon={Zap}
-              label="TOP SPEED"
-              value={`${Math.round(finishStats.topSpeed)} KM/H`}
-              accentClass="text-accent-orange"
-            />
-            <div className="relative flex flex-col items-center justify-center rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/0 p-3 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-              <Clock className="text-accent-orange mb-2 h-6 w-6" />
-              <div className="text-3xl font-black tracking-wide md:text-4xl">
-                {formatTime(finishStats.timeElapsed)}
+            <div className="flex flex-col items-center gap-1">
+              <MapPin className="h-5 w-5 text-emerald-200" />
+              <div className="font-mono text-lg font-semibold">
+                {Math.floor(finishStats.distance)} m
               </div>
-              <div className="text-[11px] tracking-[0.4em] text-white/70 uppercase">Final Time</div>
-              {personalBest && !isNewRecord && (
-                <div className="mt-2 text-xs text-white/60">PB {formatTime(personalBest)}</div>
-              )}
-              {isNewRecord && (
-                <div className="absolute -top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-300 px-3 py-1 text-[10px] font-black text-slate-900 shadow-lg">
-                  <Trophy className="h-3 w-3" />
-                  NEW BEST
-                </div>
-              )}
-            </div>
-            <StatCard
-              icon={MapPin}
-              label="DISTANCE"
-              value={`${Math.floor(finishStats.distance)} M`}
-              accentClass="text-sky-300"
-            />
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-                {(() => {
-                  const activeDifficulty = DIFFICULTY_OPTIONS.find(
-                    (option) => option.value === finishStats.difficulty
-                  );
-                  if (!activeDifficulty) return null;
-                  const Icon = activeDifficulty.icon;
-                  return (
-                    <>
-                      <Icon className={clsx('h-5 w-5', activeDifficulty.iconClass)} />
-                      <div className="text-lg font-black tracking-wide text-white">
-                        {activeDifficulty.value}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-              <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-                {(() => {
-                  const activeSlope = getSlopeDescriptor(finishStats.slopeAngle);
-                  return (
-                    <>
-                      <div className="flex h-8 w-8 items-center justify-center">
-                        {activeSlope.renderIcon(true)}
-                      </div>
-                      <div>
-                        <div className="text-lg font-black tracking-wide text-white">
-                          {Math.round(finishStats.slopeAngle)}°
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
+              <div className="text-[10px] font-semibold tracking-[0.25em] text-white/60 uppercase">
+                Distance
               </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleBackToMenu}
-            className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs font-semibold tracking-[0.35em] text-white/80 uppercase transition hover:bg-white/10"
-          >
-            <Home className="h-4 w-4 text-white/70" />
-            Back to Home
-          </button>
-
-          <button
-            type="button"
-            onClick={handleRestart}
-            className="group from-accent-orange to-accent-red relative flex h-14 items-center justify-center gap-3 rounded-2xl bg-gradient-to-r py-4 text-lg font-black tracking-[0.3em] uppercase shadow-[0_12px_30px_rgba(249,115,22,0.45)] transition-transform hover:translate-y-[-2px] active:scale-95"
-          >
-            <RefreshCcw className="h-5 w-5 transition-transform group-hover:rotate-180" />
-            Play Again
-          </button>
-
-          <div className="hidden text-center text-xs text-white/60 md:block">
+          <div className="hidden text-center text-sm text-white/60 md:block">
             Press Space or Enter to restart instantly.
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleRestart}
+              className="font-russo group from-accent-orange to-accent-red flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-linear-to-r px-6 text-xl tracking-[0.15em] uppercase shadow-[0_0_20px_rgba(249,115,22,0.45)] transition-all hover:-translate-y-1 active:scale-95"
+            >
+              <RefreshCcw className="h-5 w-5 transition-transform group-hover:rotate-180" />
+              Play Again
+            </button>
+            <button
+              type="button"
+              onClick={handleBackToMenu}
+              className="font-russo flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/20 px-4 text-xl tracking-[0.15em] text-white uppercase transition-all hover:bg-white/30 hover:text-white"
+            >
+              <Home className="h-5 w-5" />
+              Back to Home
+            </button>
           </div>
         </div>
 
         {showGrade && (
-          <div className="pointer-events-none absolute top-6 -right-2 rotate-12 text-8xl font-black text-white/20 md:text-[8rem]">
+          <div className="pointer-events-none absolute top-6 -right-2 rotate-12 text-8xl font-black text-white/15 md:text-[8rem]">
             {grade}
           </div>
         )}
