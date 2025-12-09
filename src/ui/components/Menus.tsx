@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ChevronDown, Home, LogOut, Play, RotateCcw } from 'lucide-react';
+import { ChevronDown, Home, LogOut, Play, RotateCcw, Trees, TrendingDown } from 'lucide-react';
 import { type FC, type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
@@ -131,10 +131,11 @@ const FirstRunPrompt: FC<{ isMobile: boolean }> = ({ isMobile }) => (
 const AccordionSection: FC<{
   title: string;
   subtitle?: ReactNode;
+  icon?: React.ElementType;
   isOpen: boolean;
   onToggle: () => void;
   children: ReactNode;
-}> = ({ title, subtitle, isOpen, onToggle, children }) => {
+}> = ({ title, subtitle, icon: Icon, isOpen, onToggle, children }) => {
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10">
       <button
@@ -142,11 +143,14 @@ const AccordionSection: FC<{
         onClick={onToggle}
         className="flex w-full items-center justify-between p-3 text-left outline-none"
       >
-        <div className="flex flex-col md:w-full md:flex-row md:items-baseline md:justify-between md:gap-4">
-          <span className="text-[10px] font-bold tracking-[0.2em] text-white/90 uppercase">
-            {title}
-          </span>
-          {subtitle && <span className="text-[10px] text-white/60 uppercase">{subtitle}</span>}
+        <div className="flex flex-1 items-center gap-3">
+          {Icon && <Icon className="h-4 w-4 text-white/70" />}
+          <div className="flex flex-1 flex-col">
+            <span className="text-xs font-bold tracking-[0.2em] text-white/90 uppercase">
+              {title}
+            </span>
+            {subtitle && <span className="text-xs text-white/60 uppercase">{subtitle}</span>}
+          </div>
         </div>
         <ChevronDown
           className={clsx(
@@ -180,9 +184,6 @@ const SetupPanel: FC = () => {
     // Mobile: p-3. Desktop: p-4.
     <div className="pointer-events-auto flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm shadow-2xl backdrop-blur-xl transition-all duration-500 md:gap-4 md:p-6">
       <div className="flex flex-col gap-2">
-        <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-white/90 uppercase">
-          Game Mode
-        </div>
         <GameModeToggle />
       </div>
 
@@ -191,6 +192,7 @@ const SetupPanel: FC = () => {
       <AccordionSection
         title="Obstacle Density"
         subtitle="Trees & Rocks"
+        icon={Trees}
         isOpen={openSection === 'DENSITY'}
         onToggle={() => toggleSection('DENSITY')}
       >
@@ -202,6 +204,7 @@ const SetupPanel: FC = () => {
       <AccordionSection
         title="Steepness"
         subtitle="Speed & Gravity"
+        icon={TrendingDown}
         isOpen={openSection === 'SLOPE'}
         onToggle={() => toggleSection('SLOPE')}
       >
