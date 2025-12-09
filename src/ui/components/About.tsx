@@ -41,7 +41,7 @@ export const About = () => {
 
   return (
     <div
-      className="font-russo pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/80 text-white backdrop-blur-md"
+      className="font-russo pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-slate-900/80 text-white backdrop-blur-md"
       onClick={handleBackdropClick}
       onKeyDown={handleBackdropKeyDown}
       role="button"
