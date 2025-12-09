@@ -92,7 +92,7 @@ interface GameState {
   triggerScorePopup: (payload: ScorePopupPayload) => void;
 }
 
-const ARCADE_DEFAULT_LIVES = ARCADE_CONFIG.DEFAULT_LIVES;
+const ARCADE_DEFAULT_LIVES = ARCADE_CONFIG.defaultLives;
 const ARCADE_DEFAULT_MULTIPLIER = 1;
 const SCORE_POPUP_LIFETIME_MS = 1600;
 const SCORE_POPUP_TEXT = {

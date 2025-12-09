@@ -3,11 +3,10 @@ import * as THREE from 'three';
 
 import {
   ARCADE_CONFIG,
+  COLOR_PALETTE,
   OBSTACLE_CONFIG,
   TERRAIN_CONFIG,
-  TERRAIN_DIMENSIONS,
 } from '../config/GameConfig';
-import { COLOR_PALETTE } from '../constants/colors';
 import { makeCollisionGroups, PhysicsLayer } from '../physics/PhysicsLayers';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { getCoinGeometry, getRockGeometry } from './AssetFactory';
@@ -39,9 +38,9 @@ type CoinInstance = {
   active: boolean;
 };
 
-export const CHUNK_WIDTH = TERRAIN_DIMENSIONS.CHUNK_WIDTH;
-export const CHUNK_LENGTH = TERRAIN_DIMENSIONS.CHUNK_LENGTH;
-export const CHUNK_SEGMENTS = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS;
+export const CHUNK_WIDTH = TERRAIN_CONFIG.dimensions.chunkWidth;
+export const CHUNK_LENGTH = TERRAIN_CONFIG.dimensions.chunkLength;
+export const CHUNK_SEGMENTS = TERRAIN_CONFIG.dimensions.chunkSegments;
 
 export class TerrainChunk {
   // Visuals
@@ -106,11 +105,11 @@ export class TerrainChunk {
     this.obstacleDensityMultiplier = obstacleDensityMultiplier;
     this.trackObstaclesEnabled = trackObstaclesEnabled;
     this.coinsEnabled = coinsEnabled;
-    this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.OBSTACLE_COUNT * obstacleDensityMultiplier);
+    this.obstacleCapacity = Math.ceil(TERRAIN_CONFIG.obstacleCount * obstacleDensityMultiplier);
     this.maxTreesPerBucket = Math.ceil(this.obstacleCapacity);
     this.maxDeadTrees = Math.ceil(this.obstacleCapacity * 0.1);
     this.maxRocks = this.obstacleCapacity;
-    this.maxCoins = ARCADE_CONFIG.COINS_PER_ARC * ARCADE_CONFIG.ARCS_PER_CHUNK;
+    this.maxCoins = ARCADE_CONFIG.coinsPerArc * ARCADE_CONFIG.arcsPerChunk;
 
     // Initialize Group
     this.group = new THREE.Group();
@@ -120,7 +119,12 @@ export class TerrainChunk {
     this.snowMaterial = materials.snow;
 
     // Initialize Geometries (higher width resolution for better cliff quality)
-    this.snowGeometry = new THREE.PlaneGeometry(CHUNK_WIDTH, CHUNK_LENGTH, 80, CHUNK_SEGMENTS);
+    this.snowGeometry = new THREE.PlaneGeometry(
+      CHUNK_WIDTH,
+      CHUNK_LENGTH,
+      TERRAIN_CONFIG.dimensions.widthSegments,
+      CHUNK_SEGMENTS
+    );
 
     // Initialize Meshes
     this.snowMesh = new THREE.Mesh(this.snowGeometry, this.snowMaterial);
@@ -329,7 +333,10 @@ export class TerrainChunk {
     const obstacleTypeProportions = this.normalizeProportions({
       tree: config.treeProportion,
       rock: config.rockProportion,
-      deadTree: 'deadTreeProportion' in config ? config.deadTreeProportion : 0,
+      deadTree:
+        'deadTreeProportion' in config && config.deadTreeProportion !== undefined
+          ? config.deadTreeProportion
+          : 0,
     });
 
     // Normalize tree size proportions (for track)
@@ -342,7 +349,9 @@ export class TerrainChunk {
 
     // Multiply rockProbability by density multiplier for consistency
     const rockProbability =
-      'rockProbability' in config ? config.rockProbability * densityScale : undefined;
+      'rockProbability' in config && config.rockProbability !== undefined
+        ? config.rockProbability * densityScale
+        : undefined;
 
     // Multiply noise threshold probabilities by density multiplier
     let adjustedNoiseThresholds:
@@ -396,7 +405,7 @@ export class TerrainChunk {
       const worldX = point.x + point.rightX * lateralOffset;
       const worldZ = point.z;
       const sample = this.generator.sampleTerrainAt(worldX, worldZ, point);
-      const worldY = sample.height + ARCADE_CONFIG.COIN_HEIGHT_OFFSET;
+      const worldY = sample.height + ARCADE_CONFIG.coinHeightOffset;
       const baseRotationY = Math.random() * Math.PI * 2;
 
       dummy.position.set(worldX, worldY, worldZ - startZ);
@@ -412,7 +421,7 @@ export class TerrainChunk {
       };
 
       if (world) {
-        const colliderRadius = ARCADE_CONFIG.COIN_RADIUS * 1.5; // sphere collider enlarged for easier pickup
+        const colliderRadius = ARCADE_CONFIG.coinRadius * 1.5; // sphere collider enlarged for easier pickup
         const colliderDesc = RAPIER.ColliderDesc.ball(colliderRadius)
           .setSensor(true)
           .setTranslation(worldX, worldY, worldZ)
@@ -468,7 +477,7 @@ export class TerrainChunk {
     if (this.coinMesh.count === 0 || deltaSeconds <= 0) return;
 
     this.coinSpinAngle =
-      (this.coinSpinAngle + deltaSeconds * ARCADE_CONFIG.COIN_ROTATION_SPEED) % (Math.PI * 2);
+      (this.coinSpinAngle + deltaSeconds * ARCADE_CONFIG.coinRotationSpeed) % (Math.PI * 2);
 
     const dummy = this.coinDummy;
 

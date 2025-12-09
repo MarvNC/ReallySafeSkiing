@@ -49,7 +49,7 @@ export class PlayerController {
   private currentCameraBank = 0;
 
   // Base camera pitch (vertical tilt) - dynamically adjusted based on slope
-  private basePitch: number = PLAYER_CONFIG.camera.pitchBase ?? PLAYER_CONFIG.camera.tiltRadians;
+  private basePitch: number = PLAYER_CONFIG.camera.pitchBase;
 
   // Ground alignment state (shared by skis and hands)
   private currentGroundNormal = new THREE.Vector3(0, 1, 0);
@@ -80,7 +80,7 @@ export class PlayerController {
   private crashStartQuat = new THREE.Quaternion();
 
   constructor(scene: THREE.Scene, input: InputManager, options: PlayerOptions) {
-    const startPosition = options.startPosition ?? PLAYER_CONFIG.startPosition.clone();
+    const startPosition = options.startPosition || PLAYER_CONFIG.startPosition.clone();
 
     // 1. Main container for all visual elements
     const mesh = new THREE.Group();
@@ -208,11 +208,7 @@ export class PlayerController {
     // Calculate ideal pitch:
     // We want to look down the slope, plus a slight fixed downward tilt (offset)
     // to center the player and see the path ahead.
-    // Based on current tuning: 20deg slope needs ~0.6 rad tilt.
-    // 0.6 - degToRad(20) ~= 0.25 offset
-    const horizonOffset = 0.25;
-
-    this.basePitch = -(slopeRad + horizonOffset);
+    this.basePitch = -(slopeRad + PLAYER_CONFIG.camera.horizonOffset);
 
     // Apply immediately if not crashed
     if (!this.isCrashed) {
@@ -257,7 +253,7 @@ export class PlayerController {
     this.skis.quaternion.copy(this.currentGroundQuat);
 
     // --- Small sink to keep skis visually planted on steep slopes ---
-    const { sinkOffset = 0, steepnessSinkMax = 0 } = PLAYER_CONFIG.skis.groundAlignment;
+    const { sinkOffset, steepnessSinkMax } = PLAYER_CONFIG.skis.groundAlignment;
     const steepness = 1 - THREE.MathUtils.clamp(this.currentGroundNormal.y, 0, 1); // 0 flat, 1 vertical
     const targetYOffset = this.baseSkiOffset.y - (sinkOffset + steepness * steepnessSinkMax);
     this.currentSkiYOffset = THREE.MathUtils.lerp(this.currentSkiYOffset, targetYOffset, alignLerp);
@@ -306,8 +302,8 @@ export class PlayerController {
     const maxSpeedMs = PLAYER_CONFIG.skis.maxSpeedKmh / 3.6;
     const speedRatio = Math.min(1.0, speed / maxSpeedMs); // 0 to 1 based on speed
 
-    const flowStartKmh = PLAYER_CONFIG.camera.flowStartKmh ?? 0;
-    const flowMaxKmh = PLAYER_CONFIG.camera.flowMaxKmh ?? 120;
+    const flowStartKmh = PLAYER_CONFIG.camera.flowStartKmh;
+    const flowMaxKmh = PLAYER_CONFIG.camera.flowMaxKmh;
     const flowRange = Math.max(1, flowMaxKmh - flowStartKmh);
     const flowRatio = THREE.MathUtils.clamp((speedKmh - flowStartKmh) / flowRange, 0, 1);
     const fovLerp = 1.0 - Math.exp(-2.0 * deltaTime);
@@ -345,9 +341,9 @@ export class PlayerController {
     // Add slight forward push on steep slopes to stay ahead of the skis.
     const forwardOffset = this.tmpForward
       .set(0, 0, -1)
-      .multiplyScalar((PLAYER_CONFIG.camera.slopeForwardPush ?? 0.6) * slopeBlend);
+      .multiplyScalar(PLAYER_CONFIG.camera.slopeForwardPush * slopeBlend);
 
-    const maxLift = Math.min(PLAYER_CONFIG.camera.slopeLiftMax ?? 0.6, 10);
+    const maxLift = Math.min(PLAYER_CONFIG.camera.slopeLiftMax, 10);
     const targetEyeHeight = PLAYER_CONFIG.camera.eyeHeight + slopeBlend * maxLift;
 
     // Base target in local space
@@ -360,18 +356,14 @@ export class PlayerController {
     const desiredWorldPos = targetCameraPos.clone().applyMatrix4(this.mesh.matrixWorld);
     const terrainHeight = this.terrain.getTerrainHeight(desiredWorldPos.x, desiredWorldPos.z);
     const clearance = desiredWorldPos.y - terrainHeight;
-    const minClearance = PLAYER_CONFIG.camera.cameraMinClearance ?? 0.4;
+    const minClearance = PLAYER_CONFIG.camera.cameraMinClearance;
     if (clearance < minClearance) {
       const pushDist = minClearance - clearance;
       const pushLocal = this.tmpVecA
         .copy(this.currentGroundNormal)
         .multiplyScalar(pushDist)
         .applyQuaternion(this.tmpQuatA.copy(this.mesh.quaternion).invert());
-      const smoothing = THREE.MathUtils.clamp(
-        PLAYER_CONFIG.camera.cameraClearanceSmoothing ?? 0.35,
-        0,
-        1
-      );
+      const smoothing = THREE.MathUtils.clamp(PLAYER_CONFIG.camera.cameraClearanceSmoothing, 0, 1);
       targetCameraPos.addScaledVector(pushLocal, smoothing);
     }
 

@@ -1,10 +1,10 @@
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 
-import { MOUNTAIN_CONFIG, TERRAIN_CONFIG, TERRAIN_DIMENSIONS } from '../config/GameConfig';
+import { MOUNTAIN_CONFIG, TERRAIN_CONFIG } from '../config/GameConfig';
 import type { ChunkState, PathPoint, TerrainSample } from './WorldState';
 import { SurfaceKind } from './WorldState';
 
-const { CHUNK_LENGTH, CHUNK_SEGMENTS } = TERRAIN_DIMENSIONS;
+const { chunkSegments } = TERRAIN_CONFIG.dimensions;
 
 /**
  * Pure terrain-generation logic: heightfields, path spine, and noise sampling.
@@ -36,41 +36,40 @@ export class TerrainGenerator {
   }
 
   private sampleJumpSpacing(index: number): number {
-    const { JUMP_DISTANCE_MEAN, JUMP_DISTANCE_STD, JUMP_DISTANCE_MAX, SEGMENT_LENGTH } =
-      TERRAIN_CONFIG;
-    const minSpacing = Math.max(SEGMENT_LENGTH, 20);
+    const { jumpDistanceMean, jumpDistanceStd, jumpDistanceMax, segmentLength } = TERRAIN_CONFIG;
+    const minSpacing = Math.max(segmentLength, 20);
     const normal = this.sampleNormal(index * 2, index * 2 + 1);
-    const raw = JUMP_DISTANCE_MEAN + normal * JUMP_DISTANCE_STD;
-    const clamped = Math.min(JUMP_DISTANCE_MAX, Math.max(minSpacing, raw));
+    const raw = jumpDistanceMean + normal * jumpDistanceStd;
+    const clamped = Math.min(jumpDistanceMax, Math.max(minSpacing, raw));
     return clamped;
   }
 
   private ensureJumpsCoverS(s: number): void {
-    const { JUMP_DISTANCE_MAX, JUMP_LENGTH_RANGE, JUMP_HEIGHT_RANGE } = TERRAIN_CONFIG;
+    const { jumpDistanceMax, jumpLengthRange, jumpHeightRange } = TERRAIN_CONFIG;
 
     if (this.jumpStarts.length === 0) {
       const firstStart = this.sampleJumpSpacing(0);
       const firstLength =
-        JUMP_LENGTH_RANGE.min + this.hash01(1000) * (JUMP_LENGTH_RANGE.max - JUMP_LENGTH_RANGE.min);
+        jumpLengthRange.min + this.hash01(1000) * (jumpLengthRange.max - jumpLengthRange.min);
       const firstHeight =
-        JUMP_HEIGHT_RANGE.min + this.hash01(1001) * (JUMP_HEIGHT_RANGE.max - JUMP_HEIGHT_RANGE.min);
+        jumpHeightRange.min + this.hash01(1001) * (jumpHeightRange.max - jumpHeightRange.min);
       this.jumpStarts.push(firstStart);
       this.jumpLengths.push(firstLength);
       this.jumpHeights.push(firstHeight);
     }
 
-    while (this.jumpStarts[this.jumpStarts.length - 1] < s + JUMP_DISTANCE_MAX) {
+    while (this.jumpStarts[this.jumpStarts.length - 1] < s + jumpDistanceMax) {
       const idx = this.jumpStarts.length;
       const prevStart = this.jumpStarts[idx - 1];
       const spacing = this.sampleJumpSpacing(idx);
       const start = prevStart + spacing;
 
       const length =
-        JUMP_LENGTH_RANGE.min +
-        this.hash01(idx * 10 + 3) * (JUMP_LENGTH_RANGE.max - JUMP_LENGTH_RANGE.min);
+        jumpLengthRange.min +
+        this.hash01(idx * 10 + 3) * (jumpLengthRange.max - jumpLengthRange.min);
       const height =
-        JUMP_HEIGHT_RANGE.min +
-        this.hash01(idx * 10 + 4) * (JUMP_HEIGHT_RANGE.max - JUMP_HEIGHT_RANGE.min);
+        jumpHeightRange.min +
+        this.hash01(idx * 10 + 4) * (jumpHeightRange.max - jumpHeightRange.min);
 
       this.jumpStarts.push(start);
       this.jumpLengths.push(length);
@@ -128,8 +127,8 @@ export class TerrainGenerator {
   private getTrackWidth(z: number): number {
     const widthNoise = this.noise2D(z * 0.01, 100);
     return (
-      TERRAIN_CONFIG.WIDTH_MIN +
-      (widthNoise * 0.5 + 0.5) * (TERRAIN_CONFIG.WIDTH_MAX - TERRAIN_CONFIG.WIDTH_MIN)
+      TERRAIN_CONFIG.widthMin +
+      (widthNoise * 0.5 + 0.5) * (TERRAIN_CONFIG.widthMax - TERRAIN_CONFIG.widthMin)
     );
   }
 
@@ -153,11 +152,11 @@ export class TerrainGenerator {
   private sampleTerrainLocal(t: number, s: number, point: PathPoint): TerrainSample {
     const bankingOffset = t * point.banking;
     const moguls =
-      this.noise2D(t * TERRAIN_CONFIG.MOGUL_SCALE, s * TERRAIN_CONFIG.MOGUL_SCALE) *
-      TERRAIN_CONFIG.MOGUL_HEIGHT;
+      this.noise2D(t * TERRAIN_CONFIG.mogulScale, s * TERRAIN_CONFIG.mogulScale) *
+      TERRAIN_CONFIG.mogulHeight;
     const trackWidth = point.width;
     const halfTrack = trackWidth / 2;
-    const canyonFloorWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+    const canyonFloorWidth = halfTrack + TERRAIN_CONFIG.canyonFloorOffset;
     const distFromTrackEdge = Math.abs(t) - canyonFloorWidth;
     let extraHeight = 0;
     let kind: SurfaceKind;
@@ -167,15 +166,15 @@ export class TerrainGenerator {
       const onBank = !onTrack && distFromTrackEdge <= 0;
       kind = onTrack ? SurfaceKind.Track : onBank ? SurfaceKind.Bank : SurfaceKind.CanyonFloor;
     } else {
-      const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.WALL_WIDTH);
+      const progress = Math.min(1.0, distFromTrackEdge / TERRAIN_CONFIG.wallWidth);
 
       if (progress < 1.0) {
         const terraceSteps = 6;
-        const terraceStepSize = TERRAIN_CONFIG.CANYON_HEIGHT / terraceSteps;
+        const terraceStepSize = TERRAIN_CONFIG.canyonHeight / terraceSteps;
         const quantizedProgress = Math.floor(progress * terraceSteps) / terraceSteps;
-        const baseTerraceHeight = quantizedProgress * TERRAIN_CONFIG.CANYON_HEIGHT;
+        const baseTerraceHeight = quantizedProgress * TERRAIN_CONFIG.canyonHeight;
 
-        const wallHeight = progress * TERRAIN_CONFIG.CANYON_HEIGHT;
+        const wallHeight = progress * TERRAIN_CONFIG.canyonHeight;
         const wallSpaceX = s * 0.1;
         const wallSpaceY = wallHeight * 0.15;
 
@@ -188,7 +187,7 @@ export class TerrainGenerator {
         kind = isOnLedge ? SurfaceKind.WallLedge : SurfaceKind.WallVertical;
       } else {
         const plateauNoise = this.noise2D(t * 0.05, s * 0.05) * 3.0;
-        extraHeight = TERRAIN_CONFIG.CANYON_HEIGHT + plateauNoise;
+        extraHeight = TERRAIN_CONFIG.canyonHeight + plateauNoise;
         kind = SurfaceKind.Plateau;
       }
     }
@@ -204,9 +203,9 @@ export class TerrainGenerator {
       jump.index !== null &&
       (kind === SurfaceKind.Track || kind === SurfaceKind.Bank)
     ) {
-      const usableHalfWidth = halfTrack + TERRAIN_CONFIG.CANYON_FLOOR_OFFSET;
+      const usableHalfWidth = halfTrack + TERRAIN_CONFIG.canyonFloorOffset;
       const usableWidth = usableHalfWidth * 2;
-      const rawFraction = TERRAIN_CONFIG.JUMP_WIDTH_FRACTION ?? 0.5;
+      const rawFraction = TERRAIN_CONFIG.jumpWidthFraction;
       const bandFraction = Math.max(0.05, Math.min(1, rawFraction));
       const bandWidth = usableWidth * bandFraction;
       const halfBand = bandWidth / 2;
@@ -244,34 +243,34 @@ export class TerrainGenerator {
     previousPoints: PathPoint[] = []
   ): PathPoint[] {
     const {
-      SEGMENT_LENGTH,
-      AMPLITUDE,
-      NOISE_SCALE,
-      MEANDER1_FREQ,
-      MEANDER2_FREQ,
-      WIDTH_BASE,
-      WIDTH_NOISE_SCALE,
-      WIDTH_VARIATION,
-      SMOOTHING_WINDOW,
-      BANKING_STRENGTH,
+      segmentLength,
+      amplitude,
+      noiseScale,
+      meander1Freq,
+      meander2Freq,
+      widthBase,
+      widthNoiseScale,
+      widthVariation,
+      smoothingWindow,
+      bankingStrength,
     } = TERRAIN_CONFIG;
-    const { TOTAL_LENGTH } = MOUNTAIN_CONFIG;
+    const { totalLength } = MOUNTAIN_CONFIG;
 
-    const segmentLength = SEGMENT_LENGTH;
+    const segmentLengthValue = segmentLength;
     const numPoints = segmentCount + 1;
     const rawPoints: Array<{ x: number; y: number; z: number }> = [];
-    const startDistance = startIndex * segmentLength;
-    const virtualRunSamples = TOTAL_LENGTH / segmentLength;
+    const startDistance = startIndex * segmentLengthValue;
+    const virtualRunSamples = totalLength / segmentLengthValue;
 
     for (let i = 0; i < numPoints; i++) {
       const globalIndex = startIndex + i;
-      const distanceAlong = startDistance + i * segmentLength;
+      const distanceAlong = startDistance + i * segmentLengthValue;
       const currentZ = -distanceAlong;
       const progress = virtualRunSamples > 0 ? globalIndex / virtualRunSamples : 0;
-      const noiseValue = this.noise2D(globalIndex * NOISE_SCALE, 0);
-      const lateralNoise = noiseValue * AMPLITUDE;
-      const meander1 = Math.sin(progress * Math.PI * 2 * MEANDER1_FREQ) * AMPLITUDE * 0.3;
-      const meander2 = Math.sin(progress * Math.PI * 2 * MEANDER2_FREQ + 1) * AMPLITUDE * 0.2;
+      const noiseValue = this.noise2D(globalIndex * noiseScale, 0);
+      const lateralNoise = noiseValue * amplitude;
+      const meander1 = Math.sin(progress * Math.PI * 2 * meander1Freq) * amplitude * 0.3;
+      const meander2 = Math.sin(progress * Math.PI * 2 * meander2Freq + 1) * amplitude * 0.2;
       const x = lateralNoise + meander1 + meander2;
       const y = baseAltitude - distanceAlong * slopeTangent;
 
@@ -285,8 +284,8 @@ export class TerrainGenerator {
     const smoothedX: number[] = [];
 
     for (let i = 0; i < combinedPoints.length; i++) {
-      const windowStart = Math.max(0, i - Math.floor(SMOOTHING_WINDOW / 2));
-      const windowEnd = Math.min(combinedPoints.length, i + Math.ceil(SMOOTHING_WINDOW / 2));
+      const windowStart = Math.max(0, i - Math.floor(smoothingWindow / 2));
+      const windowEnd = Math.min(combinedPoints.length, i + Math.ceil(smoothingWindow / 2));
       let sum = 0;
       let count = 0;
       for (let j = windowStart; j < windowEnd; j++) {
@@ -308,7 +307,7 @@ export class TerrainGenerator {
       const z = combinedPoints[combinedIndex].z;
 
       let directionX = 0;
-      let directionZ = -segmentLength;
+      let directionZ = -segmentLengthValue;
 
       if (combinedIndex > 0) {
         directionX = x - smoothedX[combinedIndex - 1];
@@ -320,9 +319,9 @@ export class TerrainGenerator {
 
       let stepLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
       if (stepLength === 0) {
-        stepLength = segmentLength;
+        stepLength = segmentLengthValue;
         directionX = 0;
-        directionZ = -segmentLength;
+        directionZ = -segmentLengthValue;
       }
 
       if (combinedIndex > 0) {
@@ -335,12 +334,12 @@ export class TerrainGenerator {
       const rightX = forwardZ;
       const rightZ = -forwardX;
 
-      const widthNoise = this.noise2D(z * WIDTH_NOISE_SCALE, 100);
+      const widthNoise = this.noise2D(z * widthNoiseScale, 100);
       const segmentProgress = segmentCount > 0 ? i / segmentCount : 0;
       const widthProgressFactor = 1 + Math.sin(segmentProgress * Math.PI - Math.PI / 2) * 0.2;
       const width =
-        WIDTH_BASE * (1 + widthNoise * WIDTH_VARIATION) * Math.max(0.5, widthProgressFactor);
-      const banking = angle * BANKING_STRENGTH;
+        widthBase * (1 + widthNoise * widthVariation) * Math.max(0.5, widthProgressFactor);
+      const banking = angle * bankingStrength;
 
       newPoints.push({
         x,
@@ -366,19 +365,20 @@ export class TerrainGenerator {
     let currentX = startState.endX;
     let currentAngle = startState.endAngle;
 
-    const segmentLength = CHUNK_LENGTH / CHUNK_SEGMENTS;
+    const segmentLength =
+      TERRAIN_CONFIG.dimensions.chunkLength / TERRAIN_CONFIG.dimensions.chunkSegments;
 
-    for (let i = 0; i <= CHUNK_SEGMENTS; i++) {
+    for (let i = 0; i <= chunkSegments; i++) {
       const localZ = -i * segmentLength;
       const worldZ = startState.endZ + localZ;
 
       // Generate target angle using noise
-      const noiseFreq = TERRAIN_CONFIG.TURN_SPEED;
+      const noiseFreq = TERRAIN_CONFIG.turnSpeed;
       const noiseValue = this.noise2D(0, worldZ * noiseFreq);
       const targetAngle = noiseValue * Math.PI * 0.3; // Max ~54 degrees
 
       // Smoothly interpolate current angle toward target (momentum)
-      currentAngle += (targetAngle - currentAngle) * TERRAIN_CONFIG.ANGLE_INTERPOLATION;
+      currentAngle += (targetAngle - currentAngle) * TERRAIN_CONFIG.angleInterpolation;
 
       // Update X position based on angle
       currentX += Math.sin(currentAngle) * segmentLength;
@@ -387,7 +387,7 @@ export class TerrainGenerator {
       const width = this.getTrackWidth(worldZ);
 
       // Calculate banking based on current angle
-      const banking = currentAngle * TERRAIN_CONFIG.BANKING_STRENGTH;
+      const banking = currentAngle * TERRAIN_CONFIG.bankingStrength;
 
       const s = points.length > 0 ? points[points.length - 1].s + segmentLength : 0;
       const forwardX = Math.sin(currentAngle);
@@ -413,7 +413,7 @@ export class TerrainGenerator {
     const endState: ChunkState = {
       endX: currentX,
       endAngle: currentAngle,
-      endZ: startState.endZ - CHUNK_LENGTH,
+      endZ: startState.endZ - TERRAIN_CONFIG.dimensions.chunkLength,
     };
 
     return { points, endState };

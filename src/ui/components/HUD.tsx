@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { AlertTriangle, Coins, MapPin, Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { ARCADE_CONFIG, SPRINT_CONFIG } from '../../config/GameConfig';
+import { ARCADE_CONFIG, SPRINT_CONFIG, UI_CONFIG } from '../../config/GameConfig';
 import { useGameStore } from '../store';
 import { ScoreFeed } from './ScoreFeed';
 
@@ -76,9 +76,6 @@ const LowPolyHeart = ({
   );
 };
 
-// Configuration for visual max speed (the bar is full at this speed)
-const MAX_DISPLAY_SPEED_KMH = 200;
-
 export const HUD = () => {
   const {
     timeElapsed,
@@ -148,14 +145,11 @@ export const HUD = () => {
         setLostHeartIndex(lostIdx);
         setLifeImpact(true);
       });
-      const timer = setTimeout(
-        () => {
-          setLifeToast(false);
-          setLostHeartIndex(null);
-          setLifeImpact(false);
-        },
-        (ARCADE_CONFIG.LIFE_IMPACT_DURATION ?? 0.8) * 1000
-      );
+      const timer = setTimeout(() => {
+        setLifeToast(false);
+        setLostHeartIndex(null);
+        setLifeImpact(false);
+      }, ARCADE_CONFIG.lifeImpactDuration * 1000);
       prevLives.current = lives;
       return () => {
         cancelAnimationFrame(frame);
@@ -178,7 +172,7 @@ export const HUD = () => {
   // Logic
   const speedKmh = Math.floor(speed * 3.6);
   // Cap the bar at 100% width, but let the number go higher
-  const speedPercent = Math.min(100, (speedKmh / MAX_DISPLAY_SPEED_KMH) * 100);
+  const speedPercent = Math.min(100, (speedKmh / UI_CONFIG.maxDisplaySpeedKmh) * 100);
   // Start vignette at 50km/h, max at 150km/h
   const vignetteOpacity = Math.min(0.6, Math.max(0, (speedKmh - 50) / 100));
 
@@ -213,7 +207,7 @@ export const HUD = () => {
       {lifeImpact && (
         <div
           className="pointer-events-none fixed inset-0 z-25 animate-[redPulse_0.35s_ease-out] bg-[radial-gradient(circle_at_center,rgba(248,113,113,0.3),rgba(127,29,29,0.45)_50%,rgba(15,23,42,0.9)_82%)]"
-          style={{ animationDuration: `${ARCADE_CONFIG.LIFE_IMPACT_DURATION ?? 0.8}s` }}
+          style={{ animationDuration: `${ARCADE_CONFIG.lifeImpactDuration}s` }}
         />
       )}
 
@@ -309,7 +303,7 @@ export const HUD = () => {
                     {Math.floor(distance)} <span className="text-lg text-white/70">m</span>
                     {gameMode === 'SPRINT' && (
                       <span className="ml-2 text-lg text-white/60">
-                        / {SPRINT_CONFIG.TARGET_DISTANCE}m
+                        / {SPRINT_CONFIG.targetDistance}m
                       </span>
                     )}
                   </div>
@@ -328,7 +322,7 @@ export const HUD = () => {
               >
                 <div className="border-accent-red/80 flex items-center gap-2 rounded-full border-2 bg-red-900/90 px-6 py-3 shadow-lg shadow-red-500/50 backdrop-blur-md">
                   <span className="text-accent-red text-2xl font-bold drop-shadow-[0_0_8px_rgba(217,75,61,0.8)]">
-                    +{SPRINT_CONFIG.PENALTY_SECONDS}
+                    +{SPRINT_CONFIG.penaltySeconds}
                     <span className="text-base font-normal opacity-75">s</span>
                   </span>
                   <span className="text-lg font-semibold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]">

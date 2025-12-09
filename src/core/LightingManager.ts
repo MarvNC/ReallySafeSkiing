@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
-import { GRAPHICS_PRESET, LIGHTING_CONFIG } from '../config/GameConfig';
-import { COLOR_PALETTE } from '../constants/colors';
+import { COLOR_PALETTE, GRAPHICS_PRESET, LIGHTING_CONFIG } from '../config/GameConfig';
 import { SunEffects } from './SunEffects';
 
 const ENABLE_FOG = true;
@@ -45,7 +44,7 @@ export class LightingManager {
   update({ position, velocity, camera }: UpdateArgs): void {
     if (!this.sun || !this.sunTarget) return;
 
-    const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier ?? 1;
+    const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier;
     const lookDir = this.computeLookDirection(velocity);
     const focus = position
       .clone()
@@ -81,7 +80,7 @@ export class LightingManager {
     this.sun.shadow.bias = LIGHTING_CONFIG.sun.shadow.bias;
     this.sun.shadow.normalBias = LIGHTING_CONFIG.sun.shadow.normalBias;
 
-    const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier ?? 1;
+    const shadowScale = LIGHTING_CONFIG.shadow.distanceMultiplier;
     const shadowCam = this.sun.shadow.camera as THREE.OrthographicCamera;
     const halfExtent = LIGHTING_CONFIG.sun.shadow.bounds * shadowScale;
     shadowCam.left = -halfExtent;

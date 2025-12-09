@@ -41,7 +41,7 @@ const getLegacyPBKey = (mode: GameMode) => `rss_pb_${mode.toLowerCase()}`;
 const prefersLowerScore = (mode: GameMode) => mode === 'SPRINT';
 
 export const calculateGrade = (timeSeconds: number, penalties: number): Grade => {
-  const penaltyWeightSeconds = SPRINT_CONFIG.PENALTY_SECONDS * 0.5;
+  const penaltyWeightSeconds = SPRINT_CONFIG.penaltySeconds * 0.5;
   const adjustedScore = timeSeconds + penalties * penaltyWeightSeconds;
 
   if (adjustedScore <= SPRINT_GRADE_THRESHOLDS.S) return 'S';
