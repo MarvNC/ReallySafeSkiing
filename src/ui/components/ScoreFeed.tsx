@@ -36,7 +36,7 @@ export const ScoreFeed = () => {
   if (!scorePopups.length) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center gap-2">
+    <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-start gap-2 pt-[15vh]">
       {scorePopups.map((popup) => {
         const colors = palette[popup.type];
         return (
