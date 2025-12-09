@@ -136,11 +136,11 @@ const AccordionSection: FC<{
   children: ReactNode;
 }> = ({ title, subtitle, isOpen, onToggle, children }) => {
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10 md:overflow-visible md:rounded-none md:border-none md:bg-transparent md:hover:bg-transparent">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between p-3 text-left outline-none md:cursor-default md:p-0 md:pb-1"
+        className="flex w-full items-center justify-between p-3 text-left outline-none"
       >
         <div className="flex flex-col md:w-full md:flex-row md:items-baseline md:justify-between md:gap-4">
           <span className="text-[10px] font-bold tracking-[0.2em] text-white/90 uppercase">
@@ -150,19 +150,19 @@ const AccordionSection: FC<{
         </div>
         <ChevronDown
           className={clsx(
-            'h-4 w-4 text-white/50 transition-transform duration-300 md:hidden',
+            'h-4 w-4 text-white/50 transition-transform duration-300',
             isOpen && 'rotate-180'
           )}
         />
       </button>
       <div
         className={clsx(
-          'grid transition-[grid-template-rows] duration-300 ease-out md:grid-rows-[1fr]',
+          'grid transition-[grid-template-rows] duration-300 ease-out',
           isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         )}
       >
-        <div className="overflow-hidden md:overflow-visible">
-          <div className="p-3 pt-0 md:p-0">{children}</div>
+        <div className="overflow-hidden">
+          <div className="p-3 pt-0">{children}</div>
         </div>
       </div>
     </div>
@@ -170,7 +170,7 @@ const AccordionSection: FC<{
 };
 
 const SetupPanel: FC = () => {
-  const [openSection, setOpenSection] = useState<'DENSITY' | 'SLOPE' | null>('DENSITY');
+  const [openSection, setOpenSection] = useState<'DENSITY' | 'SLOPE' | null>(null);
 
   const toggleSection = (section: 'DENSITY' | 'SLOPE') => {
     setOpenSection(openSection === section ? null : section);
@@ -187,7 +187,6 @@ const SetupPanel: FC = () => {
       </div>
 
       <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent md:hidden" />
-      <div className="hidden h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent md:block" />
 
       <AccordionSection
         title="Obstacle Density"
