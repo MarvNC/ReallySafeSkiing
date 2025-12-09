@@ -209,14 +209,6 @@ export function createTreeGeometry(layerCount: number): THREE.BufferGeometry {
 }
 
 /**
- * Legacy function for backward compatibility.
- * Creates a tree with 3 layers (medium size).
- */
-export function getTreeGeometry(): THREE.BufferGeometry {
-  return createTreeGeometry(3);
-}
-
-/**
  * Tree archetype definitions for instanced rendering.
  * Each archetype uses a different layer count for visual variety.
  */
