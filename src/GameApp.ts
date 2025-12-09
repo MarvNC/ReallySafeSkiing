@@ -757,31 +757,29 @@ export class GameApp {
 
     const interval = ARCADE_CONFIG.speedBonusPopupIntervalSeconds;
     const pointsPerInterval = ARCADE_CONFIG.speedBonusPointsPerSecond * interval;
+    const multiplierPerInterval = ARCADE_CONFIG.speedBonusMultiplierPerSecond * interval;
 
     this.speedBonusTimer += deltaSeconds;
     const events = interval > 0 ? Math.floor(this.speedBonusTimer / interval) : 1;
 
-    let awarded = 0;
-    if (events > 0) {
-      this.speedBonusTimer -= interval > 0 ? events * interval : 0;
-      awarded = pointsPerInterval * events * currentMultiplier;
-    }
+    if (events === 0) return;
 
-    const nextMultiplier = Number(
-      (currentMultiplier + ARCADE_CONFIG.speedBonusMultiplierPerSecond * deltaSeconds).toFixed(2)
-    );
-    if (nextMultiplier !== currentMultiplier) {
+    this.speedBonusTimer -= interval > 0 ? events * interval : 0;
+
+    const multiplierBonus = Number((events * multiplierPerInterval).toFixed(2));
+    const nextMultiplier = Number((currentMultiplier + multiplierBonus).toFixed(2));
+    const awarded = pointsPerInterval * events * currentMultiplier;
+
+    if (multiplierBonus !== 0) {
       store.setMultiplier(nextMultiplier);
     }
 
-    if (awarded > 0) {
-      store.addScore(awarded);
-      store.triggerScorePopup({
-        value: awarded,
-        multiplier: nextMultiplier,
-        type: 'speed',
-      });
-    }
+    store.addScore(awarded);
+    store.triggerScorePopup({
+      value: awarded,
+      multiplier: nextMultiplier,
+      type: 'speed',
+    });
   }
 
   private triggerCrashSequence(): void {

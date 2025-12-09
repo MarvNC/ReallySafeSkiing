@@ -87,9 +87,9 @@ export interface ArcadeConfig {
   lifeImpactDuration: number;
   /** Speed threshold in km/h to start earning speed bonus points. */
   speedBonusThresholdKmh: number;
-  /** Speed bonus points awarded per second above threshold. */
+  /** Speed bonus points awarded per second above threshold (applied in discrete intervals). */
   speedBonusPointsPerSecond: number;
-  /** Speed bonus multiplier increment per second. */
+  /** Speed bonus multiplier increment per second above threshold (applied in discrete intervals). */
   speedBonusMultiplierPerSecond: number;
   /** Interval in seconds between speed bonus popup notifications. */
   speedBonusPopupIntervalSeconds: number;
