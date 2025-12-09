@@ -303,8 +303,6 @@ export interface PlayerConfig {
 export interface MountainConfig {
   /** Virtual shaping length for slope/noise generation in meters. */
   totalLength: number;
-  /** Baseline altitude reference in meters (legacy). */
-  endAltitude: number;
 }
 
 /**
@@ -750,7 +748,6 @@ export const PLAYER_CONFIG: PlayerConfig = {
 
 export const MOUNTAIN_CONFIG: MountainConfig = {
   totalLength: 2500,
-  endAltitude: 0,
 };
 
 export const TERRAIN_CONFIG: TerrainConfig = {

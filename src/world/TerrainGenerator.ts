@@ -131,14 +131,6 @@ export class TerrainGenerator {
     return this.sampleTerrainLocal(t, s, point);
   }
 
-  projectToLocalXZ(worldX: number, worldZ: number, point: PathPoint): { t: number; s: number } {
-    return this.worldToLocalXZ(worldX, worldZ, point);
-  }
-
-  getSnowHeightLocal(t: number, s: number, point: PathPoint): number {
-    return this.sampleTerrainLocal(t, s, point).height;
-  }
-
   private sampleTerrainLocal(t: number, s: number, point: PathPoint): TerrainSample {
     const bankingOffset = t * point.banking;
     const moguls =

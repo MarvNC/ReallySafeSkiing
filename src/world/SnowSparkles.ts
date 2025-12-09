@@ -157,10 +157,6 @@ gl_PointSize = size * aSize;
     }
   }
 
-  setVisible(visible: boolean): void {
-    this.points.visible = visible;
-  }
-
   reset(camera: THREE.Camera, sunDir: THREE.Vector3): void {
     camera.getWorldPosition(this.tmpCamPos);
     this.tmpForward.set(0, 0, -1).applyQuaternion(camera.quaternion).setY(0);

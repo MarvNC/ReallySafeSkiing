@@ -212,15 +212,6 @@ export class TerrainManager {
     return closestPoint;
   }
 
-  getStartPoint(): THREE.Vector3 {
-    if (this.allPoints.length > 0) {
-      const firstPoint = this.allPoints[0];
-      return new THREE.Vector3(firstPoint.x, firstPoint.y, firstPoint.z);
-    }
-    // Fallback
-    return new THREE.Vector3(0, this.startAltitude, 0);
-  }
-
   /**
    * Get a point at a specific offset along the path.
    * @param offset Number of points to advance along the path (default: 0 for start point)

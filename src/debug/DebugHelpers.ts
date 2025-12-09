@@ -42,13 +42,14 @@ export class DebugHelpers {
       0.5
     );
     this.velocityArrow = new THREE.ArrowHelper(
+      new THREE.Vector3(0, 0, 1),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0, 0),
-      0,
+      1,
       0xffff00,
       1.5,
       0.7
     );
+    this.velocityArrow.visible = false;
 
     this.playerHelpers.add(this.forwardArrow, this.rightArrow, this.upArrow, this.velocityArrow);
   }

@@ -81,7 +81,6 @@ export class GameApp {
   private wasCrashedBeforePause = false; // Track if we were in crash state before pausing
 
   // New Menu State
-  private menuIndex = 0;
   private isAboutOpen = false;
   private readonly menuOptionsCount = 3; // Resume, Restart, Back to menu
 
@@ -124,6 +123,7 @@ export class GameApp {
     // Initialize Background
     this.backgroundEnv = new BackgroundEnvironment(this.scene);
 
+    this.physics?.dispose();
     this.physics = new PhysicsWorld();
     await this.physics.init();
 
@@ -165,6 +165,7 @@ export class GameApp {
 
     // Initialize debug systems
     this.debugUI = new DebugUI(this.container);
+    this.debugHelpers?.dispose();
     this.debugHelpers = new DebugHelpers(this.scene);
     this.debugHelpers.addWorldAxes(50);
 
@@ -238,12 +239,15 @@ export class GameApp {
     const handleMenuNav = (action: Action) => {
       if (this.gameState !== GameState.PAUSED || this.isAboutOpen) return;
 
+      const store = useGameStore.getState();
+      const currentIndex = store.menuIndex ?? 0;
+
       if (action === Action.MenuUp) {
-        this.menuIndex = (this.menuIndex - 1 + this.menuOptionsCount) % this.menuOptionsCount;
-        this.updateMenuVisuals();
+        const nextIndex = (currentIndex - 1 + this.menuOptionsCount) % this.menuOptionsCount;
+        store.setMenuIndex(nextIndex);
       } else if (action === Action.MenuDown) {
-        this.menuIndex = (this.menuIndex + 1) % this.menuOptionsCount;
-        this.updateMenuVisuals();
+        const nextIndex = (currentIndex + 1) % this.menuOptionsCount;
+        store.setMenuIndex(nextIndex);
       } else if (action === Action.MenuSelect || action === Action.Start) {
         this.executeMenuOption();
       }
@@ -428,7 +432,6 @@ export class GameApp {
     this.crashTimer = 0;
     this.wasCrashedBeforePause = false;
     this.isAboutOpen = false;
-    this.menuIndex = 0;
     this.gameState = shouldPauseForFirstRun ? GameState.READY : GameState.PLAYING;
     this.lastDistance = 0;
     this.arcadeInvulnerability = 0;
@@ -499,7 +502,6 @@ export class GameApp {
     this.wasCrashedBeforePause = this.gameState === GameState.CRASHED;
 
     this.gameState = GameState.PAUSED;
-    this.menuIndex = 0; // Reset to "Resume"
     useGameStore.getState().setUIState(UIState.PAUSED);
     // Rebind keys for menu/paused state
     this.updateKeyBindingsForGameState();
@@ -542,7 +544,6 @@ export class GameApp {
     this.crashTimer = 0;
     this.wasCrashedBeforePause = false;
     this.isAboutOpen = false;
-    this.menuIndex = 0;
     useGameStore.getState().setMenuIndex(0);
     useGameStore.getState().setUIState(UIState.MENU);
     useGameStore.getState().setEndReason(null);
@@ -559,19 +560,12 @@ export class GameApp {
     }
   }
 
-  private updateMenuVisuals(): void {
-    // Menu visuals now handled by React - just update the store
-    useGameStore.getState().setMenuIndex(this.menuIndex);
-  }
-
   private executeMenuOption(): void {
     // Read menuIndex from store to sync with React component clicks
     const storeMenuIndex = useGameStore.getState().menuIndex;
     const gameMode = useGameStore.getState().gameMode;
-    // Sync internal menuIndex for consistency
-    this.menuIndex = storeMenuIndex;
 
-    switch (this.menuIndex) {
+    switch (storeMenuIndex) {
       case 0: // Resume
         this.resumeGame();
         break;

@@ -9,7 +9,6 @@ import { SpeedLines } from './SpeedLines';
 
 type PlayerOptions = {
   startPosition?: THREE.Vector3;
-  radius?: number;
   playerPhysics: PlayerPhysics;
   terrain: TerrainManager;
 };
