@@ -688,7 +688,6 @@ export class GameApp {
       const { multiplier } = useGameStore.getState();
       this.triggerLifeShake();
       store.triggerScorePopup({
-        text: 'LIFE LOST',
         multiplier,
         type: 'life',
       });
@@ -748,7 +747,6 @@ export class GameApp {
           const next = Number((store.multiplier + bonus).toFixed(2));
           store.setMultiplier(next);
           store.triggerScorePopup({
-            text: 'AIRTIME!',
             multiplier: next,
             type: 'airtime',
           });
@@ -778,7 +776,6 @@ export class GameApp {
 
     store.triggerScorePopup({
       value: popupValue,
-      text: `SPEED BONUS +${Math.round(popupValue)}`,
       multiplier,
       type: 'speed',
     });

@@ -29,7 +29,6 @@ export type ScorePopup = {
 type ScorePopupPayload = {
   value?: number;
   multiplier: number;
-  text?: string;
   type: ScorePopup['type'];
 };
 
@@ -96,6 +95,24 @@ interface GameState {
 const ARCADE_DEFAULT_LIVES = ARCADE_CONFIG.DEFAULT_LIVES;
 const ARCADE_DEFAULT_MULTIPLIER = 1;
 const SCORE_POPUP_LIFETIME_MS = 1600;
+const SCORE_POPUP_TEXT = {
+  airtime: 'AIRTIME!',
+  life: '-1 LIFE',
+  speed: 'SPEED BONUS',
+} as const;
+
+const formatScorePopupText = (type: ScorePopup['type'], value: number): string => {
+  switch (type) {
+    case 'airtime':
+      return SCORE_POPUP_TEXT.airtime;
+    case 'life':
+      return SCORE_POPUP_TEXT.life;
+    case 'speed':
+      return `${SCORE_POPUP_TEXT.speed} +${Math.round(value)}`;
+    default:
+      return `+${Math.round(value)}`;
+  }
+};
 
 const loadArcadePersonalBest = (difficulty: Difficulty, slopeAngle: number): number => {
   const context: { mode: GameMode; difficulty: Difficulty; slopeAngle: number } = {
@@ -226,7 +243,7 @@ export const useGameStore = create<GameState>()(
     triggerScorePopup: (payload) => {
       const id = Date.now() + Math.random();
       const value = payload.value ?? 0;
-      const text = payload.text ?? `+${Math.round(value)}`;
+      const text = formatScorePopupText(payload.type, value);
 
       set((state) => ({
         scorePopups: [
