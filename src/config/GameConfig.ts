@@ -155,8 +155,6 @@ export interface CameraConfig {
   far: number;
   /** Eye height above player position in meters. */
   eyeHeight: number;
-  /** Base camera tilt in radians (negative = look down). */
-  tiltRadians: number;
   /** Maximum bank angle in radians at max steering. */
   maxBankAngle: number;
   /** Bank smoothing speed (higher = faster roll into turn). */
@@ -782,7 +780,6 @@ export const PLAYER_CONFIG: PlayerConfig = {
     near: 0.1,
     far: 8000,
     eyeHeight: 0.1,
-    tiltRadians: -0.6,
     maxBankAngle: Math.PI / 18,
     bankSmoothingSpeed: 5.0,
     fovMin: 75,
