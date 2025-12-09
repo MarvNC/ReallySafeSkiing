@@ -81,6 +81,10 @@ export const PLAYER_CONFIG = {
 
     // Ski properties
     lateralFriction: 2.0, // "Edge Grip": How hard it stops you sliding sideways
+    edgeGripForce: 1000, // Max lateral grip force budget (N)
+    edgeGripBrakingMultiplier: 1.5, // Extra grip when braking
+    kineticEdgeFrictionRatio: 0.8, // Fraction of static grip applied when sliding
+    lateralViscousDragScale: 0.5, // Residual viscous drag when sliding
     forwardFriction: 0.05, // "Wax": Very low friction sliding forward
 
     // --- NEW: Air drag (non-linear with speed) ---

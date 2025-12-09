@@ -188,7 +188,6 @@ export class PlayerPhysics {
       // Reset pushing state on crash
       this._isPushing = false;
       // Just update debug state and return
-      // Do NOT force velocity to zero
       return;
     }
 
@@ -262,16 +261,40 @@ export class PlayerPhysics {
     const speed = this.currentVel.length();
 
     // 5. Apply Forces
-
-    let lateralForce = 0;
     let forwardForce = 0;
     let pushForceApplied = 0;
 
     const impulse = new THREE.Vector3();
 
     if (hasRecentGroundContact) {
-      // Lateral Friction (Drift control from ski edge)
-      lateralForce = -lateralSpeed * PLAYER_CONFIG.physics.lateralFriction * this.lateralGripScale;
+      // === REALISTIC LATERAL FRICTION (STATIC EDGE GRIP) ===
+      const mass = PLAYER_CONFIG.physics.mass;
+
+      // Calculate the impulse required to stop lateral movement completely this frame.
+      const impulseToStop = -lateralSpeed * mass;
+
+      // Edge grip budget for this frame (scaled by delta time).
+      const brakingBonus = isBraking ? PLAYER_CONFIG.physics.edgeGripBrakingMultiplier : 1;
+      const maxGripImpulse =
+        PLAYER_CONFIG.physics.edgeGripForce * this.lateralGripScale * brakingBonus * deltaSeconds;
+
+      if (Math.abs(impulseToStop) <= maxGripImpulse) {
+        // Static friction: fully cancel lateral motion.
+        impulse.addScaledVector(this.rightDir, impulseToStop);
+      } else {
+        // Kinetic friction: apply maximum available grip and some viscous drag.
+        const kineticImpulse =
+          Math.sign(impulseToStop) *
+          maxGripImpulse *
+          PLAYER_CONFIG.physics.kineticEdgeFrictionRatio;
+        impulse.addScaledVector(this.rightDir, kineticImpulse);
+
+        const viscousDrag =
+          -lateralSpeed *
+          PLAYER_CONFIG.physics.lateralFriction *
+          PLAYER_CONFIG.physics.lateralViscousDragScale;
+        impulse.addScaledVector(this.rightDir, viscousDrag * deltaSeconds * mass);
+      }
 
       // Forward snow friction (roughly linear in speed)
       forwardForce = -forwardSpeed * PLAYER_CONFIG.physics.forwardFriction;
@@ -304,8 +327,7 @@ export class PlayerPhysics {
         forwardForce += brakeForce;
       }
 
-      impulse.addScaledVector(this.rightDir, lateralForce);
-      impulse.addScaledVector(this.forwardDir, forwardForce);
+      impulse.addScaledVector(this.forwardDir, forwardForce * deltaSeconds * mass);
 
       // Poling Logic - Centralized state calculation
       const currentSpeed = speed;
@@ -322,8 +344,8 @@ export class PlayerPhysics {
         const pushImpulse = PLAYER_CONFIG.physics.poleForce * effectiveness;
 
         const pushVec = this.forwardDir.clone().multiplyScalar(pushImpulse);
-        impulse.add(pushVec);
-        pushForceApplied = pushImpulse; // Variable is now used below
+        impulse.add(pushVec.multiplyScalar(mass * deltaSeconds));
+        pushForceApplied = pushImpulse;
       }
     } else {
       // In the air, allow rotation but don't let it curve momentum; only apply air drag along velocity.
@@ -331,11 +353,13 @@ export class PlayerPhysics {
       if (speed > 0.1) {
         const airK = PLAYER_CONFIG.physics.airDragCoeff;
         const dragMagnitude = -airK * speed * speed;
-        impulse.addScaledVector(this.currentVel, dragMagnitude / speed);
+        impulse.addScaledVector(
+          this.currentVel,
+          (dragMagnitude / speed) * deltaSeconds * PLAYER_CONFIG.physics.mass
+        );
       }
     }
 
-    impulse.multiplyScalar(PLAYER_CONFIG.physics.mass * deltaSeconds);
     this.body.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
 
     // 6. Debug Data
