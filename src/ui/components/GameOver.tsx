@@ -204,7 +204,7 @@ export const GameOver = () => {
                 </div>
                 {personalBest || isNewRecord ? (
                   <div className="flex items-center justify-between text-sm text-white/70">
-                    {personalBest && <span>`Personal Best: ${formatTime(personalBest)}`</span>}
+                    {personalBest && <span>Personal Best: {formatTime(personalBest)}</span>}
                     {isNewRecord && (
                       <span className="flex items-center gap-2 font-semibold text-amber-200">
                         <Trophy className="h-4 w-4" />
