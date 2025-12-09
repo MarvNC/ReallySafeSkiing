@@ -638,7 +638,7 @@ export const ARCADE_CONFIG: ArcadeConfig = {
   speedBonusPoints: 20,
   speedBonusMultiplierPerSecond: 0.05,
   speedMultiplierIntervalSeconds: 1,
-  airtimeBonusPoints: 20,
+  airtimeBonusPoints: 40,
 };
 
 const isLowPreset =
