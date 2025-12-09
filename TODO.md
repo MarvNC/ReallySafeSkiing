@@ -9,3 +9,4 @@
 - Extend plateau more out
 - PWA (but no caching)
 - Fix isMobile detection to not rely on touch since many laptops have touch
+- Redesign hearts
