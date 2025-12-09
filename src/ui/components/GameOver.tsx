@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Clock, Home, MapPin, RefreshCcw, Trophy, X, Zap } from 'lucide-react';
+import { Clock, Home, MapPin, RefreshCcw, Trophy, Zap } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 import { Action, InputManager } from '../../core/InputManager';
@@ -146,29 +146,22 @@ export const GameOver = () => {
 
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               {activeDifficulty && (
-                <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-white/80">
-                  <activeDifficulty.icon className={clsx('h-4 w-4', activeDifficulty.iconClass)} />
+                <span className="flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[11px] font-semibold tracking-[0.16em] text-white/80 md:h-8 md:gap-2 md:px-4 md:text-xs">
+                  <activeDifficulty.icon
+                    className={clsx('h-3.5 w-3.5 md:h-4 md:w-4', activeDifficulty.iconClass)}
+                  />
                   {activeDifficulty.value}
                 </span>
               )}
-              <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-white/80">
-                <div className="flex h-4 w-4 items-center justify-center">
+              <span className="flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[11px] font-semibold tracking-[0.16em] text-white/80 md:h-8 md:gap-2 md:px-4 md:text-xs">
+                <div className="flex scale-50 items-center justify-center md:scale-[0.6]">
                   {slopeDescriptor.renderIcon(true)}
                 </div>
-                {Math.round(finishStats.slopeAngle)}°
+                {slopeDescriptor.label}
               </span>
             </div>
-
-            <button
-              type="button"
-              aria-label="Back to home"
-              onClick={handleBackToMenu}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-white/30 hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
           <div className="flex flex-col items-center gap-1 text-center">
@@ -209,19 +202,17 @@ export const GameOver = () => {
                 <div className="font-mono text-4xl leading-tight font-black text-white md:text-5xl">
                   {formatTime(finishStats.timeElapsed)}
                 </div>
-                <div className="flex items-center justify-between text-sm text-white/70">
-                  <span>
-                    {personalBest
-                      ? `Personal Best: ${formatTime(personalBest)}`
-                      : 'Finish the sprint to set your first record.'}
-                  </span>
-                  {isNewRecord && (
-                    <span className="flex items-center gap-2 font-semibold text-amber-200">
-                      <Trophy className="h-4 w-4" />
-                      New record!
-                    </span>
-                  )}
-                </div>
+                {personalBest || isNewRecord ? (
+                  <div className="flex items-center justify-between text-sm text-white/70">
+                    {personalBest && <span>`Personal Best: ${formatTime(personalBest)}`</span>}
+                    {isNewRecord && (
+                      <span className="flex items-center gap-2 font-semibold text-amber-200">
+                        <Trophy className="h-4 w-4" />
+                        New record!
+                      </span>
+                    )}
+                  </div>
+                ) : null}
               </>
             )}
           </div>
