@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { COLOR_PALETTE } from '../constants/colors';
+import { COLOR_PALETTE } from '../config/GameConfig';
 
 export type TerrainMaterials = {
   snow: THREE.MeshStandardMaterial;

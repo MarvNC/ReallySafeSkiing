@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { COLOR_PALETTE } from '../constants/colors';
+import { COLOR_PALETTE } from '../config/GameConfig';
 
 /**
  * Creates a single ski with a curved and rounded tip using procedural geometry.

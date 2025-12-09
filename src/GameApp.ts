@@ -69,7 +69,7 @@ export class GameApp {
   private tmpVecA = new THREE.Vector3();
   private tmpVecB = new THREE.Vector3();
   private lifeShakeTime = 0;
-  private readonly lifeShakeDuration = ARCADE_CONFIG.LIFE_IMPACT_DURATION;
+  private readonly lifeShakeDuration = ARCADE_CONFIG.lifeImpactDuration;
   private readonly lifeShakeMagnitude = 0.5;
   private lifeShakeStartPos = new THREE.Vector3();
   private lifeShakeBaseRotZ = 0;
@@ -77,11 +77,10 @@ export class GameApp {
   // Crash sequence variables
   private timeScale = 1.0;
   private crashTimer = 0;
-  private readonly CRASH_DURATION = SPRINT_CONFIG.CRASH_DURATION; // Real-time seconds
+  private readonly CRASH_DURATION = SPRINT_CONFIG.crashDuration; // Real-time seconds
   private wasCrashedBeforePause = false; // Track if we were in crash state before pausing
 
   // New Menu State
-  private menuIndex = 0;
   private isAboutOpen = false;
   private readonly menuOptionsCount = 3; // Resume, Restart, Back to menu
 
@@ -124,6 +123,7 @@ export class GameApp {
     // Initialize Background
     this.backgroundEnv = new BackgroundEnvironment(this.scene);
 
+    this.physics?.dispose();
     this.physics = new PhysicsWorld();
     await this.physics.init();
 
@@ -165,6 +165,7 @@ export class GameApp {
 
     // Initialize debug systems
     this.debugUI = new DebugUI(this.container);
+    this.debugHelpers?.dispose();
     this.debugHelpers = new DebugHelpers(this.scene);
     this.debugHelpers.addWorldAxes(50);
 
@@ -238,12 +239,15 @@ export class GameApp {
     const handleMenuNav = (action: Action) => {
       if (this.gameState !== GameState.PAUSED || this.isAboutOpen) return;
 
+      const store = useGameStore.getState();
+      const currentIndex = store.menuIndex ?? 0;
+
       if (action === Action.MenuUp) {
-        this.menuIndex = (this.menuIndex - 1 + this.menuOptionsCount) % this.menuOptionsCount;
-        this.updateMenuVisuals();
+        const nextIndex = (currentIndex - 1 + this.menuOptionsCount) % this.menuOptionsCount;
+        store.setMenuIndex(nextIndex);
       } else if (action === Action.MenuDown) {
-        this.menuIndex = (this.menuIndex + 1) % this.menuOptionsCount;
-        this.updateMenuVisuals();
+        const nextIndex = (currentIndex + 1) % this.menuOptionsCount;
+        store.setMenuIndex(nextIndex);
       } else if (action === Action.MenuSelect || action === Action.Start) {
         this.executeMenuOption();
       }
@@ -412,7 +416,7 @@ export class GameApp {
   }
 
   private getModeObstacleMultiplier(mode: GameMode): number {
-    return mode === 'ZEN' ? (GAME_CONFIG.zenObstacleDensityMultiplier ?? 1) : 1;
+    return mode === 'ZEN' ? GAME_CONFIG.zenObstacleDensityMultiplier : 1;
   }
 
   private startGame() {
@@ -428,7 +432,6 @@ export class GameApp {
     this.crashTimer = 0;
     this.wasCrashedBeforePause = false;
     this.isAboutOpen = false;
-    this.menuIndex = 0;
     this.gameState = shouldPauseForFirstRun ? GameState.READY : GameState.PLAYING;
     this.lastDistance = 0;
     this.arcadeInvulnerability = 0;
@@ -499,7 +502,6 @@ export class GameApp {
     this.wasCrashedBeforePause = this.gameState === GameState.CRASHED;
 
     this.gameState = GameState.PAUSED;
-    this.menuIndex = 0; // Reset to "Resume"
     useGameStore.getState().setUIState(UIState.PAUSED);
     // Rebind keys for menu/paused state
     this.updateKeyBindingsForGameState();
@@ -542,7 +544,6 @@ export class GameApp {
     this.crashTimer = 0;
     this.wasCrashedBeforePause = false;
     this.isAboutOpen = false;
-    this.menuIndex = 0;
     useGameStore.getState().setMenuIndex(0);
     useGameStore.getState().setUIState(UIState.MENU);
     useGameStore.getState().setEndReason(null);
@@ -559,19 +560,12 @@ export class GameApp {
     }
   }
 
-  private updateMenuVisuals(): void {
-    // Menu visuals now handled by React - just update the store
-    useGameStore.getState().setMenuIndex(this.menuIndex);
-  }
-
   private executeMenuOption(): void {
     // Read menuIndex from store to sync with React component clicks
     const storeMenuIndex = useGameStore.getState().menuIndex;
     const gameMode = useGameStore.getState().gameMode;
-    // Sync internal menuIndex for consistency
-    this.menuIndex = storeMenuIndex;
 
-    switch (this.menuIndex) {
+    switch (storeMenuIndex) {
       case 0: // Resume
         this.resumeGame();
         break;
@@ -612,8 +606,7 @@ export class GameApp {
 
     if (enableArcadeScoring && store.gameMode === 'ARCADE') {
       const currentMultiplier = store.multiplier;
-      const distanceScore =
-        distanceDelta * ARCADE_CONFIG.DISTANCE_SCORE_PER_METER * currentMultiplier;
+      const distanceScore = distanceDelta * ARCADE_CONFIG.distanceScorePerMeter * currentMultiplier;
 
       if (distanceScore > 0) {
         store.addScore(distanceScore);
@@ -631,9 +624,9 @@ export class GameApp {
 
     const currentMultiplier = store.multiplier;
     const nextMultiplier = Number(
-      (currentMultiplier + ARCADE_CONFIG.COIN_MULTIPLIER_BONUS).toFixed(2)
+      (currentMultiplier + ARCADE_CONFIG.coinMultiplierBonus).toFixed(2)
     );
-    const coinScore = ARCADE_CONFIG.COIN_VALUE * currentMultiplier;
+    const coinScore = ARCADE_CONFIG.coinValue * currentMultiplier;
 
     store.addCoin(1);
     store.addScore(coinScore);
@@ -664,12 +657,12 @@ export class GameApp {
       }
     }
 
-    if (speedKmh >= ARCADE_CONFIG.DEATH_THRESHOLD_KMH && headOn) {
+    if (speedKmh >= ARCADE_CONFIG.deathThresholdKmh && headOn) {
       this.triggerCrashSequence();
       return;
     }
 
-    if (speedKmh >= ARCADE_CONFIG.DAMAGE_THRESHOLD_KMH) {
+    if (speedKmh >= ARCADE_CONFIG.damageThresholdKmh) {
       store.loseLife(1);
       const { multiplier } = useGameStore.getState();
       this.triggerLifeShake();
@@ -678,7 +671,7 @@ export class GameApp {
         type: 'life',
       });
       this.airTimeAccumulator = 0;
-      this.arcadeInvulnerability = ARCADE_CONFIG.INVULNERABILITY_SECONDS;
+      this.arcadeInvulnerability = ARCADE_CONFIG.invulnerabilitySeconds;
       if (useGameStore.getState().lives <= 0) {
         this.triggerCrashSequence();
       }
@@ -695,11 +688,11 @@ export class GameApp {
 
     if (lives <= 1) {
       this.playerPhysics.setHandlingModifiers(
-        ARCADE_CONFIG.STEER_NOISE_CRITICAL,
-        ARCADE_CONFIG.LATERAL_FRICTION_CRITICAL
+        ARCADE_CONFIG.steerNoiseCritical,
+        ARCADE_CONFIG.lateralFrictionCritical
       );
     } else if (lives === 2) {
-      this.playerPhysics.setHandlingModifiers(ARCADE_CONFIG.STEER_NOISE_DAMAGED, 1);
+      this.playerPhysics.setHandlingModifiers(ARCADE_CONFIG.steerNoiseDamaged, 1);
     } else {
       this.playerPhysics.setHandlingModifiers(0, 1);
     }
@@ -718,21 +711,21 @@ export class GameApp {
     }
 
     const airborneTime = this.playerPhysics.getAirborneTime();
-    const minAirSeconds = ARCADE_CONFIG.AIR_MULTIPLIER_MIN_SECONDS;
+    const minAirSeconds = ARCADE_CONFIG.airMultiplierMinSeconds;
     const eligible = this.playerPhysics.isAirborne() && airborneTime >= minAirSeconds;
 
     if (eligible) {
       this.airTimeAccumulator += gameDelta;
-      const interval = ARCADE_CONFIG.AIR_MULTIPLIER_INTERVAL_SECONDS;
+      const interval = ARCADE_CONFIG.airMultiplierIntervalSeconds;
 
       if (interval > 0) {
         const incrementsEarned = Math.floor(this.airTimeAccumulator / interval);
 
         if (incrementsEarned > 0) {
-          const bonus = incrementsEarned * ARCADE_CONFIG.AIR_MULTIPLIER_INCREMENT;
+          const bonus = incrementsEarned * ARCADE_CONFIG.airMultiplierIncrement;
           const currentMultiplier = store.multiplier;
           const airtimeBonus =
-            ARCADE_CONFIG.AIRTIME_BONUS_POINTS * incrementsEarned * currentMultiplier;
+            ARCADE_CONFIG.airtimeBonusPoints * incrementsEarned * currentMultiplier;
           const next = Number((currentMultiplier + bonus).toFixed(2));
           store.setMultiplier(next);
           if (airtimeBonus > 0) {
@@ -757,13 +750,13 @@ export class GameApp {
     deltaSeconds: number,
     store: ReturnType<typeof useGameStore.getState>
   ): void {
-    if (speedKmh <= ARCADE_CONFIG.SPEED_BONUS_THRESHOLD_KMH) {
+    if (speedKmh <= ARCADE_CONFIG.speedBonusThresholdKmh) {
       this.speedBonusTimer = 0;
       return;
     }
 
-    const interval = ARCADE_CONFIG.SPEED_BONUS_POPUP_INTERVAL_SECONDS ?? 1;
-    const pointsPerInterval = ARCADE_CONFIG.SPEED_BONUS_POINTS_PER_SECOND * interval;
+    const interval = ARCADE_CONFIG.speedBonusPopupIntervalSeconds;
+    const pointsPerInterval = ARCADE_CONFIG.speedBonusPointsPerSecond * interval;
 
     this.speedBonusTimer += deltaSeconds;
     const events = interval > 0 ? Math.floor(this.speedBonusTimer / interval) : 1;
@@ -775,9 +768,7 @@ export class GameApp {
     }
 
     const nextMultiplier = Number(
-      (currentMultiplier + ARCADE_CONFIG.SPEED_BONUS_MULTIPLIER_PER_SECOND * deltaSeconds).toFixed(
-        2
-      )
+      (currentMultiplier + ARCADE_CONFIG.speedBonusMultiplierPerSecond * deltaSeconds).toFixed(2)
     );
     if (nextMultiplier !== currentMultiplier) {
       store.setMultiplier(nextMultiplier);
@@ -836,7 +827,7 @@ export class GameApp {
     if (gameMode !== 'SPRINT') return;
 
     // 1. Add penalty time (this also increments penalty count)
-    useGameStore.getState().addPenalty(SPRINT_CONFIG.PENALTY_SECONDS);
+    useGameStore.getState().addPenalty(SPRINT_CONFIG.penaltySeconds);
     // Update local timeElapsed to match store
     this.timeElapsed = useGameStore.getState().timeElapsed;
 
@@ -1018,7 +1009,7 @@ export class GameApp {
       if (gameMode === 'SPRINT') {
         const currentPos = this.playerPhysics.getPosition();
         const distance = Math.abs(currentPos.z - this.startPosition.z);
-        if (distance >= SPRINT_CONFIG.TARGET_DISTANCE) {
+        if (distance >= SPRINT_CONFIG.targetDistance) {
           this.endGame('complete');
         }
       }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { COLOR_PALETTE } from '../constants/colors';
+import { COLOR_PALETTE } from '../config/GameConfig';
 import { TerrainManager } from './TerrainManager';
 
 export class SnowSparkles {
@@ -155,10 +155,6 @@ gl_PointSize = size * aSize;
     if (sizeNeedsUpdate) {
       (this.geometry.getAttribute('aSize') as THREE.BufferAttribute).needsUpdate = true;
     }
-  }
-
-  setVisible(visible: boolean): void {
-    this.points.visible = visible;
   }
 
   reset(camera: THREE.Camera, sunDir: THREE.Vector3): void {

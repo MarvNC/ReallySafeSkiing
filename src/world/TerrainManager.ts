@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 
-import {
-  DIFFICULTY_SETTINGS,
-  MOUNTAIN_CONFIG,
-  TERRAIN_CONFIG,
-  TERRAIN_DIMENSIONS,
-} from '../config/GameConfig';
+import { DIFFICULTY_SETTINGS, MOUNTAIN_CONFIG, TERRAIN_CONFIG } from '../config/GameConfig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { Difficulty } from '../ui/store';
 import { TerrainChunk } from './TerrainChunk';
@@ -23,8 +18,8 @@ export class TerrainManager {
   private coinsEnabled = false;
   private startAltitude: number = 0;
   private slopeTangent: number = 0;
-  private readonly chunkSegments = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS;
-  private readonly chunkLength = TERRAIN_DIMENSIONS.CHUNK_SEGMENTS * TERRAIN_CONFIG.SEGMENT_LENGTH;
+  private readonly chunkSegments = TERRAIN_CONFIG.dimensions.chunkSegments;
+  private readonly chunkLength = TERRAIN_CONFIG.dimensions.chunkLength;
   private sampleIndex = 0;
   private obstacleMultiplier = 1;
   private trackObstaclesEnabled = true;
@@ -151,7 +146,7 @@ export class TerrainManager {
 
   private getStartAltitudeFromSlope(slopeAngle: number): number {
     const clamped = Math.max(0, Math.min(70, slopeAngle));
-    const height = MOUNTAIN_CONFIG.TOTAL_LENGTH * Math.tan(THREE.MathUtils.degToRad(clamped));
+    const height = MOUNTAIN_CONFIG.totalLength * Math.tan(THREE.MathUtils.degToRad(clamped));
     return height;
   }
 
@@ -214,15 +209,6 @@ export class TerrainManager {
     }
 
     return closestPoint;
-  }
-
-  getStartPoint(): THREE.Vector3 {
-    if (this.allPoints.length > 0) {
-      const firstPoint = this.allPoints[0];
-      return new THREE.Vector3(firstPoint.x, firstPoint.y, firstPoint.z);
-    }
-    // Fallback
-    return new THREE.Vector3(0, this.startAltitude, 0);
   }
 
   /**

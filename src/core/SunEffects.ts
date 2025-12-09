@@ -42,10 +42,6 @@ export class SunEffects {
     mat.opacity = opacity;
   }
 
-  setVisible(visible: boolean): void {
-    this.halo.visible = visible;
-  }
-
   private createHaloTexture(): THREE.Texture {
     const size = 256;
     const canvas = document.createElement('canvas');

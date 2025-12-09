@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
-import { COLOR_PALETTE } from '../../constants/colors';
+import { COLOR_PALETTE } from '../../config/GameConfig';
 import { mergeGeometries } from '../utils/mergeGeometries';
 
 // === Export constants for physics to use ===
-export const TREE_TRUNK_RADIUS_TOP = 0.2;
+const TREE_TRUNK_RADIUS_TOP = 0.2;
 export const TREE_TRUNK_RADIUS_BOTTOM = 0.3;
 export const TREE_TRUNK_HEIGHT = 1.5;
 

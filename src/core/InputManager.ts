@@ -9,7 +9,6 @@ export const Action = {
   // Reserved for future player controls
   SteerLeft: 'SteerLeft',
   SteerRight: 'SteerRight',
-  Jump: 'Jump',
   Forward: 'Forward',
   // Debug camera controls
   DebugMoveForward: 'DebugMoveForward',
