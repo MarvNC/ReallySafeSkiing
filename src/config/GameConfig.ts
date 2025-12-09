@@ -87,12 +87,12 @@ export interface ArcadeConfig {
   lifeImpactDuration: number;
   /** Speed threshold in km/h to start earning speed bonus points. */
   speedBonusThresholdKmh: number;
-  /** Speed bonus points awarded per second above threshold (applied in discrete intervals). */
-  speedBonusPointsPerSecond: number;
-  /** Speed bonus multiplier increment per second above threshold (applied in discrete intervals). */
+  /** Speed bonus points awarded per event. */
+  speedBonusPoints: number;
+  /** Speed bonus multiplier increment per event. */
   speedBonusMultiplierPerSecond: number;
-  /** Interval in seconds between speed bonus popup notifications. */
-  speedBonusPopupIntervalSeconds: number;
+  /** Interval in seconds between speed bonus awards. */
+  speedMultiplierIntervalSeconds: number;
   /** Points awarded per airtime interval. */
   airtimeBonusPoints: number;
 }
@@ -635,10 +635,10 @@ export const ARCADE_CONFIG: ArcadeConfig = {
   lateralFrictionCritical: 0.7,
   lifeImpactDuration: 0.8,
   speedBonusThresholdKmh: 150,
-  speedBonusPointsPerSecond: 20,
+  speedBonusPoints: 20,
   speedBonusMultiplierPerSecond: 0.05,
-  speedBonusPopupIntervalSeconds: 1,
-  airtimeBonusPoints: 10,
+  speedMultiplierIntervalSeconds: 1,
+  airtimeBonusPoints: 20,
 };
 
 const isLowPreset =

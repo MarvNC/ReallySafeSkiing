@@ -755,8 +755,8 @@ export class GameApp {
       return;
     }
 
-    const interval = ARCADE_CONFIG.speedBonusPopupIntervalSeconds;
-    const pointsPerInterval = ARCADE_CONFIG.speedBonusPointsPerSecond * interval;
+    const interval = ARCADE_CONFIG.speedMultiplierIntervalSeconds;
+    const pointsPerInterval = ARCADE_CONFIG.speedBonusPoints * interval;
     const multiplierPerInterval = ARCADE_CONFIG.speedBonusMultiplierPerSecond * interval;
 
     this.speedBonusTimer += deltaSeconds;
