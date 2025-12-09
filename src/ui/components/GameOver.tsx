@@ -217,7 +217,12 @@ export const GameOver = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-3 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-2 text-center shadow-inner shadow-black/20">
+          <div
+            className={clsx(
+              'grid items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-2 text-center shadow-inner shadow-black/20',
+              finishStats.gameMode === 'ARCADE' ? 'grid-cols-3' : 'grid-cols-2'
+            )}
+          >
             <div className="flex flex-col items-center gap-1">
               <Zap className="h-5 w-5 text-amber-200" />
               <div className="font-mono text-lg font-semibold">
@@ -227,15 +232,17 @@ export const GameOver = () => {
                 Speed
               </div>
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <Clock className="h-5 w-5 text-sky-200" />
-              <div className="font-mono text-lg font-semibold">
-                {formatTime(finishStats.timeElapsed)}
+            {finishStats.gameMode === 'ARCADE' && (
+              <div className="flex flex-col items-center gap-1">
+                <Clock className="h-5 w-5 text-sky-200" />
+                <div className="font-mono text-lg font-semibold">
+                  {formatTime(finishStats.timeElapsed)}
+                </div>
+                <div className="text-[10px] font-semibold tracking-[0.25em] text-white/60 uppercase">
+                  Time
+                </div>
               </div>
-              <div className="text-[10px] font-semibold tracking-[0.25em] text-white/60 uppercase">
-                Time
-              </div>
-            </div>
+            )}
             <div className="flex flex-col items-center gap-1">
               <MapPin className="h-5 w-5 text-emerald-200" />
               <div className="font-mono text-lg font-semibold">
