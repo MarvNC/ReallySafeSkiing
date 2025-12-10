@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { Action, InputManager } from '../../core/InputManager';
-import { UIState, useGameStore } from '../store';
+import { Action, InputManager } from '../../../core/InputManager';
+import { UIState, useGameStore } from '../../store';
 
 type Side = 'left' | 'right';
 

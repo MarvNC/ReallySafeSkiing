@@ -2,16 +2,16 @@ import clsx from 'clsx';
 import { Clock, Home, MapPin, RefreshCcw, Trophy, Zap } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
-import { Action, InputManager } from '../../core/InputManager';
+import { Action, InputManager } from '../../../core/InputManager';
 import {
   calculateGrade,
   getPersonalBest,
   type Grade,
   savePersonalBest,
-} from '../../utils/scoreSystem';
-import { Difficulty, EndReason, GameMode, UIState, useGameStore } from '../store';
-import { DIFFICULTY_OPTIONS } from './DifficultySelector';
-import { SLOPE_LEVELS } from './SlopeControl';
+} from '../../../utils/scoreSystem';
+import { Difficulty, EndReason, GameMode, UIState, useGameStore } from '../../store';
+import { DIFFICULTY_OPTIONS } from '../menu/DifficultySelector';
+import { SLOPE_LEVELS } from '../menu/SlopeControl';
 
 const formatTime = (value: number) => {
   const minutes = Math.floor(value / 60);

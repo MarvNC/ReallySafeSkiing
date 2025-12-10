@@ -2,12 +2,12 @@ import clsx from 'clsx';
 import { ChevronDown, Home, LogOut, Play, RotateCcw, Trees, TrendingDown } from 'lucide-react';
 import { type FC, type ReactNode, useEffect, useRef, useState } from 'react';
 
-import { Action, InputManager } from '../../core/InputManager';
-import { GameMode, UIState, useGameStore } from '../store';
+import { Action, InputManager } from '../../../core/InputManager';
+import { GameMode, UIState, useGameStore } from '../../store';
+import { GameLogo } from '../common/GameLogo';
+import { GameOver } from '../screens/GameOver';
 import { DifficultySelector } from './DifficultySelector';
-import { GameLogo } from './GameLogo';
 import { GameModeToggle } from './GameModeToggle';
-import { GameOver } from './GameOver';
 import { SlopeControl } from './SlopeControl';
 
 /** Trigger an input action after a brief delay for visual feedback */
