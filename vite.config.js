@@ -18,7 +18,7 @@ export default defineConfig({
       ],
       manifest: {
         name: 'Really Safe Skiing',
-        short_name: 'Safe Skiing',
+        short_name: 'Really Safe Skiing',
         description:
           'A low-poly, high-speed downhill skiing game where safety is strictly... optional. Dodge trees, rocks, and gravity itself.',
         theme_color: '#ffffff',
