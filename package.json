@@ -13,7 +13,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "fix": "bun run lint:fix && bun run format",
-    "render-logo": "bun scripts/render-logo.ts"
+    "render": "bun scripts/render-logo.ts",
+    "render:logo": "bun scripts/render-logo.ts --component logo",
+    "render:icon": "bun scripts/render-logo.ts --component appicon"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
@@ -34,6 +36,7 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "puppeteer": "^24.32.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.47.0",
