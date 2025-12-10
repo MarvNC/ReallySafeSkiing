@@ -9,6 +9,13 @@ export const About = () => {
 
   if (uiState !== UIState.ABOUT) return null;
 
+  const buildDate = import.meta.env.VITE_BUILD_DATE
+    ? new Date(import.meta.env.VITE_BUILD_DATE).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : 'dev build';
+
   const handleClose = () => {
     setUIState(UIState.MENU);
   };
@@ -102,6 +109,12 @@ export const About = () => {
                 MarvNC
               </span>
             </a>
+          </div>
+
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+          <div className="text-center text-xs tracking-[0.18em] text-white/50 uppercase md:text-sm">
+            {buildDate}
           </div>
         </div>
 
