@@ -17,6 +17,7 @@ const projectRoot = join(__dirname, '..');
 const iconSizes = [
   { size: 64, name: 'pwa-64x64.png' },
   { size: 192, name: 'pwa-192x192.png' },
+  { size: 180, name: 'apple-touch-icon.png' },
   { size: 512, name: 'pwa-512x512.png' },
 ];
 
@@ -36,7 +37,7 @@ async function generateIcons(): Promise<void> {
       ? Math.max(1, Math.round(icon.size * (1 - icon.padding * 2)))
       : icon.size;
 
-    let pipeline = sharp(svgPath).resize(targetSize, targetSize, {
+    let pipeline = sharp(svgPath, { density: 512 }).resize(targetSize, targetSize, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     });

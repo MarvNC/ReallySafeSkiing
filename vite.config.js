@@ -9,7 +9,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['icon.svg', 'pwa-64x64.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: [
+        'icon.svg',
+        'pwa-64x64.png',
+        'pwa-192x192.png',
+        'apple-touch-icon.png',
+        'pwa-512x512.png',
+      ],
       manifest: {
         name: 'Really Safe Skiing',
         short_name: 'Safe Skiing',
@@ -27,6 +33,11 @@ export default defineConfig({
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'apple-touch-icon.png',
+            sizes: '180x180',
             type: 'image/png',
           },
           {
