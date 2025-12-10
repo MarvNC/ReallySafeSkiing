@@ -4,6 +4,7 @@ import { TopBar } from './hud/TopBar';
 import { TouchControls } from './hud/TouchControls';
 import { About } from './menu/About';
 import { Menus } from './menu/Menus';
+import ReloadPrompt from './ReloadPrompt';
 
 export const UIOverlay = () => {
   const { uiState, hudVisible } = useGameStore();
@@ -24,6 +25,9 @@ export const UIOverlay = () => {
 
       {/* About screen */}
       <About />
+
+      {/* PWA reload/update prompt (hidden while playing) */}
+      <ReloadPrompt />
     </>
   );
 };
