@@ -18,7 +18,6 @@ const iconSizes = [
   { size: 64, name: 'pwa-64x64.png' },
   { size: 192, name: 'pwa-192x192.png' },
   { size: 512, name: 'pwa-512x512.png' },
-  { size: 512, name: 'maskable-icon-512x512.png', padding: 0.1 }, // 10% padding for maskable
 ];
 
 async function generateIcons(): Promise<void> {

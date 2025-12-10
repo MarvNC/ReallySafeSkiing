@@ -9,13 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: [
-        'icon.svg',
-        'pwa-64x64.png',
-        'pwa-192x192.png',
-        'pwa-512x512.png',
-        'maskable-icon-512x512.png',
-      ],
+      includeAssets: ['icon.svg', 'pwa-64x64.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Really Safe Skiing',
         short_name: 'Safe Skiing',
@@ -39,18 +33,6 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: 'maskable-icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
           },
         ],
       },
