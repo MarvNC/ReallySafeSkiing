@@ -1,8 +1,8 @@
 import { Github, X } from 'lucide-react';
 import React from 'react';
 
-import { UIState, useGameStore } from '../store';
-import { GameLogo } from './GameLogo';
+import { UIState, useGameStore } from '../../store';
+import { GameLogo } from '../common/GameLogo';
 
 export const About = () => {
   const { uiState, setUIState } = useGameStore();

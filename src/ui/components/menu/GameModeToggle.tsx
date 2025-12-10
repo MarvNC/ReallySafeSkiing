@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { Coins, Flame, Infinity as InfinityIcon, Sparkles } from 'lucide-react';
 
-import { useGameStore } from '../store';
+import { useGameStore } from '../../store';
 
 const MODES: Array<{
   key: 'SPRINT' | 'ARCADE' | 'ZEN';

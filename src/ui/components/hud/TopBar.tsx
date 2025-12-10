@@ -2,8 +2,8 @@ import clsx from 'clsx';
 import { Maximize, Minimize, Pause, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Action, InputManager } from '../../core/InputManager';
-import { UIState, useGameStore } from '../store';
+import { Action, InputManager } from '../../../core/InputManager';
+import { UIState, useGameStore } from '../../store';
 
 export const TopBar = () => {
   const { uiState } = useGameStore();

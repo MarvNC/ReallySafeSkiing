@@ -2,8 +2,8 @@ import clsx from 'clsx';
 import { AlertTriangle, Coins, MapPin, Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { ARCADE_CONFIG, SPRINT_CONFIG, UI_CONFIG } from '../../config/GameConfig';
-import { useGameStore } from '../store';
+import { ARCADE_CONFIG, SPRINT_CONFIG, UI_CONFIG } from '../../../config/GameConfig';
+import { useGameStore } from '../../store';
 import { ScoreFeed } from './ScoreFeed';
 
 type HeartState = 'full' | 'fragile' | 'lost';

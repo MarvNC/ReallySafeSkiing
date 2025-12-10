@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 
-import { useGameStore } from '../store';
-import { SelectionTile } from './SelectionTile';
+import { useGameStore } from '../../store';
+import { SelectionTile } from '../common/SelectionTile';
 
 export type SlopeLevel = {
   angle: number;

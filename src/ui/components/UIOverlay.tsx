@@ -1,9 +1,9 @@
 import { UIState, useGameStore } from '../store';
-import { About } from './About';
-import { HUD } from './HUD';
-import { Menus } from './Menus';
-import { TopBar } from './TopBar';
-import { TouchControls } from './TouchControls';
+import { HUD } from './hud/HUD';
+import { TopBar } from './hud/TopBar';
+import { TouchControls } from './hud/TouchControls';
+import { About } from './menu/About';
+import { Menus } from './menu/Menus';
 
 export const UIOverlay = () => {
   const { uiState, hudVisible } = useGameStore();

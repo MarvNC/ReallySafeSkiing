@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import { useGameStore } from '../store';
+import { useGameStore } from '../../store';
 
 const palette = {
   coin: {

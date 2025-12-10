@@ -2,9 +2,9 @@ import clsx from 'clsx';
 import { Skull, Snowflake, Wind } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-import type { Difficulty } from '../store';
-import { useGameStore } from '../store';
-import { SelectionTile } from './SelectionTile';
+import type { Difficulty } from '../../store';
+import { useGameStore } from '../../store';
+import { SelectionTile } from '../common/SelectionTile';
 
 export type DifficultyOption = {
   value: Difficulty;
