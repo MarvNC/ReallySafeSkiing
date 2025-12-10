@@ -14,7 +14,12 @@ import sharp from 'sharp';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
 
-const iconSizes = [
+type IconSpec = {
+  size: number;
+  name: string;
+};
+
+const iconSizes: IconSpec[] = [
   { size: 64, name: 'pwa-64x64.png' },
   { size: 192, name: 'pwa-192x192.png' },
   { size: 180, name: 'apple-touch-icon.png' },
@@ -33,33 +38,15 @@ async function generateIcons(): Promise<void> {
   for (const icon of iconSizes) {
     const outputPath = join(outputDir, icon.name);
 
-    const targetSize = icon.padding
-      ? Math.max(1, Math.round(icon.size * (1 - icon.padding * 2)))
-      : icon.size;
-
-    let pipeline = sharp(svgPath, { density: 512 }).resize(targetSize, targetSize, {
+    const pipeline = sharp(svgPath, { density: 512 }).resize(icon.size, icon.size, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     });
 
-    // Add padding for maskable icons
-    if (icon.padding) {
-      const paddingPx = Math.max(0, Math.floor((icon.size - targetSize) / 2));
-      pipeline = pipeline.extend({
-        top: paddingPx,
-        bottom: paddingPx,
-        left: paddingPx,
-        right: paddingPx,
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      });
-    }
-
     await pipeline.png().toFile(outputPath);
 
     const metadata = await sharp(outputPath).metadata();
-    console.log(
-      `✓ Generated ${icon.name} - ${metadata.width}x${metadata.height}px${icon.padding ? ' (maskable)' : ''}`
-    );
+    console.log(`✓ Generated ${icon.name} - ${metadata.width}x${metadata.height}px`);
   }
 
   console.log('\nPWA icons generated successfully!');
