@@ -64,30 +64,96 @@ async function startViteServer(): Promise<{ url: string; process: ReturnType<typ
     const viteProcess = spawn('bun', ['vite', '--port', '5174'], {
       cwd: projectRoot,
       stdio: 'pipe',
+      env: { ...process.env, FORCE_COLOR: '0' }, // Disable colors for consistent output
     });
 
+    let stdout = '';
     let stderr = '';
+    let resolved = false;
+
+    const tryResolve = (output: string) => {
+      if (resolved) return;
+
+      // Look for the server URL in the output (handle various formats)
+      const patterns = [/Local:\s+(https?:\/\/[^\s]+)/, /localhost:(\d+)/, /127\.0\.0\.1:(\d+)/];
+
+      for (const pattern of patterns) {
+        const match = output.match(pattern);
+        if (match) {
+          const url = match[1]?.startsWith('http')
+            ? match[1]
+            : `http://localhost:${match[1] || '5174'}`;
+          resolved = true;
+
+          // Give Vite a moment to fully initialize
+          setTimeout(() => {
+            resolve({ url, process: viteProcess });
+          }, 500);
+          return;
+        }
+      }
+    };
 
     viteProcess.stdout?.on('data', (data) => {
       const output = data.toString();
-      // Look for the server URL in the output
-      const match = output.match(/Local:\s+(http:\/\/[^\s]+)/);
-      if (match) {
-        resolve({ url: match[1], process: viteProcess });
-      }
+      stdout += output;
+      console.log('[Vite stdout]:', output.trim());
+      tryResolve(output);
     });
 
     viteProcess.stderr?.on('data', (data) => {
-      stderr += data.toString();
+      const output = data.toString();
+      stderr += output;
+      console.log('[Vite stderr]:', output.trim());
+      tryResolve(output);
     });
 
     viteProcess.on('error', (err) => {
-      reject(new Error(`Failed to start Vite server: ${err.message}`));
+      if (!resolved) {
+        resolved = true;
+        reject(new Error(`Failed to start Vite server: ${err.message}`));
+      }
     });
+
+    viteProcess.on('exit', (code) => {
+      if (!resolved) {
+        resolved = true;
+        reject(
+          new Error(`Vite process exited with code ${code}\nStdout: ${stdout}\nStderr: ${stderr}`)
+        );
+      }
+    });
+
+    // Fallback: After 5 seconds, try polling localhost:5174
+    setTimeout(async () => {
+      if (resolved) return;
+
+      console.log('No URL detected in output, attempting to connect to http://localhost:5174...');
+      const url = 'http://localhost:5174';
+
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          resolved = true;
+          console.log('Successfully connected to Vite server via polling');
+          resolve({ url, process: viteProcess });
+          return;
+        }
+      } catch {
+        // Continue waiting
+      }
+    }, 5000);
 
     // Timeout after 30 seconds
     setTimeout(() => {
-      reject(new Error(`Vite server failed to start:\n${stderr}`));
+      if (!resolved) {
+        resolved = true;
+        reject(
+          new Error(
+            `Vite server failed to start within 30 seconds\nStdout: ${stdout}\nStderr: ${stderr}`
+          )
+        );
+      }
     }, 30000);
   });
 }
