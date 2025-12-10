@@ -17,12 +17,14 @@ jobs:
     strategy:
       matrix:
         check:
-          - name: Check formatting
+          - name: Check Formatting
             command: format:check
           - name: Lint
             command: lint
           - name: Build
             command: build
+          - name: Test Render Script
+            command: render
     name: ${{ matrix.check.name }}
     steps:
       - name: Checkout
