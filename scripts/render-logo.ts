@@ -12,7 +12,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -70,6 +70,46 @@ async function startViteServer(): Promise<{ url: string; process: ReturnType<typ
     let stdout = '';
     let stderr = '';
     let resolved = false;
+    let readyTimer: NodeJS.Timeout | null = null;
+    let pollTimeout: NodeJS.Timeout | null = null;
+    let startupTimeout: NodeJS.Timeout | null = null;
+
+    const clearTimers = () => {
+      if (readyTimer) {
+        clearTimeout(readyTimer);
+        readyTimer = null;
+      }
+      if (pollTimeout) {
+        clearTimeout(pollTimeout);
+        pollTimeout = null;
+      }
+      if (startupTimeout) {
+        clearTimeout(startupTimeout);
+        startupTimeout = null;
+      }
+    };
+
+    const finish = (
+      next:
+        | { type: 'resolve'; url: string }
+        | { type: 'reject'; error: string | Error; kill?: boolean }
+    ) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimers();
+
+      if (next.type === 'resolve') {
+        resolve({ url: next.url, process: viteProcess });
+        return;
+      }
+
+      if (next.kill) {
+        viteProcess.kill();
+      }
+
+      const error = next.error instanceof Error ? next.error : new Error(next.error);
+      reject(error);
+    };
 
     const tryResolve = (output: string) => {
       if (resolved) return;
@@ -83,11 +123,14 @@ async function startViteServer(): Promise<{ url: string; process: ReturnType<typ
           const url = match[1]?.startsWith('http')
             ? match[1]
             : `http://localhost:${match[1] || '5174'}`;
-          resolved = true;
+
+          if (readyTimer) {
+            clearTimeout(readyTimer);
+          }
 
           // Give Vite a moment to fully initialize
-          setTimeout(() => {
-            resolve({ url, process: viteProcess });
+          readyTimer = setTimeout(() => {
+            finish({ type: 'resolve', url });
           }, 500);
           return;
         }
@@ -109,23 +152,18 @@ async function startViteServer(): Promise<{ url: string; process: ReturnType<typ
     });
 
     viteProcess.on('error', (err) => {
-      if (!resolved) {
-        resolved = true;
-        reject(new Error(`Failed to start Vite server: ${err.message}`));
-      }
+      finish({ type: 'reject', error: `Failed to start Vite server: ${err.message}`, kill: true });
     });
 
     viteProcess.on('exit', (code) => {
-      if (!resolved) {
-        resolved = true;
-        reject(
-          new Error(`Vite process exited with code ${code}\nStdout: ${stdout}\nStderr: ${stderr}`)
-        );
-      }
+      finish({
+        type: 'reject',
+        error: `Vite process exited with code ${code}\nStdout: ${stdout}\nStderr: ${stderr}`,
+      });
     });
 
     // Fallback: After 5 seconds, try polling localhost:5174
-    setTimeout(async () => {
+    pollTimeout = setTimeout(async () => {
       if (resolved) return;
 
       console.log('No URL detected in output, attempting to connect to http://localhost:5174...');
@@ -134,9 +172,8 @@ async function startViteServer(): Promise<{ url: string; process: ReturnType<typ
       try {
         const response = await fetch(url);
         if (response.ok) {
-          resolved = true;
           console.log('Successfully connected to Vite server via polling');
-          resolve({ url, process: viteProcess });
+          finish({ type: 'resolve', url });
           return;
         }
       } catch {
@@ -145,15 +182,12 @@ async function startViteServer(): Promise<{ url: string; process: ReturnType<typ
     }, 5000);
 
     // Timeout after 30 seconds
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        reject(
-          new Error(
-            `Vite server failed to start within 30 seconds\nStdout: ${stdout}\nStderr: ${stderr}`
-          )
-        );
-      }
+    startupTimeout = setTimeout(() => {
+      finish({
+        type: 'reject',
+        kill: true,
+        error: `Vite server failed to start within 30 seconds\nStdout: ${stdout}\nStderr: ${stderr}`,
+      });
     }, 30000);
   });
 }
@@ -191,8 +225,8 @@ async function renderComponent(
     // Wait for fonts to load
     await page.evaluate(() => document.fonts.ready);
 
-    // Wait for React to render and animations to complete
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Wait for React to render (component sets data-render-ready when mounted)
+    await page.waitForSelector('[data-render-ready]', { timeout: 10000 });
 
     // Take full viewport screenshot to buffer
     const screenshotBuffer = await page.screenshot({
@@ -210,6 +244,13 @@ async function renderComponent(
       .toFile(pngPath);
 
     console.log(`  PNG saved (auto-trimmed): ${pngPath}`);
+
+    const [metadata, fileStats] = await Promise.all([sharp(pngPath).metadata(), stat(pngPath)]);
+    const width = metadata.width ?? 'unknown';
+    const height = metadata.height ?? 'unknown';
+    console.log(
+      `  Metadata: ${width}x${height}px, size: ${fileStats.size} bytes, format: ${metadata.format ?? 'unknown'}`
+    );
   } finally {
     await page.close();
   }
@@ -263,7 +304,9 @@ async function renderLogo(options: Options): Promise<void> {
 
 // Main execution
 const options = parseArgs();
-renderLogo(options).catch((err) => {
-  console.error('Error rendering logo:', err);
-  process.exit(1);
-});
+renderLogo(options)
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error('Error rendering logo:', err);
+    process.exit(1);
+  });
